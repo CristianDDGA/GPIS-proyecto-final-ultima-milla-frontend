@@ -4,14 +4,9 @@ import {
   validateLateOrderPlacementInput,
   type LateOrderPlacementResult,
 } from '../../domain/index.js';
-import { Alert, Button, Card, Select, TextInput } from '../../../../shared/ui/index.js';
+import { Alert, Button, Card, Select, ShortIdBadge, TextInput } from '../../../../shared/ui/index.js';
 
 type OrderInputMode = 'list' | 'manual';
-
-const MODE_OPTIONS = [
-  { value: 'list', label: 'Elegir de la lista' },
-  { value: 'manual', label: 'Escribir UUID' },
-];
 
 const DEFAULT_CAPACITY_LIMIT = '4';
 
@@ -41,7 +36,7 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
         .filter((order) => order.status === 'pendiente')
         .map((order) => ({
           value: order.id,
-          label: `${order.deliveryAddress} — ${order.deliveryDate} ${order.deliveryTime}`,
+          label: `${order.deliveryAddress} · ${order.deliveryDate} ${order.deliveryTime}`,
         })),
     [pendingOrders],
   );
@@ -90,45 +85,29 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
 
   return (
     <Card variant="elevated" className="routes-operation-card">
-      <h3 className="routes-operation-card__title">Insertar Pedido Tardío (POST /late-order-placements)</h3>
+      <div className="routes-operation-card__header">
+        <h3 className="routes-operation-card__title">Insertar pedido tardío</h3>
+        <span className="routes-operation-card__tag">Etapa 3b</span>
+      </div>
       <p className="routes-operation-card__hint">
         Incorpora un pedido pendiente a una ruta con cupo disponible del mismo día.
       </p>
 
       <form className="routes-form" onSubmit={handleSubmit} aria-label="Insertar pedido tardío">
-        <Select
-          label="Origen del pedido"
-          options={MODE_OPTIONS}
-          value={mode}
-          onChange={(event) => {
-            setMode(event.target.value === 'manual' ? 'manual' : 'list');
-            setShowErrors(false);
-            setResult(null);
-          }}
-        />
-
-        {mode === 'list' ? (
+        {pendingOrderOptions.length > 0 ? (
           <Select
             label="Pedido pendiente"
             options={pendingOrderOptions}
             value={selectedOrderId}
             onChange={(event) => setSelectedOrderId(event.target.value)}
             error={orderIdError}
-            helperText={
-              pendingOrderOptions.length === 0
-                ? 'No hay pedidos pendientes disponibles; cambia a "Escribir UUID" para ingresarlo manualmente.'
-                : undefined
-            }
+            helperText="Selecciona la dirección que quieres incorporar a la operación."
           />
         ) : (
-          <TextInput
-            label="Identificador del pedido (UUID)"
-            type="text"
-            value={manualOrderId}
-            onChange={(event) => setManualOrderId(event.target.value)}
-            error={orderIdError}
-            placeholder="00000000-0000-4000-8000-000000000000"
-          />
+          <Alert type="info" title="Sin pedidos pendientes">
+            No hay pedidos pendientes para hoy. Puedes buscar un pedido por su código en la
+            opción avanzada.
+          </Alert>
         )}
 
         <TextInput
@@ -143,16 +122,52 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
         />
 
         <div className="routes-form__actions">
-          <Button type="submit" variant="primary" isLoading={isPlacingLate}>
+          <Button
+            type="submit"
+            variant="primary"
+            isLoading={isPlacingLate}
+            disabled={mode === 'list' && pendingOrderOptions.length === 0}
+          >
             Insertar pedido tardío
           </Button>
         </div>
+
+        <details className="routes-advanced">
+          <summary className="routes-advanced__summary">Opción avanzada · buscar por código</summary>
+          <div className="routes-advanced__body">
+            <Select
+              label="Método de búsqueda"
+              options={[
+                { value: 'list', label: 'Elegir de la lista' },
+                { value: 'manual', label: 'Escribir código de pedido' },
+              ]}
+              value={mode}
+              onChange={(event) => {
+                setMode(event.target.value === 'manual' ? 'manual' : 'list');
+                setShowErrors(false);
+                setResult(null);
+              }}
+            />
+            {mode === 'manual' && (
+              <TextInput
+                label="Código del pedido"
+                type="text"
+                value={manualOrderId}
+                onChange={(event) => setManualOrderId(event.target.value)}
+                error={orderIdError}
+                placeholder="00000000-0000-4000-8000-000000000000"
+                helperText="Identificador completo del pedido pendiente."
+              />
+            )}
+          </div>
+        </details>
       </form>
 
       {assignedRouteId && (
         <Alert type="success" title="Pedido tardío insertado" onClose={() => setResult(null)}>
-          <p>
-            El pedido se asignó a la ruta <code>{assignedRouteId}</code>.
+          <p className="routes-late-result">
+            El pedido se asignó a la ruta{' '}
+            <ShortIdBadge id={assignedRouteId} prefix="RUT" copyable={false} />.
           </p>
           <Button type="button" variant="secondary" size="sm" onClick={() => onInspectRoute(assignedRouteId)}>
             Inspeccionar esa ruta
@@ -162,7 +177,8 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
 
       {isPendingPlacement && (
         <Alert type="warning" title="Pedido tardío pendiente" onClose={() => setResult(null)}>
-          No hay repartidor disponible para insertar el pedido (NO_AVAILABLE_COURIER).
+          No hay repartidor disponible con capacidad suficiente para insertar este pedido. La
+          operación quedará pendiente hasta que se libere un repartidor.
         </Alert>
       )}
     </Card>

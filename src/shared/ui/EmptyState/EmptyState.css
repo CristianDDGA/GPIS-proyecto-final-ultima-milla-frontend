@@ -7,7 +7,7 @@
   padding: 3rem 1.5rem;
   background-color: var(--color-surface, #ffffff);
   border: 1px dashed var(--color-border, #cbd5e1);
-  border-radius: var(--radius-lg, 0.75rem);
+  border-radius: var(--radius-xl, 1.25rem);
 }
 
 .ui-empty-state__icon {

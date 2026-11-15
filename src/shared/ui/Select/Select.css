@@ -27,8 +27,9 @@
   width: 100%;
   font-family: inherit;
   font-size: 0.9375rem;
+  min-height: 2.75rem;
   padding: 0.625rem 2.25rem 0.625rem 0.875rem;
-  border-radius: var(--radius-md, 0.5rem);
+  border-radius: var(--radius-md, 0.625rem);
   border: 1px solid var(--color-border, #cbd5e1);
   background-color: var(--color-surface, #ffffff);
   color: var(--color-text-main, #0f172a);
@@ -42,8 +43,8 @@
 }
 
 .ui-select-control:focus-visible {
-  border-color: var(--color-primary, #1d4ed8);
-  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(29, 78, 216, 0.25));
+  border-color: var(--color-primary, #0051d5);
+  box-shadow: 0 0 0 4px var(--color-primary-ring, rgba(0, 81, 213, 0.22));
 }
 
 .ui-select-control:disabled {

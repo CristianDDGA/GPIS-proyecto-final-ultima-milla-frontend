@@ -335,3 +335,110 @@
     align-items: flex-start;
   }
 }
+/* ============================================================================
+   Flota · Cubos isométricos, medidor de capacidad y filtro Liquid Morph
+   ========================================================================== */
+
+.fleet-filter.segmented {
+  margin-bottom: 0.75rem;
+}
+
+.fleet-filter .ui-btn {
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.fleet-filter .ui-btn:hover:not(:disabled) {
+  transform: none;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.fleet-filter .ui-btn--primary {
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  color: var(--accent-primary);
+}
+
+.fleet-filter .ui-btn--primary:hover:not(:disabled) {
+  background: transparent;
+}
+
+.couriers-assignment-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: var(--radius-lg, 0.875rem);
+  background: linear-gradient(150deg, rgba(232, 240, 254, 0.8), rgba(248, 250, 252, 0.6));
+  border: 1px solid var(--accent-primary-border, #bfd3fa);
+}
+
+.couriers-assignment-preview__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.couriers-assignment-preview__meta {
+  margin: 0.125rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.couriers-capacity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 5.5rem;
+}
+
+.couriers-capacity__bar {
+  display: block;
+  height: 0.3125rem;
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(148, 163, 184, 0.24);
+  overflow: hidden;
+}
+
+.couriers-capacity__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3b82f6, #0d9488);
+}
+
+.couriers-capacity__label {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.couriers-active-route__overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-lg, 0.875rem);
+  background: var(--surface-card-muted);
+  border: 1px solid var(--color-border);
+}
+
+.couriers-active-route__overview .couriers-route-meta {
+  flex: 1 1 16rem;
+}
+
+.couriers-table__id {
+  margin-top: 0.1875rem;
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FC, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FC, type FormEvent } from 'react';
 import type {
   ActiveCourierRouteStop,
   CreateCourierInput,
@@ -6,13 +6,17 @@ import type {
 } from '../../domain/index.js';
 import { validateCreateCourierInput } from '../../domain/index.js';
 import type { CourierUseCases } from '../../application/courierUseCases.js';
+import type { Zone } from '../../../zones/domain/index.js';
 import { useCouriers, type CourierAvailabilityFilter } from '../hooks/useCouriers.js';
 import {
   Alert,
   Button,
   Card,
   EmptyState,
+  IsometricCapacityCube,
+  KineticHeader,
   Select,
+  ShortIdBadge,
   Spinner,
   TextInput,
 } from '../../../../shared/ui/index.js';
@@ -30,6 +34,10 @@ export interface DispatchableRoute {
 export interface CourierFleetDispatchViewProps {
   useCases: CourierUseCases;
   listPlanifiedRoutes: () => Promise<readonly DispatchableRoute[]>;
+  /** Catálogo de zonas para mostrar nombres legibles en lugar de identificadores. */
+  zones?: readonly Zone[] | undefined;
+  /** Navegación guiada del pipeline: ejecutar la hoja de ruta en Entregas. */
+  onNavigateToDeliveries?: (() => void) | undefined;
 }
 
 const STOP_STATUS_LABELS: Record<ActiveCourierRouteStop['status'], string> = {
@@ -49,13 +57,15 @@ const AVAILABILITY_FILTERS: readonly {
   readonly label: string;
 }[] = [
   { value: 'all', label: 'Todos' },
-  { value: 'available', label: 'Solo disponibles' },
+  { value: 'available', label: 'Disponibles' },
   { value: 'unavailable', label: 'No disponibles' },
 ];
 
 export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
   useCases,
   listPlanifiedRoutes,
+  zones,
+  onNavigateToDeliveries,
 }) => {
   const {
     couriers,
@@ -146,6 +156,12 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     [routes],
   );
 
+  const resolveZoneName = useCallback(
+    (zoneId: string): string =>
+      zones?.find((zone) => zone.id === zoneId)?.name ?? 'Zona sin catalogar',
+    [zones],
+  );
+
   const selectedPlanifiedRoute = useMemo(
     () => planifiedRoutes.find((route) => route.id === selectedRouteId) ?? null,
     [planifiedRoutes, selectedRouteId],
@@ -181,9 +197,9 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     () =>
       planifiedRoutes.map((route) => ({
         value: route.id,
-        label: `${route.serviceDate} · ${route.zoneId} · ${route.occupiedSlots}/${route.capacityLimit}`,
+        label: `${route.serviceDate} · ${resolveZoneName(route.zoneId)} · ${route.occupiedSlots}/${route.capacityLimit} cupos`,
       })),
-    [planifiedRoutes],
+    [planifiedRoutes, resolveZoneName],
   );
 
   const availableCourierOptions = useMemo(
@@ -230,28 +246,35 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     }
   };
 
+  const activeStopCount = activeRoute?.stops.length ?? 0;
+  const activeRouteCapacity = selectedCourier?.maxOrdersPerTrip ?? Math.max(activeStopCount, 1);
+
+  const segmentedStyle = {
+    '--seg-index': AVAILABILITY_FILTERS.findIndex((filter) => filter.value === availabilityFilter),
+    '--seg-count': AVAILABILITY_FILTERS.length,
+  } as CSSProperties;
+
   return (
     <section className="couriers-layout" aria-labelledby="couriers-view-title">
-      <header className="couriers-header">
-        <div className="couriers-header__title-group">
-          <h2 id="couriers-view-title">Flota de Repartidores y Asignación de Rutas</h2>
-          <p>
-            Registra repartidores, administra su disponibilidad y asigna rutas planificadas para la
-            operación de última milla.
-          </p>
-        </div>
-
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          isLoading={isLoadingCouriers}
-          onClick={() => void refreshCouriers()}
-          aria-label="Refrescar catálogo de repartidores"
-        >
-          {isLoadingCouriers ? 'Actualizando...' : '↻ Actualizar'}
-        </Button>
-      </header>
+      <KineticHeader
+        id="couriers-view-title"
+        level="h2"
+        eyebrow="Etapa 4 · Despacho"
+        title="Flota y despacho"
+        description="Registra repartidores, administra su disponibilidad y asigna las rutas planificadas que saldrán a la calle."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            isLoading={isLoadingCouriers}
+            onClick={() => void refreshCouriers()}
+            aria-label="Refrescar catálogo de repartidores"
+          >
+            {isLoadingCouriers ? 'Actualizando...' : '↻ Actualizar'}
+          </Button>
+        }
+      />
 
       {error && (
         <Alert type="error" title="Atención" onClose={clearFeedback}>
@@ -260,7 +283,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
       )}
 
       {successMessage && (
-        <Alert type="success" title="Operación Exitosa" onClose={clearFeedback}>
+        <Alert type="success" title="Operación exitosa" onClose={clearFeedback}>
           {successMessage}
         </Alert>
       )}
@@ -268,7 +291,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
       <div className="couriers-grid">
         <div className="couriers-grid__column">
           <Card variant="elevated" className="couriers-form-card">
-            <h3 className="couriers-card__title">Alta de Repartidor</h3>
+            <h3 className="couriers-card__title">Alta de repartidor</h3>
             <form className="couriers-form" onSubmit={handleCreateCourier} noValidate>
               <TextInput
                 id="courier-display-name"
@@ -309,7 +332,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
 
           <Card variant="elevated" className="couriers-assignment-card">
             <div className="couriers-card__header">
-              <h3 className="couriers-card__title">Asignación de Ruta a Repartidor</h3>
+              <h3 className="couriers-card__title">Asignación de ruta a repartidor</h3>
               <Button
                 type="button"
                 variant="ghost"
@@ -332,6 +355,26 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
               <Alert type="error" title="Repartidores no disponibles">
                 {assignableCouriersError}
               </Alert>
+            )}
+
+            {selectedPlanifiedRoute !== null && (
+              <div className="couriers-assignment-preview">
+                <IsometricCapacityCube
+                  occupied={selectedPlanifiedRoute.occupiedSlots}
+                  capacity={selectedPlanifiedRoute.capacityLimit}
+                  status={selectedPlanifiedRoute.status}
+                  showCaption={false}
+                />
+                <div>
+                  <p className="couriers-assignment-preview__title">
+                    {resolveZoneName(selectedPlanifiedRoute.zoneId)}
+                  </p>
+                  <p className="couriers-assignment-preview__meta">
+                    {selectedPlanifiedRoute.serviceDate} · {selectedPlanifiedRoute.occupiedSlots}/
+                    {selectedPlanifiedRoute.capacityLimit} cupos
+                  </p>
+                </div>
+              </div>
             )}
 
             {isLoadingRoutes ? (
@@ -396,24 +439,28 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
         <div className="couriers-grid__column">
           <Card variant="elevated" className="couriers-fleet-card">
             <div className="couriers-card__header">
-              <h3 className="couriers-card__title">Catálogo de Flota</h3>
+              <h3 className="couriers-card__title">Catálogo de flota</h3>
               <span className="couriers-badge-count">
                 {couriers.length} {couriers.length === 1 ? 'repartidor' : 'repartidores'}
               </span>
             </div>
 
-            <div className="fleet-filter" role="group" aria-label="Filtrar repartidores por disponibilidad">
+            <div
+              className="fleet-filter segmented"
+              role="group"
+              aria-label="Filtrar repartidores por disponibilidad"
+              style={segmentedStyle}
+            >
+              <span className="segmented__thumb" aria-hidden="true" />
               {AVAILABILITY_FILTERS.map((filter) => (
                 <Button
                   key={filter.value}
                   type="button"
                   size="sm"
-                  variant={availabilityFilter === filter.value ? 'primary' : 'outline'}
+                  variant={availabilityFilter === filter.value ? 'primary' : 'ghost'}
                   aria-pressed={availabilityFilter === filter.value}
                   onClick={() => setAvailabilityFilter(filter.value)}
-                  isLoading={
-                    availabilityFilter === filter.value ? isLoadingCouriers : false
-                  }
+                  isLoading={availabilityFilter === filter.value ? isLoadingCouriers : false}
                 >
                   {filter.label}
                 </Button>
@@ -471,9 +518,25 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                       <tr key={courier.id}>
                         <td>
                           <span className="couriers-table__name">{courier.displayName}</span>
-                          <code className="couriers-table__id">{courier.id}</code>
+                          <span className="couriers-table__id">
+                            <ShortIdBadge id={courier.id} prefix="REP" copyable={false} />
+                          </span>
                         </td>
-                        <td>{courier.maxOrdersPerTrip} pedidos</td>
+                        <td>
+                          <span className="couriers-capacity">
+                            <span className="couriers-capacity__bar" aria-hidden="true">
+                              <span
+                                className="couriers-capacity__fill"
+                                style={{
+                                  width: `${Math.min(100, courier.maxOrdersPerTrip * 12.5)}%`,
+                                }}
+                              />
+                            </span>
+                            <span className="couriers-capacity__label">
+                              {courier.maxOrdersPerTrip} por viaje
+                            </span>
+                          </span>
+                        </td>
                         <td>
                           <span
                             className={`couriers-status-badge ${
@@ -506,7 +569,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                             onClick={() => void loadActiveRoute(courier.id)}
                             aria-label={`Ver hoja de ruta activa de ${courier.displayName}`}
                           >
-                            Ver hoja de ruta activa
+                            Ver hoja de ruta
                           </Button>
                         </td>
                       </tr>
@@ -518,18 +581,24 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
           </Card>
 
           <Card variant="elevated" className="couriers-route-card">
-            <h3 className="couriers-card__title">Hoja de Ruta Activa del Repartidor Seleccionado</h3>
+            <div className="couriers-card__header">
+              <h3 className="couriers-card__title">Hoja de ruta activa</h3>
+              {onNavigateToDeliveries !== undefined && (
+                <Button type="button" variant="ghost" size="sm" onClick={onNavigateToDeliveries}>
+                  Ejecutar en Entregas →
+                </Button>
+              )}
+            </div>
 
             {selectedCourierId.length === 0 ? (
               <p className="couriers-hint">
-                Selecciona un repartidor en el catálogo con la acción &quot;Ver hoja de ruta
-                activa&quot; para consultar su ruta.
+                Selecciona un repartidor en el catálogo con la acción &quot;Ver hoja de ruta&quot;
+                para consultar su ruta.
               </p>
             ) : (
               <p className="couriers-hint">
                 Repartidor:{' '}
-                <strong>{selectedCourier?.displayName ?? 'Sin nombre en el catálogo'}</strong>{' '}
-                <code className="couriers-table__id">{selectedCourierId}</code>
+                <strong>{selectedCourier?.displayName ?? 'Sin nombre en el catálogo'}</strong>
               </p>
             )}
 
@@ -557,34 +626,39 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
 
             {activeRoute && (
               <div className="couriers-active-route">
-                <dl className="couriers-route-meta">
-                  <div className="couriers-route-meta__item">
-                    <dt>Identificador de ruta</dt>
-                    <dd>
-                      <code className="couriers-table__id">{activeRoute.routeId}</code>
-                    </dd>
-                  </div>
-                  <div className="couriers-route-meta__item">
-                    <dt>Fecha de servicio</dt>
-                    <dd>{activeRoute.serviceDate}</dd>
-                  </div>
-                  <div className="couriers-route-meta__item">
-                    <dt>Zona</dt>
-                    <dd>
-                      <code className="couriers-table__id">{activeRoute.zoneId}</code>
-                    </dd>
-                  </div>
-                  <div className="couriers-route-meta__item">
-                    <dt>Estado</dt>
-                    <dd>
-                      <span
-                        className={`couriers-status-badge couriers-status-badge--${activeRoute.status}`}
-                      >
-                        {ROUTE_STATUS_LABELS[activeRoute.status] ?? activeRoute.status}
-                      </span>
-                    </dd>
-                  </div>
-                </dl>
+                <div className="couriers-active-route__overview">
+                  <IsometricCapacityCube
+                    occupied={activeStopCount}
+                    capacity={activeRouteCapacity}
+                    status={activeRoute.status}
+                  />
+                  <dl className="couriers-route-meta">
+                    <div className="couriers-route-meta__item">
+                      <dt>Zona</dt>
+                      <dd>{resolveZoneName(activeRoute.zoneId)}</dd>
+                    </div>
+                    <div className="couriers-route-meta__item">
+                      <dt>Fecha de servicio</dt>
+                      <dd>{activeRoute.serviceDate}</dd>
+                    </div>
+                    <div className="couriers-route-meta__item">
+                      <dt>Estado</dt>
+                      <dd>
+                        <span
+                          className={`couriers-status-badge couriers-status-badge--${activeRoute.status}`}
+                        >
+                          {ROUTE_STATUS_LABELS[activeRoute.status] ?? activeRoute.status}
+                        </span>
+                      </dd>
+                    </div>
+                    <div className="couriers-route-meta__item">
+                      <dt>Código de ruta</dt>
+                      <dd>
+                        <ShortIdBadge id={activeRoute.routeId} prefix="RUT" copyable={false} />
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
 
                 <ol className="couriers-stops" aria-label="Paradas de la ruta activa">
                   {activeRoute.stops.map((stop) => (
@@ -598,7 +672,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                         <span className="couriers-stop__meta">
                           Hora de entrega: {stop.deliveryTime}
                         </span>
-                        <code className="couriers-table__id">{stop.orderId}</code>
+                        <ShortIdBadge id={stop.orderId} prefix="PED" copyable={false} />
                       </div>
                       <span
                         className={`couriers-status-badge couriers-status-badge--${stop.status}`}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FC, FormEvent, KeyboardEvent } from 'react';
+import type { CSSProperties, FC, FormEvent, KeyboardEvent } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import {
   firstValidationError,
@@ -10,7 +10,13 @@ import {
   type RegisterCustomerInput,
 } from '../../domain/index.js';
 import { setToken } from '../../infrastructure/http/authTokenStorage.js';
-import { Alert, Button, Card, Spinner, TextInput } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  IsometricLogisticsHub,
+  Spinner,
+  TextInput,
+} from '../../../../shared/ui/index.js';
 import '../styles/auth.css';
 
 export interface AuthViewProps {
@@ -21,39 +27,60 @@ export interface AuthViewProps {
 
 type AuthTab = 'login' | 'register';
 
-interface QuickAccount {
-  readonly label: string;
-  readonly email: string;
-  readonly password: string;
-}
-
-interface EndpointSummary {
-  readonly method: string;
-  readonly path: string;
-  readonly description: string;
-}
-
-const QUICK_ACCOUNTS: readonly QuickAccount[] = [
-  { label: 'Admin / Personal', email: 'admin@logistica.local', password: 'Admin1234!' },
-  { label: 'Repartidor Demo 1', email: 'repartidor1@logistica.local', password: 'Repartidor1234!' },
-  { label: 'Repartidor Demo 2', email: 'repartidor2@logistica.local', password: 'Repartidor1234!' },
-  { label: 'Cliente Demo', email: 'cliente@logistica.local', password: 'Cliente1234!' },
-];
-
-const AUTH_ENDPOINTS: readonly EndpointSummary[] = [
-  { method: 'POST', path: '/auth/login', description: 'Inicia sesión y emite el token JWT.' },
-  { method: 'POST', path: '/auth/register', description: 'Registra una cuenta con rol cliente.' },
-  { method: 'GET', path: '/auth/me', description: 'Obtiene el perfil de la sesión activa.' },
-  { method: 'POST', path: '/auth/logout', description: 'Revoca el token de acceso actual.' },
-  { method: 'POST', path: '/auth/users', description: 'Crea usuarios administrados (solo personal).' },
-  { method: 'GET', path: '/health', description: 'Verifica la disponibilidad del servidor.' },
+const AUTH_TABS: readonly { readonly value: AuthTab; readonly label: string }[] = [
+  { value: 'login', label: 'Iniciar sesión' },
+  { value: 'register', label: 'Crear cuenta' },
 ];
 
 const HEALTH_LABELS: Record<HealthStatus, string> = {
-  checking: 'Verificando servidor...',
-  online: 'Servidor en línea',
-  offline: 'Servidor sin conexión',
+  checking: 'Verificando disponibilidad',
+  online: 'Servicios operativos',
+  offline: 'Servicios no disponibles',
 };
+
+const OPERATIONAL_CAPABILITIES: readonly {
+  readonly title: string;
+  readonly description: string;
+  readonly tag: string;
+}[] = [
+  {
+    tag: '01',
+    title: 'Cobertura',
+    description: 'Define zonas y mide la demanda real de cada área de reparto.',
+  },
+  {
+    tag: '02',
+    title: 'Planificación',
+    description: 'Agrupa pedidos en rutas con cupo controlado y reparto equilibrado.',
+  },
+  {
+    tag: '03',
+    title: 'Última milla',
+    description: 'Despacha la flota y confirma cada entrega con telemetría en vivo.',
+  },
+];
+
+const ROLE_CARDS: readonly {
+  readonly role: string;
+  readonly title: string;
+  readonly description: string;
+}[] = [
+  {
+    role: 'Administrador',
+    title: 'Operación completa',
+    description: 'Zonas, pedidos, rutas, flota y cuentas del equipo.',
+  },
+  {
+    role: 'Repartidor',
+    title: 'Hoja de ruta',
+    description: 'Paradas asignadas y avance de cada entrega.',
+  },
+  {
+    role: 'Cliente',
+    title: 'Seguimiento',
+    description: 'Registro de pedidos y estado de sus entregas.',
+  },
+];
 
 function toErrorMessage(error: unknown, fallbackMessage: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -70,7 +97,11 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerDisplayName, setRegisterDisplayName] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [liveErrors, setLiveErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [requestError, setRequestError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,21 +147,11 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     setRequestError(null);
   }, []);
 
-  const selectTab = useCallback(
-    (nextTab: AuthTab): void => {
-      setTab(nextTab);
-      setFieldErrors({});
-      setRequestError(null);
-      setSuccessMessage(null);
-    },
-    [],
-  );
-
-  const fillQuickAccount = useCallback((account: QuickAccount): void => {
-    setTab('login');
-    setLoginEmail(account.email);
-    setLoginPassword(account.password);
+  const selectTab = useCallback((nextTab: AuthTab): void => {
+    setTab(nextTab);
     setFieldErrors({});
+    setLiveErrors({});
+    setTouchedFields({});
     setRequestError(null);
     setSuccessMessage(null);
   }, []);
@@ -154,12 +175,54 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     [tab, selectTab],
   );
 
+  // Validación en vivo: sólo se muestran errores de campos ya visitados.
+  const validateLive = useCallback(
+    (values: { email?: string; password?: string; displayName?: string }): void => {
+      const isRegister = tab === 'register';
+      const validation = isRegister
+        ? validateRegisterCustomerInput({
+            email: values.email ?? registerEmail,
+            password: values.password ?? registerPassword,
+            displayName: values.displayName ?? registerDisplayName,
+          })
+        : validateLoginInput({
+            email: values.email ?? loginEmail,
+            password: values.password ?? loginPassword,
+          });
+
+      const nextErrors: Record<string, string> = {};
+      for (const [field, message] of Object.entries(validation.errors)) {
+        if (message !== undefined && touchedFields[field] === true) {
+          nextErrors[field] = message;
+        }
+      }
+      setLiveErrors(nextErrors);
+    },
+    [
+      tab,
+      registerEmail,
+      registerPassword,
+      registerDisplayName,
+      loginEmail,
+      loginPassword,
+      touchedFields,
+    ],
+  );
+
+  const markTouched = useCallback(
+    (field: string): void => {
+      setTouchedFields((previous) => ({ ...previous, [field]: true }));
+    },
+    [],
+  );
+
   const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     resetFeedback();
 
     const validation = validateLoginInput({ email: loginEmail, password: loginPassword });
     setFieldErrors(validation.errors);
+    setTouchedFields({ email: true, password: true });
 
     if (!validation.isValid) {
       setRequestError(
@@ -218,6 +281,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
       displayName: trimmedDisplayName,
     });
     setFieldErrors(validation.errors);
+    setTouchedFields({ email: true, password: true, displayName: true });
 
     if (!validation.isValid) {
       setRequestError(firstValidationError(validation.errors) ?? 'Revisa los datos de registro.');
@@ -248,268 +312,301 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     }
   };
 
-  return (
-    <section className="auth-layout" aria-labelledby="auth-view-title">
-      <Card variant="elevated" className="auth-card">
-        <header className="auth-brand">
-          <p className="auth-eyebrow">Gestión de Logística</p>
-          <h2 id="auth-view-title" className="auth-title">
-            Última Milla
-          </h2>
-          <p className="auth-subtitle">Acceso al sistema de gestión logística</p>
-        </header>
+  const activeTabIndex = tab === 'login' ? 0 : 1;
+  const segmentedStyle = {
+    '--seg-index': activeTabIndex,
+    '--seg-count': AUTH_TABS.length,
+  } as CSSProperties;
 
-        <div
-          className={`auth-health auth-health--${healthStatus}`}
-          role="status"
-          aria-live="polite"
-        >
+  return (
+    <section className="auth-shell" aria-labelledby="auth-view-title">
+      <aside className="auth-hero" aria-label="Presentación de la torre de control">
+        <div className="auth-hero__head">
+          <p className="auth-hero__eyebrow">Gestión de logística</p>
+          <h1 id="auth-view-title" className="auth-hero__title">
+            Última Milla
+          </h1>
+          <p className="auth-hero__subtitle">
+            Torre de control para la operación de reparto urbano: cobertura, demanda,
+            planificación, despacho y entregas confirmadas en una sola secuencia.
+          </p>
+        </div>
+
+        <div className="auth-hero__visual">
+          <IsometricLogisticsHub healthStatus={healthStatus} />
+        </div>
+
+        <div className={`auth-health-pill auth-health-pill--${healthStatus}`} role="status" aria-live="polite">
           {healthStatus === 'checking' ? (
-            <Spinner size="sm" label="Verificando servidor" />
+            <Spinner size="sm" label="Verificando disponibilidad del servidor" />
           ) : (
-            <span className="auth-health__dot" aria-hidden="true" />
+            <span className="auth-health-pill__dot" aria-hidden="true" />
           )}
-          <span className="auth-health__label">{HEALTH_LABELS[healthStatus]}</span>
-          <Button
+          <span className="auth-health-pill__label">{HEALTH_LABELS[healthStatus]}</span>
+          <button
             type="button"
-            variant="outline"
-            size="sm"
+            className="auth-health-pill__retry"
             onClick={() => {
               void runHealthCheck();
             }}
-            isLoading={healthStatus === 'checking'}
-            aria-label="Reintentar la verificación del servidor"
+            disabled={healthStatus === 'checking'}
           >
             Reintentar
-          </Button>
-        </div>
-
-        {requestError && (
-          <Alert type="error" title="Atención" onClose={clearError}>
-            {requestError}
-          </Alert>
-        )}
-
-        {successMessage && (
-          <Alert type="success" title="Sesión iniciada">
-            {successMessage}
-          </Alert>
-        )}
-
-        <div className="auth-tabs" role="tablist" aria-label="Modo de acceso">
-          <button
-            ref={loginTabRef}
-            type="button"
-            role="tab"
-            id="auth-tab-login"
-            aria-selected={tab === 'login'}
-            aria-controls="auth-panel-login"
-            tabIndex={tab === 'login' ? 0 : -1}
-            className={`auth-tab ${tab === 'login' ? 'auth-tab--active' : ''}`}
-            onClick={() => selectTab('login')}
-            onKeyDown={handleTabKeyDown}
-          >
-            Iniciar sesión
-          </button>
-          <button
-            ref={registerTabRef}
-            type="button"
-            role="tab"
-            id="auth-tab-register"
-            aria-selected={tab === 'register'}
-            aria-controls="auth-panel-register"
-            tabIndex={tab === 'register' ? 0 : -1}
-            className={`auth-tab ${tab === 'register' ? 'auth-tab--active' : ''}`}
-            onClick={() => selectTab('register')}
-            onKeyDown={handleTabKeyDown}
-          >
-            Registrarse como cliente
           </button>
         </div>
 
-        {tab === 'login' ? (
-          <form
-            id="auth-panel-login"
-            role="tabpanel"
-            aria-labelledby="auth-tab-login"
-            className="auth-form"
-            onSubmit={handleLoginSubmit}
-            noValidate
-          >
-            <TextInput
-              id="auth-login-email"
-              label="Correo electrónico"
-              type="email"
-              name="email"
-              autoComplete="username"
-              placeholder="usuario@logistica.local"
-              value={loginEmail}
-              onChange={(event) => {
-                setLoginEmail(event.target.value);
-                setFieldErrors({});
-                setRequestError(null);
-              }}
-              error={fieldErrors.email}
-              isRequired
-              maxLength={254}
-              disabled={isSubmitting}
-            />
-
-            <TextInput
-              id="auth-login-password"
-              label="Contraseña"
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              placeholder="Mínimo 8 caracteres"
-              value={loginPassword}
-              onChange={(event) => {
-                setLoginPassword(event.target.value);
-                setFieldErrors({});
-                setRequestError(null);
-              }}
-              error={fieldErrors.password}
-              isRequired
-              maxLength={128}
-              disabled={isSubmitting}
-            />
-
-            <div className="auth-form__actions">
-              <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                Entrar
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <form
-            id="auth-panel-register"
-            role="tabpanel"
-            aria-labelledby="auth-tab-register"
-            className="auth-form"
-            onSubmit={handleRegisterSubmit}
-            noValidate
-          >
-            <TextInput
-              id="auth-register-email"
-              label="Correo electrónico"
-              type="email"
-              name="email"
-              autoComplete="email"
-              placeholder="cliente@logistica.local"
-              value={registerEmail}
-              onChange={(event) => {
-                setRegisterEmail(event.target.value);
-                setFieldErrors({});
-                setRequestError(null);
-              }}
-              error={fieldErrors.email}
-              isRequired
-              maxLength={254}
-              disabled={isSubmitting}
-            />
-
-            <TextInput
-              id="auth-register-password"
-              label="Contraseña"
-              type="password"
-              name="password"
-              autoComplete="new-password"
-              placeholder="Mínimo 8 caracteres"
-              value={registerPassword}
-              onChange={(event) => {
-                setRegisterPassword(event.target.value);
-                setFieldErrors({});
-                setRequestError(null);
-              }}
-              error={fieldErrors.password}
-              helperText="Debe tener entre 8 y 128 caracteres."
-              isRequired
-              maxLength={128}
-              disabled={isSubmitting}
-            />
-
-            <TextInput
-              id="auth-register-display-name"
-              label="Nombre para mostrar"
-              type="text"
-              name="displayName"
-              autoComplete="name"
-              placeholder="Opcional"
-              value={registerDisplayName}
-              onChange={(event) => {
-                setRegisterDisplayName(event.target.value);
-                setFieldErrors({});
-                setRequestError(null);
-              }}
-              error={fieldErrors.displayName}
-              helperText="Opcional. Se mostrará en la barra de sesión en lugar de tu correo."
-              maxLength={120}
-              disabled={isSubmitting}
-            />
-
-            <div className="auth-form__actions">
-              <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                Crear cuenta
-              </Button>
-            </div>
-          </form>
-        )}
-
-        <div className="auth-quick-accounts">
-          <h3 className="auth-quick-accounts__title">Cuentas de prueba rápida (Entorno Local)</h3>
-          <p className="auth-quick-accounts__hint">
-            Selecciona una cuenta para completar el formulario de inicio de sesión.
-          </p>
-          <div className="auth-quick-accounts__grid">
-            {QUICK_ACCOUNTS.map((account) => (
-              <Button
-                key={account.email}
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => fillQuickAccount(account)}
-                disabled={isSubmitting}
-                aria-label={`Rellenar credenciales de ${account.label}`}
-              >
-                {account.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      <aside className="auth-side" aria-label="Información de autenticación">
-        <Card variant="outlined" className="auth-side-card">
-          <h3 className="auth-side-card__title">Endpoints de autenticación</h3>
-          <p className="auth-side-card__description">
-            Esta pantalla consume los servicios de acceso, registro y salud del backend.
-          </p>
-          <ul className="auth-endpoints">
-            {AUTH_ENDPOINTS.map((endpoint) => (
-              <li key={`${endpoint.method} ${endpoint.path}`} className="auth-endpoint">
-                <span className="auth-endpoint__method">{endpoint.method}</span>
-                <span className="auth-endpoint__path">{endpoint.path}</span>
-                <span className="auth-endpoint__description">{endpoint.description}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card variant="outlined" className="auth-side-card">
-          <h3 className="auth-side-card__title">Roles del sistema</h3>
-          <ul className="auth-roles">
-            <li>
-              <strong>Administrador:</strong> gestiona zonas, pedidos, rutas, flota y usuarios.
+        <ul className="auth-capabilities" aria-label="Capacidades operativas del sistema">
+          {OPERATIONAL_CAPABILITIES.map((capability) => (
+            <li key={capability.tag} className="auth-capability">
+              <span className="auth-capability__tag" aria-hidden="true">
+                {capability.tag}
+              </span>
+              <div>
+                <p className="auth-capability__title">{capability.title}</p>
+                <p className="auth-capability__description">{capability.description}</p>
+              </div>
             </li>
-            <li>
-              <strong>Repartidor:</strong> ejecuta la hoja de ruta asignada y actualiza entregas.
-            </li>
-            <li>
-              <strong>Cliente:</strong> registra y consulta sus pedidos de última milla.
-            </li>
-          </ul>
-        </Card>
+          ))}
+        </ul>
       </aside>
+
+      <div className="auth-panel">
+        <div className="auth-panel__card">
+          <header className="auth-panel__head">
+            <h2 className="auth-panel__title">Acceso al sistema</h2>
+            <p className="auth-panel__subtitle">
+              Ingresa con tus credenciales corporativas o crea una cuenta de cliente.
+            </p>
+          </header>
+
+          <div className="auth-tabs segmented" role="tablist" aria-label="Modo de acceso" style={segmentedStyle}>
+            <span className="segmented__thumb" aria-hidden="true" />
+            <button
+              ref={loginTabRef}
+              type="button"
+              role="tab"
+              id="auth-tab-login"
+              aria-selected={tab === 'login'}
+              aria-controls="auth-panel-login"
+              tabIndex={tab === 'login' ? 0 : -1}
+              className={`auth-tab ${tab === 'login' ? 'auth-tab--active' : ''}`}
+              onClick={() => selectTab('login')}
+              onKeyDown={handleTabKeyDown}
+            >
+              Iniciar sesión
+            </button>
+            <button
+              ref={registerTabRef}
+              type="button"
+              role="tab"
+              id="auth-tab-register"
+              aria-selected={tab === 'register'}
+              aria-controls="auth-panel-register"
+              tabIndex={tab === 'register' ? 0 : -1}
+              className={`auth-tab ${tab === 'register' ? 'auth-tab--active' : ''}`}
+              onClick={() => selectTab('register')}
+              onKeyDown={handleTabKeyDown}
+            >
+              Crear cuenta
+            </button>
+          </div>
+
+          {requestError && (
+            <Alert type="error" title="Atención" onClose={clearError}>
+              {requestError}
+            </Alert>
+          )}
+
+          {successMessage && (
+            <Alert type="success" title="Sesión iniciada">
+              {successMessage}
+            </Alert>
+          )}
+
+          {tab === 'login' ? (
+            <form
+              id="auth-panel-login"
+              role="tabpanel"
+              aria-labelledby="auth-tab-login"
+              className="auth-form"
+              onSubmit={handleLoginSubmit}
+              noValidate
+            >
+              <TextInput
+                id="auth-login-email"
+                label="Correo electrónico"
+                type="email"
+                name="email"
+                autoComplete="username"
+                placeholder="usuario@logistica.local"
+                value={loginEmail}
+                onChange={(event) => {
+                  setLoginEmail(event.target.value);
+                  setFieldErrors({});
+                  setRequestError(null);
+                  validateLive({ email: event.target.value });
+                }}
+                onBlur={() => {
+                  markTouched('email');
+                  validateLive({ email: loginEmail });
+                }}
+                error={liveErrors['email'] ?? fieldErrors['email']}
+                isRequired
+                maxLength={254}
+                disabled={isSubmitting}
+              />
+
+              <div className="auth-password-field">
+                <TextInput
+                  id="auth-login-password"
+                  label="Contraseña"
+                  type={showLoginPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="current-password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={loginPassword}
+                  onChange={(event) => {
+                    setLoginPassword(event.target.value);
+                    setFieldErrors({});
+                    setRequestError(null);
+                    validateLive({ password: event.target.value });
+                  }}
+                  onBlur={() => {
+                    markTouched('password');
+                    validateLive({ password: loginPassword });
+                  }}
+                  error={liveErrors['password'] ?? fieldErrors['password']}
+                  isRequired
+                  maxLength={128}
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowLoginPassword((previous) => !previous)}
+                  aria-pressed={showLoginPassword}
+                  aria-label={showLoginPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showLoginPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+
+              <div className="auth-form__actions">
+                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                  Entrar
+                </Button>
+                <p className="auth-form__hint">
+                  El acceso se valida contra el servicio de identidad corporativo.
+                </p>
+              </div>
+            </form>
+          ) : (
+            <form
+              id="auth-panel-register"
+              role="tabpanel"
+              aria-labelledby="auth-tab-register"
+              className="auth-form"
+              onSubmit={handleRegisterSubmit}
+              noValidate
+            >
+              <TextInput
+                id="auth-register-email"
+                label="Correo electrónico"
+                type="email"
+                name="email"
+                autoComplete="email"
+                placeholder="cliente@logistica.local"
+                value={registerEmail}
+                onChange={(event) => {
+                  setRegisterEmail(event.target.value);
+                  setFieldErrors({});
+                  setRequestError(null);
+                  validateLive({ email: event.target.value });
+                }}
+                onBlur={() => {
+                  markTouched('email');
+                  validateLive({ email: registerEmail });
+                }}
+                error={liveErrors['email'] ?? fieldErrors['email']}
+                isRequired
+                maxLength={254}
+                disabled={isSubmitting}
+              />
+
+              <div className="auth-password-field">
+                <TextInput
+                  id="auth-register-password"
+                  label="Contraseña"
+                  type={showRegisterPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="new-password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={registerPassword}
+                  onChange={(event) => {
+                    setRegisterPassword(event.target.value);
+                    setFieldErrors({});
+                    setRequestError(null);
+                    validateLive({ password: event.target.value });
+                  }}
+                  onBlur={() => {
+                    markTouched('password');
+                    validateLive({ password: registerPassword });
+                  }}
+                  error={liveErrors['password'] ?? fieldErrors['password']}
+                  helperText="Entre 8 y 128 caracteres; se guarda cifrada."
+                  isRequired
+                  maxLength={128}
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowRegisterPassword((previous) => !previous)}
+                  aria-pressed={showRegisterPassword}
+                  aria-label={showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showRegisterPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+
+              <TextInput
+                id="auth-register-display-name"
+                label="Nombre para mostrar"
+                type="text"
+                name="displayName"
+                autoComplete="name"
+                placeholder="Opcional"
+                value={registerDisplayName}
+                onChange={(event) => {
+                  setRegisterDisplayName(event.target.value);
+                  setFieldErrors({});
+                  setRequestError(null);
+                }}
+                error={fieldErrors['displayName']}
+                helperText="Opcional. Se usará en la cápsula de sesión en lugar de tu correo."
+                maxLength={120}
+                disabled={isSubmitting}
+              />
+
+              <div className="auth-form__actions">
+                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                  Crear cuenta
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <section className="auth-roles" aria-label="Perfiles del sistema">
+          {ROLE_CARDS.map((card) => (
+            <article key={card.role} className="auth-role">
+              <p className="auth-role__name">{card.role}</p>
+              <p className="auth-role__title">{card.title}</p>
+              <p className="auth-role__description">{card.description}</p>
+            </article>
+          ))}
+        </section>
+      </div>
     </section>
   );
 };

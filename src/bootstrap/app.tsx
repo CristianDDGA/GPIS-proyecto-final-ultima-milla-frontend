@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { FetchHttpClient } from '../shared/infrastructure/http/index.js';
-import { Alert, Card, Spinner } from '../shared/ui/index.js';
+import {
+  Alert,
+  Card,
+  KineticCounter,
+  KineticHeader,
+  Spinner,
+} from '../shared/ui/index.js';
 
 import {
   AuthView,
@@ -15,7 +21,7 @@ import {
 import { ZoneManagementView, type Zone } from '../features/zones/index.js';
 import { OrderManagementView, type Order } from '../features/orders/index.js';
 import { RouteManagementView } from '../features/routes/index.js';
-import { CourierFleetDispatchView } from '../features/couriers/index.js';
+import { CourierFleetDispatchView, type Courier } from '../features/couriers/index.js';
 import { DeliveryExecutionView, type DeliveryActor } from '../features/deliveries/index.js';
 import { composeUseCases } from './compose-use-cases.js';
 
@@ -24,10 +30,10 @@ type AppTab = 'zones' | 'orders' | 'routes' | 'fleet' | 'deliveries' | 'users';
 const TAB_LABELS: Readonly<Record<AppTab, string>> = {
   zones: 'Zonas',
   orders: 'Pedidos',
-  routes: 'Rutas y Operaciones',
-  fleet: 'Flota y Despacho',
-  deliveries: 'Ejecución de Entregas',
-  users: 'Usuarios y Sistema',
+  routes: 'Rutas',
+  fleet: 'Despacho',
+  deliveries: 'Entregas',
+  users: 'Accesos',
 };
 
 const TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
@@ -43,6 +49,24 @@ const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
 };
 
 const APP_TABS: readonly AppTab[] = ['zones', 'orders', 'routes', 'fleet', 'deliveries', 'users'];
+
+const STEP_BY_TAB: Readonly<Record<AppTab, number>> = {
+  zones: 1,
+  orders: 2,
+  routes: 3,
+  fleet: 4,
+  deliveries: 5,
+  users: 6,
+};
+
+/** Las cinco etapas del pipeline operativo, en orden de negocio. */
+const PIPELINE_STAGES: readonly { readonly tab: AppTab; readonly label: string }[] = [
+  { tab: 'zones', label: 'Cobertura' },
+  { tab: 'orders', label: 'Demanda' },
+  { tab: 'routes', label: 'Planificación' },
+  { tab: 'fleet', label: 'Despacho' },
+  { tab: 'deliveries', label: 'Última milla' },
+];
 
 const ORDER_QUERY_PARAMS = ['orderId', 'deliveryDate', 'zoneId'] as const;
 
@@ -64,6 +88,15 @@ function resolveTab(requested: string | null, role: AuthRole | null): AppTab {
   return TABS_BY_ROLE[role].includes(requested) ? requested : fallback;
 }
 
+function pipelineStatusLabel(activeTab: AppTab): string {
+  if (activeTab === 'users') {
+    return 'Administración';
+  }
+
+  const index = PIPELINE_STAGES.findIndex((stage) => stage.tab === activeTab);
+  return index < 0 ? '' : `Paso ${index + 1} de ${PIPELINE_STAGES.length}`;
+}
+
 export function App() {
   const unauthorizedHandlerRef = useRef<() => void>(() => undefined);
 
@@ -83,6 +116,7 @@ export function App() {
     setVerificationMessage(null);
     setZones([]);
     setOrders([]);
+    setCouriers([]);
     setCatalogError(null);
     setRequestedTab(null);
 
@@ -115,13 +149,33 @@ export function App() {
     return () => window.removeEventListener('popstate', restoreTab);
   }, []);
 
-  const selectTab = useCallback((tab: AppTab) => {
+  const allowedTabs: readonly AppTab[] =
+    currentRole === null ? APP_TABS : TABS_BY_ROLE[currentRole];
+
+  // El dock respeta el orden real del pipeline operativo, independientemente
+  // del orden en que cada rol tenga habilitadas sus pestañas.
+  const navTabs = useMemo(
+    () => [...allowedTabs].sort((left, right) => STEP_BY_TAB[left] - STEP_BY_TAB[right]),
+    [allowedTabs],
+  );
+
+  const selectTab = useCallback((tab: AppTab, params?: Readonly<Record<string, string>>) => {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
 
     if (tab !== 'orders') {
       for (const key of ORDER_QUERY_PARAMS) {
         url.searchParams.delete(key);
+      }
+    }
+
+    if (params !== undefined) {
+      for (const [key, value] of Object.entries(params)) {
+        if (value.length > 0) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
       }
     }
 
@@ -134,6 +188,7 @@ export function App() {
 
   const [zones, setZones] = useState<Zone[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [couriers, setCouriers] = useState<Courier[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
 
@@ -141,36 +196,49 @@ export function App() {
     setIsLoadingCatalog(true);
     setCatalogError(null);
 
-    try {
-      const [zoneItems, orderItems] = await Promise.all([
-        useCases.orders.getZones.execute(),
-        useCases.orders.getOrders.execute(),
-      ]);
+    const includeCouriers = currentRole === 'personal' || currentRole === 'repartidor';
 
-      setZones(zoneItems);
-      setOrders(orderItems);
-    } catch (error) {
-      setCatalogError(
-        error instanceof Error
-          ? error.message
-          : 'No se pudo cargar el catálogo de zonas y pedidos pendientes.',
-      );
-    } finally {
-      setIsLoadingCatalog(false);
+    const [zonesResult, ordersResult, couriersResult] = await Promise.allSettled([
+      useCases.orders.getZones.execute(),
+      useCases.orders.getOrders.execute(),
+      includeCouriers ? useCases.couriers.getCouriers.execute({}) : Promise.resolve(null),
+    ]);
+
+    if (zonesResult.status === 'fulfilled') {
+      setZones(zonesResult.value);
     }
-  }, [useCases]);
+    if (ordersResult.status === 'fulfilled') {
+      setOrders(ordersResult.value);
+    }
+    if (couriersResult.status === 'fulfilled' && couriersResult.value !== null) {
+      setCouriers([...couriersResult.value.items]);
+    }
+
+    const failed =
+      zonesResult.status === 'rejected'
+        ? zonesResult.reason
+        : ordersResult.status === 'rejected'
+          ? ordersResult.reason
+          : null;
+
+    if (failed !== null && failed !== undefined) {
+      setCatalogError(
+        failed instanceof Error
+          ? failed.message
+          : 'No se pudo cargar el catálogo compartido de zonas y pedidos.',
+      );
+    }
+
+    setIsLoadingCatalog(false);
+  }, [currentRole, useCases]);
 
   useEffect(() => {
     if (auth.status !== 'authenticated') {
       return;
     }
 
-    if (activeTab !== 'routes') {
-      return;
-    }
-
     void loadSharedCatalog();
-  }, [auth.status, activeTab, loadSharedCatalog]);
+  }, [auth.status, loadSharedCatalog]);
 
   const listPlanifiedRoutes = useCallback(async () => {
     const items = await useCases.routes.getRoutes.execute({ limit: 100 });
@@ -202,7 +270,7 @@ export function App() {
     const verifiedUser = await auth.refreshMe();
     if (verifiedUser !== null) {
       setVerificationMessage(
-        `Perfil verificado: ${verifiedUser.displayName ?? verifiedUser.email} · rol ${verifiedUser.publicRole} · repartidor vinculado: ${verifiedUser.courierId ?? 'no asignado'}.`,
+        `Perfil verificado: ${verifiedUser.displayName ?? verifiedUser.email} · rol ${verifiedUser.publicRole}.`,
       );
     }
   }, [auth.refreshMe]);
@@ -218,51 +286,67 @@ export function App() {
 
   if (auth.status === 'loading') {
     return (
-      <main className="app-shell app-shell--centered">
-        <Card variant="outlined" className="app-loading-card">
-          <Spinner size="lg" label="Restaurando la sesión activa" />
-          <p role="status">Restaurando la sesión activa (GET /auth/me)...</p>
-        </Card>
-      </main>
+      <div className="app-frame">
+        <div className="app-mesh" aria-hidden="true" />
+        <main className="app-shell app-shell--centered">
+          <Card variant="outlined" className="app-loading-card">
+            <Spinner size="lg" label="Restaurando la sesión activa" />
+            <p role="status">Restaurando la sesión activa...</p>
+          </Card>
+        </main>
+      </div>
     );
   }
 
   if (auth.status !== 'authenticated' || currentUser === null) {
     return (
-      <main className="app-shell">
-        {auth.error !== null && (
-          <Alert type="error" title="Atención" onClose={auth.clearError}>
-            {auth.error}
-          </Alert>
-        )}
-        <AuthView useCases={useCases.auth} onAuthenticated={handleAuthenticated} />
-      </main>
+      <div className="app-frame">
+        <div className="app-mesh" aria-hidden="true" />
+        <main className="app-shell app-shell--auth">
+          {auth.error !== null && (
+            <Alert type="error" title="Atención" onClose={auth.clearError}>
+              {auth.error}
+            </Alert>
+          )}
+          <AuthView useCases={useCases.auth} onAuthenticated={handleAuthenticated} />
+        </main>
+      </div>
     );
   }
 
-  const allowedTabs = TABS_BY_ROLE[currentUser.role];
+  const activeTabIndex = navTabs.indexOf(activeTab);
+  const navStyle = {
+    '--tab-index': activeTabIndex < 0 ? 0 : activeTabIndex,
+    '--tab-count': navTabs.length,
+  } as CSSProperties;
+
+  const pendingOrderCount = orders.filter((order) => order.status === 'pendiente').length;
+  const availableCourierCount = couriers.filter(
+    (courier) => courier.isEnabled && courier.isAvailable,
+  ).length;
+  const activePipelineIndex = PIPELINE_STAGES.findIndex((stage) => stage.tab === activeTab);
 
   // ARIA tabs pattern: roving tabIndex plus Left/Right/Home/End navigation, as in AuthView.
   const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    const currentIndex = allowedTabs.indexOf(activeTab);
+    const currentIndex = navTabs.indexOf(activeTab);
     if (currentIndex < 0) {
       return;
     }
 
     let nextIndex: number;
     if (event.key === 'ArrowRight') {
-      nextIndex = (currentIndex + 1) % allowedTabs.length;
+      nextIndex = (currentIndex + 1) % navTabs.length;
     } else if (event.key === 'ArrowLeft') {
-      nextIndex = (currentIndex - 1 + allowedTabs.length) % allowedTabs.length;
+      nextIndex = (currentIndex - 1 + navTabs.length) % navTabs.length;
     } else if (event.key === 'Home') {
       nextIndex = 0;
     } else if (event.key === 'End') {
-      nextIndex = allowedTabs.length - 1;
+      nextIndex = navTabs.length - 1;
     } else {
       return;
     }
 
-    const nextTab = allowedTabs[nextIndex];
+    const nextTab = navTabs[nextIndex];
     if (nextTab === undefined) {
       return;
     }
@@ -273,121 +357,192 @@ export function App() {
   };
 
   return (
-    <main className="app-shell">
-      <header className="app-hero">
-        <p className="app-eyebrow">Gestión de Logística</p>
-        <h1>Última Milla</h1>
-        <p className="app-description">
-          Panel unificado de operación: zonas de cobertura, pedidos, planificación de rutas, flota
-          de reparto y ejecución de entregas contra la API real del backend.
-        </p>
+    <div className="app-frame">
+      <div className="app-mesh" aria-hidden="true" />
+
+      <header className="app-topbar">
+        <div className="app-topbar__inner">
+          <div className="app-brand">
+            <span className="app-brand__mark" aria-hidden="true">
+              ⬢
+            </span>
+            <span className="app-brand__name">Última Milla</span>
+            <span className="app-brand__tag">Torre de control</span>
+          </div>
+
+          <SessionBar
+            user={currentUser}
+            healthStatus={auth.healthStatus}
+            isLoading={auth.isSubmitting}
+            verificationMessage={verificationMessage}
+            onLogout={handleLogout}
+            onVerifyProfile={() => {
+              void handleVerifyProfile();
+            }}
+          />
+        </div>
+
+        <nav
+          className="app-nav"
+          role="tablist"
+          aria-label="Navegación principal del sistema"
+          onKeyDown={handleTabKeyDown}
+          style={navStyle}
+        >
+          {navTabs.map((tab) => (
+            <button
+              key={tab}
+              id={`app-tab-${tab}`}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              aria-controls={`app-panel-${tab}`}
+              tabIndex={activeTab === tab ? 0 : -1}
+              className={`app-nav__tab ${activeTab === tab ? 'app-nav__tab--active' : ''}`}
+              onClick={() => selectTab(tab)}
+            >
+              <span className="app-nav__step" aria-hidden="true">
+                {STEP_BY_TAB[tab]}
+              </span>
+              {TAB_LABELS[tab]}
+            </button>
+          ))}
+        </nav>
       </header>
 
-      <SessionBar
-        user={currentUser}
-        healthStatus={auth.healthStatus}
-        isLoading={auth.isSubmitting}
-        verificationMessage={verificationMessage}
-        onLogout={handleLogout}
-        onVerifyProfile={() => {
-          void handleVerifyProfile();
-        }}
-      />
-
-      {auth.error !== null && (
-        <Alert type="error" title="Atención" onClose={auth.clearError}>
-          {auth.error}
-        </Alert>
-      )}
-
-      <nav
-        className="app-nav"
-        role="tablist"
-        aria-label="Navegación principal del sistema"
-        onKeyDown={handleTabKeyDown}
-      >
-        {allowedTabs.map((tab) => (
-          <button
-            key={tab}
-            id={`app-tab-${tab}`}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab}
-            aria-controls={`app-panel-${tab}`}
-            tabIndex={activeTab === tab ? 0 : -1}
-            className={`app-nav__tab ${activeTab === tab ? 'app-nav__tab--active' : ''}`}
-            onClick={() => selectTab(tab)}
-          >
-            {TAB_LABELS[tab]}
-          </button>
-        ))}
-      </nav>
-
-      <div
-        className="app-panel"
-        role="tabpanel"
-        id={`app-panel-${activeTab}`}
-        aria-labelledby={`app-tab-${activeTab}`}
-        tabIndex={-1}
-      >
-        {activeTab === 'zones' && (
-          <ZoneManagementView
-            httpClient={httpClient}
-            canCreateZone={currentUser.role === 'personal'}
+      <main className="app-main">
+        <div className="app-hero">
+          <KineticHeader
+            level="h1"
+            eyebrow="Gestión de logística"
+            stepLabel={pipelineStatusLabel(activeTab)}
+            title="Torre de control de última milla"
+            description="Cobertura, demanda, planificación, despacho y entregas confirmadas en una secuencia guiada sobre la API real del backend."
+            className="app-hero__header"
           />
+
+          <div className="app-hero__kpis" aria-label="Indicadores operativos">
+            <KineticCounter label="Zonas" value={zones.length} tone="accent" />
+            <KineticCounter label="Pedidos pendientes" value={pendingOrderCount} tone="transit" />
+            {currentUser.role === 'personal' && (
+              <KineticCounter
+                label="Repartidores disponibles"
+                value={availableCourierCount}
+                tone="delivered"
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="app-pipeline" aria-label="Flujo operativo de última milla">
+          {PIPELINE_STAGES.map((stage, index) => {
+            const isActive = stage.tab === activeTab;
+            const isDone = activePipelineIndex >= 0 && index < activePipelineIndex;
+            const isAllowed = allowedTabs.includes(stage.tab);
+            return (
+              <span key={stage.tab} className="app-pipeline__item">
+                {index > 0 && (
+                  <span className="app-pipeline__arrow" aria-hidden="true">
+                    →
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className={`app-pipeline__stage ${
+                    isActive ? 'app-pipeline__stage--active' : ''
+                  } ${isDone ? 'app-pipeline__stage--done' : ''}`.trim()}
+                  disabled={!isAllowed}
+                  onClick={() => selectTab(stage.tab)}
+                  aria-current={isActive ? 'step' : undefined}
+                >
+                  <span className="app-pipeline__stage-number" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  {stage.label}
+                </button>
+              </span>
+            );
+          })}
+        </div>
+
+        {auth.error !== null && (
+          <Alert type="error" title="Atención" onClose={auth.clearError}>
+            {auth.error}
+          </Alert>
         )}
 
-        {activeTab === 'orders' && (
-          <OrderManagementView
-            useCases={useCases.orders}
-            canCreateOrder={currentUser.role !== 'repartidor'}
-          />
+        {catalogError !== null && (
+          <Alert type="error" title="Catálogo compartido" onClose={() => setCatalogError(null)}>
+            {catalogError}
+          </Alert>
         )}
 
-        {activeTab === 'routes' && (
-          <>
-            {catalogError !== null && (
-              <Alert type="error" title="Catálogo compartido" onClose={() => setCatalogError(null)}>
-                {catalogError}
-              </Alert>
-            )}
+        {isLoadingCatalog && zones.length === 0 && (
+          <Card variant="outlined" className="app-loading-card">
+            <Spinner size="md" label="Cargando zonas y pedidos" />
+            <p role="status">Sincronizando catálogo operativo...</p>
+          </Card>
+        )}
 
-            {isLoadingCatalog && (
-              <Card variant="outlined" className="app-loading-card">
-                <Spinner size="md" label="Cargando zonas y pedidos pendientes" />
-                <p role="status">Cargando zonas y pedidos pendientes...</p>
-              </Card>
-            )}
+        <div
+          className="app-panel"
+          role="tabpanel"
+          id={`app-panel-${activeTab}`}
+          aria-labelledby={`app-tab-${activeTab}`}
+          tabIndex={-1}
+        >
+          {activeTab === 'zones' && (
+            <ZoneManagementView
+              httpClient={httpClient}
+              canCreateZone={currentUser.role === 'personal'}
+              orders={orders}
+              onNavigateToOrders={(zoneId) => selectTab('orders', { zoneId })}
+            />
+          )}
 
+          {activeTab === 'orders' && (
+            <OrderManagementView
+              useCases={useCases.orders}
+              canCreateOrder={currentUser.role !== 'repartidor'}
+              onNavigateToRoutes={(deliveryDate) => selectTab('routes', { deliveryDate })}
+            />
+          )}
+
+          {activeTab === 'routes' && (
             <RouteManagementView
               useCases={useCases.routes}
               zones={zones}
               pendingOrders={orders}
+              couriers={couriers}
               isAdmin={currentUser.role === 'personal'}
               onCatalogChanged={() => {
                 void loadSharedCatalog();
               }}
+              onNavigateToFleet={() => selectTab('fleet')}
             />
-          </>
-        )}
+          )}
 
-        {activeTab === 'fleet' && (
-          <CourierFleetDispatchView
-            useCases={useCases.couriers}
-            listPlanifiedRoutes={listPlanifiedRoutes}
-          />
-        )}
+          {activeTab === 'fleet' && (
+            <CourierFleetDispatchView
+              useCases={useCases.couriers}
+              listPlanifiedRoutes={listPlanifiedRoutes}
+              zones={zones}
+              onNavigateToDeliveries={() => selectTab('deliveries')}
+            />
+          )}
 
-        {activeTab === 'deliveries' && (
-          <DeliveryExecutionView
-            useCases={useCases.deliveries}
-            courierUseCases={useCases.couriers}
-            actor={deliveryActor}
-          />
-        )}
+          {activeTab === 'deliveries' && (
+            <DeliveryExecutionView
+              useCases={useCases.deliveries}
+              courierUseCases={useCases.couriers}
+              actor={deliveryActor}
+              zones={zones}
+            />
+          )}
 
-        {activeTab === 'users' && <AdminUserManagementView useCases={useCases.auth} />}
-      </div>
-    </main>
+          {activeTab === 'users' && <AdminUserManagementView useCases={useCases.auth} />}
+        </div>
+      </main>
+    </div>
   );
 }

@@ -5,7 +5,7 @@ import {
   type PlanRoutesInput,
   type PlanRoutesResult,
 } from '../../domain/index.js';
-import { Alert, Button, Card, TextInput } from '../../../../shared/ui/index.js';
+import { Alert, Button, Card, ShortIdBadge, TextInput } from '../../../../shared/ui/index.js';
 
 export interface RoutePlannerCardProps {
   isPlanning: boolean;
@@ -41,7 +41,10 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
 
   return (
     <Card variant="elevated" className="routes-operation-card">
-      <h3 className="routes-operation-card__title">Generar Plan de Rutas (POST /route-plans)</h3>
+      <div className="routes-operation-card__header">
+        <h3 className="routes-operation-card__title">Generar plan de rutas</h3>
+        <span className="routes-operation-card__tag">Etapa 3a</span>
+      </div>
       <p className="routes-operation-card__hint">
         Agrupa los pedidos pendientes por zona y hora de entrega en rutas con capacidad limitada.
       </p>
@@ -64,6 +67,7 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
             value={capacityLimit}
             onChange={(event) => setCapacityLimit(event.target.value)}
             error={validation.errors['capacityLimit']}
+            helperText="Pedidos que puede transportar cada ruta."
             isRequired
           />
         </div>
@@ -90,7 +94,7 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
             <ul className="routes-plan-result" aria-label="Rutas generadas">
               {planResult.routeIds.map((routeId) => (
                 <li key={routeId}>
-                  <code>{routeId}</code>
+                  <ShortIdBadge id={routeId} prefix="RUT" />
                 </li>
               ))}
             </ul>

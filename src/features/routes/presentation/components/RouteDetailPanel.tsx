@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
+import type { Courier } from '../../../couriers/domain/index.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import type {
   RouteDetail,
@@ -7,7 +8,14 @@ import type {
   RouteSummary,
   StopOrderStatus,
 } from '../../domain/index.js';
-import { Alert, Button, Card, Select } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  Card,
+  IsometricCapacityCube,
+  Select,
+  ShortIdBadge,
+} from '../../../../shared/ui/index.js';
 
 const ROUTE_STATUS_LABELS: Record<RouteStatus, string> = {
   planificada: 'Planificada',
@@ -34,6 +42,7 @@ export interface RouteDetailPanelProps {
   route: RouteDetail;
   routes: readonly RouteSummary[];
   zones: readonly Zone[];
+  couriers?: readonly Courier[] | undefined;
   isAdmin: boolean;
   isLoadingDetail: boolean;
   detailError: string | null;
@@ -45,12 +54,14 @@ export interface RouteDetailPanelProps {
   onMoveOrder: (orderId: string, destinationRouteId: string) => Promise<boolean>;
   onReload: () => void;
   onClose: () => void;
+  onNavigateToFleet?: (() => void) | undefined;
 }
 
 export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
   route,
   routes,
   zones,
+  couriers,
   isAdmin,
   isLoadingDetail,
   detailError,
@@ -62,6 +73,7 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
   onMoveOrder,
   onReload,
   onClose,
+  onNavigateToFleet,
 }) => {
   const [draftOrderIds, setDraftOrderIds] = useState<string[]>(() => route.stops.map((stop) => stop.orderId));
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -93,7 +105,12 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
   const canReorder = isAdmin && isEditable;
   const hasStartedStops = route.stops.some((stop) => STARTED_STOP_STATUSES.has(stop.status));
   const canCancel = isAdmin && isEditable && !hasStartedStops;
-  const zoneName = zones.find((zone) => zone.id === route.zoneId)?.name ?? route.zoneId;
+  const zoneName = zones.find((zone) => zone.id === route.zoneId)?.name ?? 'Zona sin catalogar';
+  const courierName =
+    route.courierId === null
+      ? null
+      : couriers?.find((courier) => courier.id === route.courierId)?.displayName ??
+        'Repartidor asignado';
 
   const isDraftDirty =
     draftOrderIds.length !== route.stops.length ||
@@ -138,13 +155,18 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
   return (
     <Card variant="elevated" className="routes-detail-card">
       <div className="routes-detail-card__header">
-        <h3 className="routes-detail-card__title">Detalle de la Ruta Seleccionada (GET /routes/:id)</h3>
+        <div className="routes-detail-card__heading">
+          <h3 className="routes-detail-card__title">Detalle de la ruta seleccionada</h3>
+          <p className="routes-detail-card__subtitle">
+            {route.serviceDate} · {zoneName}
+          </p>
+        </div>
         <div className="routes-detail-card__header-actions">
           <Button type="button" variant="secondary" size="sm" onClick={onReload} isLoading={isLoadingDetail}>
-            ↻ Recargar detalle
+            ↻ Recargar
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Cerrar detalle
+            Cerrar
           </Button>
         </div>
       </div>
@@ -155,42 +177,54 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
         </Alert>
       )}
 
-      <dl className="routes-detail-meta">
-        <div className="routes-detail-meta__item">
-          <dt>Identificador</dt>
-          <dd>
-            <code>{route.id}</code>
-          </dd>
-        </div>
-        <div className="routes-detail-meta__item">
-          <dt>Zona</dt>
-          <dd>
-            {zoneName} <span className="routes-table__muted">{route.zoneId}</span>
-          </dd>
-        </div>
-        <div className="routes-detail-meta__item">
-          <dt>Fecha de servicio</dt>
-          <dd>{route.serviceDate}</dd>
-        </div>
-        <div className="routes-detail-meta__item">
-          <dt>Estado</dt>
-          <dd>
-            <span className={`routes-status-badge routes-status-badge--${route.status}`}>
-              {ROUTE_STATUS_LABELS[route.status]}
-            </span>
-          </dd>
-        </div>
-        <div className="routes-detail-meta__item">
-          <dt>Ocupación</dt>
-          <dd>
-            {route.occupiedSlots} / {route.capacityLimit}
-          </dd>
-        </div>
-        <div className="routes-detail-meta__item">
-          <dt>Repartidor</dt>
-          <dd>{route.courierId ?? 'Sin asignar'}</dd>
-        </div>
-      </dl>
+      <div className="routes-detail-overview">
+        <IsometricCapacityCube
+          occupied={route.occupiedSlots}
+          capacity={route.capacityLimit}
+          status={route.status}
+          showCaption={false}
+        />
+        <dl className="routes-detail-meta">
+          <div className="routes-detail-meta__item">
+            <dt>Código de ruta</dt>
+            <dd>
+              <ShortIdBadge id={route.id} prefix="RUT" />
+            </dd>
+          </div>
+          <div className="routes-detail-meta__item">
+            <dt>Zona</dt>
+            <dd>{zoneName}</dd>
+          </div>
+          <div className="routes-detail-meta__item">
+            <dt>Fecha de servicio</dt>
+            <dd>{route.serviceDate}</dd>
+          </div>
+          <div className="routes-detail-meta__item">
+            <dt>Estado</dt>
+            <dd>
+              <span className={`routes-status-badge routes-status-badge--${route.status}`}>
+                {ROUTE_STATUS_LABELS[route.status]}
+              </span>
+            </dd>
+          </div>
+          <div className="routes-detail-meta__item">
+            <dt>Ocupación</dt>
+            <dd className="routes-detail-meta__numeric">
+              {route.occupiedSlots} / {route.capacityLimit} cupos
+            </dd>
+          </div>
+          <div className="routes-detail-meta__item">
+            <dt>Repartidor</dt>
+            <dd>
+              {courierName === null ? (
+                <span className="routes-table__unassigned">Sin asignar</span>
+              ) : (
+                courierName
+              )}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       <section className="routes-stops" aria-labelledby="routes-stops-title">
         <h4 id="routes-stops-title" className="routes-stops__title">
@@ -220,12 +254,12 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
 
                   return (
                     <tr key={stop.orderId}>
-                      <td>{index + 1}</td>
+                      <td className="routes-detail-meta__numeric">{index + 1}</td>
                       <td>
-                        <code className="routes-table__uuid">{stop.orderId}</code>
+                        <ShortIdBadge id={stop.orderId} prefix="PED" />
                       </td>
                       <td>{stop.deliveryAddress}</td>
-                      <td>
+                      <td className="routes-detail-meta__numeric">
                         {stop.deliveryDate} {stop.deliveryTime}
                       </td>
                       <td>
@@ -263,7 +297,7 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
                         <td>
                           {!canMoveStop ? (
                             <span className="routes-table__muted">
-                              Sólo se pueden reubicar paradas en estado asignado_a_ruta.
+                              Sólo se pueden reubicar paradas en estado asignado a ruta.
                             </span>
                           ) : compatibleRoutes.length === 0 ? (
                             <span className="routes-table__muted">No hay rutas compatibles con cupo disponible.</span>
@@ -276,7 +310,8 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
                                   ...compatibleRoutes.map((candidate) => ({
                                     value: candidate.id,
                                     label: `${candidate.serviceDate} · ${
-                                      zones.find((zone) => zone.id === candidate.zoneId)?.name ?? candidate.zoneId
+                                      zones.find((zone) => zone.id === candidate.zoneId)?.name ??
+                                      'Zona sin catalogar'
                                     } · ${candidate.occupiedSlots}/${candidate.capacityLimit}`,
                                   })),
                                 ]}
@@ -328,30 +363,41 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
         )}
       </section>
 
-      {canCancel && (
-        <section className="routes-cancel" aria-labelledby="routes-cancel-title">
-          <h4 id="routes-cancel-title" className="routes-stops__title">
-            Cancelar Ruta (POST /routes/:id/cancel)
-          </h4>
-          {confirmingCancel ? (
-            <div className="routes-cancel__confirm">
-              <p>¿Confirma la cancelación de esta ruta?</p>
-              <div className="routes-cancel__actions">
-                <Button type="button" variant="danger" size="sm" isLoading={isCancelling} onClick={() => void onCancelRoute()}>
-                  Sí, cancelar
-                </Button>
-                <Button type="button" variant="secondary" size="sm" onClick={() => setConfirmingCancel(false)} disabled={isCancelling}>
-                  No, volver
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button type="button" variant="danger" size="sm" onClick={() => setConfirmingCancel(true)}>
+      <div className="routes-detail-footer">
+        {onNavigateToFleet !== undefined && (
+          <Button type="button" variant="primary" size="sm" onClick={onNavigateToFleet}>
+            Asignar repartidor en Despacho →
+          </Button>
+        )}
+
+        {canCancel && (
+          <section className="routes-cancel" aria-labelledby="routes-cancel-title">
+            <h4 id="routes-cancel-title" className="routes-stops__title">
               Cancelar ruta
-            </Button>
-          )}
-        </section>
-      )}
+            </h4>
+            {confirmingCancel ? (
+              <div className="routes-cancel__confirm" role="alertdialog" aria-labelledby="routes-cancel-title">
+                <p>
+                  Esta acción libera todas las paradas de la ruta y no se puede deshacer. ¿Confirma
+                  la cancelación?
+                </p>
+                <div className="routes-cancel__actions">
+                  <Button type="button" variant="danger" size="sm" isLoading={isCancelling} onClick={() => void onCancelRoute()}>
+                    Sí, cancelar ruta
+                  </Button>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setConfirmingCancel(false)} disabled={isCancelling}>
+                    No, volver
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button type="button" variant="danger" size="sm" onClick={() => setConfirmingCancel(true)}>
+                Cancelar ruta
+              </Button>
+            )}
+          </section>
+        )}
+      </div>
     </Card>
   );
 };

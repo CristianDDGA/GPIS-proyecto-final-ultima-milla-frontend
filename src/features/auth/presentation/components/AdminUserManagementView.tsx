@@ -3,20 +3,46 @@ import type { FC, FormEvent } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import {
   firstValidationError,
-  isPublicRole,
   validateCreateManagedUserInput,
   type AuthUser,
   type CreateManagedUserInput,
   type HealthStatus,
   type PublicRole,
 } from '../../domain/index.js';
-import { Alert, Button, Card, EmptyState, Select, TextInput } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  ShortIdBadge,
+  TextInput,
+} from '../../../../shared/ui/index.js';
 import '../styles/auth.css';
 
-const ROLE_OPTIONS: { value: PublicRole; label: string }[] = [
-  { value: 'admin', label: 'Administrador' },
-  { value: 'repartidor', label: 'Repartidor' },
-  { value: 'cliente', label: 'Cliente' },
+const ROLE_CARDS: readonly {
+  readonly value: PublicRole;
+  readonly label: string;
+  readonly description: string;
+  readonly scope: string;
+}[] = [
+  {
+    value: 'admin',
+    label: 'Administrador',
+    description: 'Control total de la operación y de las cuentas del equipo.',
+    scope: 'Operación completa',
+  },
+  {
+    value: 'repartidor',
+    label: 'Repartidor',
+    description: 'Ejecuta la hoja de ruta asignada y actualiza las entregas.',
+    scope: 'Última milla',
+  },
+  {
+    value: 'cliente',
+    label: 'Cliente',
+    description: 'Registra y consulta los pedidos de su cuenta.',
+    scope: 'Seguimiento',
+  },
 ];
 
 const PUBLIC_ROLE_LABELS: Record<PublicRole, string> = {
@@ -26,9 +52,9 @@ const PUBLIC_ROLE_LABELS: Record<PublicRole, string> = {
 };
 
 const HEALTH_LABELS: Record<HealthStatus, string> = {
-  checking: 'Verificando servidor...',
-  online: 'Servidor en línea',
-  offline: 'Servidor sin conexión',
+  checking: 'Verificando disponibilidad',
+  online: 'Sistema operativo',
+  offline: 'Sistema sin conexión',
 };
 
 function toErrorMessage(error: unknown, fallbackMessage: string): string {
@@ -44,6 +70,7 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<PublicRole>('repartidor');
+  const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [requestError, setRequestError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -148,10 +175,10 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
     <section className="auth-admin-layout" aria-labelledby="auth-admin-title">
       <header className="auth-admin-header">
         <div className="auth-admin-header__title-group">
-          <h2 id="auth-admin-title">Administración de Usuarios</h2>
+          <h2 id="auth-admin-title">Administración de usuarios</h2>
           <p>
-            Crea cuentas con rol administrador, repartidor o cliente (POST /auth/users) y verifica
-            el estado del sistema (GET /health).
+            Crea cuentas para el equipo y consulta el estado del servicio de identidad de la
+            plataforma.
           </p>
         </div>
 
@@ -194,6 +221,34 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
         <Card variant="elevated" className="auth-admin-card">
           <h3 className="auth-admin-card__title">Nuevo usuario</h3>
           <form className="auth-admin-form" onSubmit={handleSubmit} noValidate>
+            <fieldset className="auth-role-picker">
+              <legend className="auth-role-picker__legend">Perfil de acceso</legend>
+              <div className="auth-role-picker__grid">
+                {ROLE_CARDS.map((card) => (
+                  <label
+                    key={card.value}
+                    className={`auth-role-option ${role === card.value ? 'auth-role-option--selected' : ''}`.trim()}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value={card.value}
+                      checked={role === card.value}
+                      onChange={() => {
+                        setRole(card.value);
+                        setFieldErrors({});
+                        setRequestError(null);
+                      }}
+                      disabled={isSubmitting}
+                    />
+                    <span className="auth-role-option__scope">{card.scope}</span>
+                    <span className="auth-role-option__label">{card.label}</span>
+                    <span className="auth-role-option__description">{card.description}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
             <TextInput
               id="auth-admin-email"
               label="Correo electrónico"
@@ -207,50 +262,42 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
                 setFieldErrors({});
                 setRequestError(null);
               }}
-              error={fieldErrors.email}
+              error={fieldErrors['email']}
               isRequired
               maxLength={254}
               disabled={isSubmitting}
             />
 
-            <TextInput
-              id="auth-admin-password"
-              label="Contraseña"
-              type="password"
-              name="password"
-              autoComplete="new-password"
-              placeholder="Mínimo 8 caracteres"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-                setFieldErrors({});
-                setRequestError(null);
-              }}
-              error={fieldErrors.password}
-              helperText="Debe tener entre 8 y 128 caracteres."
-              isRequired
-              maxLength={128}
-              disabled={isSubmitting}
-            />
-
-            <Select
-              id="auth-admin-role"
-              label="Rol"
-              name="role"
-              value={role}
-              options={ROLE_OPTIONS}
-              onChange={(event) => {
-                const nextRole = event.target.value;
-                if (isPublicRole(nextRole)) {
-                  setRole(nextRole);
-                }
-                setFieldErrors({});
-                setRequestError(null);
-              }}
-              error={fieldErrors.role}
-              isRequired
-              disabled={isSubmitting}
-            />
+            <div className="auth-password-field">
+              <TextInput
+                id="auth-admin-password"
+                label="Contraseña"
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                autoComplete="new-password"
+                placeholder="Mínimo 8 caracteres"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setFieldErrors({});
+                  setRequestError(null);
+                }}
+                error={fieldErrors['password']}
+                helperText="Entre 8 y 128 caracteres."
+                isRequired
+                maxLength={128}
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowPassword((previous) => !previous)}
+                aria-pressed={showPassword}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
 
             <TextInput
               id="auth-admin-display-name"
@@ -265,7 +312,7 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
                 setFieldErrors({});
                 setRequestError(null);
               }}
-              error={fieldErrors.displayName}
+              error={fieldErrors['displayName']}
               helperText="Opcional. Máximo 120 caracteres."
               maxLength={120}
               disabled={isSubmitting}
@@ -281,7 +328,7 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
 
         <Card variant="elevated" className="auth-admin-card">
           <div className="auth-admin-card__header">
-            <h3 className="auth-admin-card__title">Historial de la sesión</h3>
+            <h3 className="auth-admin-card__title">Cuentas creadas en esta sesión</h3>
             <span className="auth-admin-badge-count">
               {createdUsers.length} {createdUsers.length === 1 ? 'usuario' : 'usuarios'}
             </span>
@@ -289,15 +336,15 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
 
           {createdUsers.length === 0 ? (
             <EmptyState
-              title="Sin usuarios creados"
-              description="Los usuarios que crees en esta sesión aparecerán aquí con su identificador UUID y su rol."
+              title="Sin cuentas creadas"
+              description="Las cuentas que crees durante esta sesión aparecerán aquí con su rol y su código corto de referencia."
             />
           ) : (
             <div className="auth-table-wrapper">
               <table className="auth-table" aria-label="Usuarios creados en la sesión actual">
                 <thead>
                   <tr>
-                    <th scope="col">UUID</th>
+                    <th scope="col">Código</th>
                     <th scope="col">Correo electrónico</th>
                     <th scope="col">Rol</th>
                     <th scope="col">Nombre</th>
@@ -306,7 +353,9 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
                 <tbody>
                   {createdUsers.map((createdUser) => (
                     <tr key={createdUser.id}>
-                      <td className="auth-table__id">{createdUser.id}</td>
+                      <td>
+                        <ShortIdBadge id={createdUser.id} prefix="USR" />
+                      </td>
                       <td>{createdUser.email}</td>
                       <td>{PUBLIC_ROLE_LABELS[createdUser.publicRole]}</td>
                       <td className="auth-table__muted">{createdUser.displayName ?? '—'}</td>

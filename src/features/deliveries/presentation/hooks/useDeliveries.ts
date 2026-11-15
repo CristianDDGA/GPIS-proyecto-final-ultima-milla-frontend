@@ -48,6 +48,11 @@ export interface UseDeliveriesResult {
   clearFeedback: () => void;
 }
 
+function shortCode(id: string): string {
+  const compact = id.replace(/[^0-9a-z]/gi, '').toUpperCase();
+  return compact.length === 0 ? 'SIN-ID' : compact.slice(0, 4);
+}
+
 function toMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
@@ -246,7 +251,7 @@ export function useDeliveries(
       } catch (error_) {
         if (mounted.current && recordRequests.current.get(orderId) === request) {
           setError(
-            toMessage(error_, `No se pudo consultar el estado del pedido ${orderId}.`),
+            toMessage(error_, `No se pudo consultar el estado del pedido #PED-${shortCode(orderId)}.`),
           );
         }
         return null;
@@ -309,7 +314,7 @@ export function useDeliveries(
           },
         }));
         setSuccessMessage(
-          `Pedido ${orderId}: estado actualizado a "${orderStatusLabel(result.status)}".`,
+          `Pedido #PED-${shortCode(orderId)}: estado actualizado a "${orderStatusLabel(result.status)}".`,
         );
 
         if (effectiveCourierId.length > 0) {
@@ -351,7 +356,7 @@ export function useDeliveries(
 
     try {
       const result = await useCases.completeRoute.execute(activeRoute.routeId);
-      setSuccessMessage(`Ruta ${result.routeId} completada correctamente.`);
+      setSuccessMessage(`Ruta #RUT-${shortCode(result.routeId)} completada correctamente.`);
       await loadActiveRoute();
     } catch (error_) {
       setError(toMessage(error_, 'No se pudo completar la hoja de ruta activa.'));
@@ -368,7 +373,7 @@ export function useDeliveries(
       setInspectedOrder(null);
 
       if (trimmed.length === 0) {
-        setInspectorError('Ingresa el UUID del pedido de entrega.');
+        setInspectorError('Selecciona una parada de la hoja de ruta o escribe el código del pedido.');
         return;
       }
 

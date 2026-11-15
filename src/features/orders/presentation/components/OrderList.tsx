@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import type { Order } from '../../domain/index.js';
-import { Button, EmptyState, Spinner } from '../../../../shared/ui/index.js';
+import { Button, EmptyState, ShortIdBadge, Spinner } from '../../../../shared/ui/index.js';
 
 export interface OrderListProps {
   orders: Order[];
@@ -11,10 +11,23 @@ export interface OrderListProps {
 
 function formatDisplayDate(dateStr: string, timeStr: string): string {
   if (!dateStr) return '—';
-  return `${dateStr} a las ${timeStr || '00:00'}`;
+  return `${dateStr} · ${timeStr || '00:00'}`;
 }
 
-export const OrderList: FC<OrderListProps> = ({ orders, isLoading, hasActiveFilters = false, onSelect }) => {
+const STATUS_LABELS: Record<string, string> = {
+  pendiente: 'Pendiente',
+  asignado_a_ruta: 'Asignado a ruta',
+  recogido: 'Recogido',
+  en_camino: 'En camino',
+  entregado: 'Entregado',
+};
+
+export const OrderList: FC<OrderListProps> = ({
+  orders,
+  isLoading,
+  hasActiveFilters = false,
+  onSelect,
+}) => {
   if (isLoading && orders.length === 0) {
     return (
       <output className="orders-loading-container">
@@ -61,13 +74,17 @@ export const OrderList: FC<OrderListProps> = ({ orders, isLoading, hasActiveFilt
               <tr key={order.id}>
                 <td>
                   <span className="orders-table__address">{order.deliveryAddress}</span>
-                  <span className="orders-table__id">ID: {order.id}</span>
+                  <span className="orders-table__id">
+                    <ShortIdBadge id={order.id} prefix="PED" />
+                  </span>
                 </td>
                 <td>{order.zoneName || order.zoneId}</td>
-                <td>{formatDisplayDate(order.deliveryDate, order.deliveryTime)}</td>
+                <td className="orders-table__schedule">
+                  {formatDisplayDate(order.deliveryDate, order.deliveryTime)}
+                </td>
                 <td>
                   <span className={`orders-status-badge ${statusClass}`}>
-                    {order.status || 'pendiente'}
+                    {STATUS_LABELS[order.status] ?? order.status}
                   </span>
                 </td>
                 {onSelect && (

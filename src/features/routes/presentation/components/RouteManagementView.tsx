@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import type { Courier } from '../../../couriers/domain/index.js';
 import type { Order } from '../../../orders/domain/index.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import type {
@@ -13,30 +14,37 @@ import { RouteDetailPanel } from './RouteDetailPanel.js';
 import { RouteFiltersForm } from './RouteFiltersForm.js';
 import { RoutePlannerCard } from './RoutePlannerCard.js';
 import { RouteTable } from './RouteTable.js';
-import { Alert, Button, Card, Spinner } from '../../../../shared/ui/index.js';
+import { Alert, Button, Card, KineticHeader, Spinner } from '../../../../shared/ui/index.js';
 import '../styles/routes.css';
 
 export interface RouteManagementViewProps {
   useCases: RouteUseCases;
   zones: readonly Zone[];
   pendingOrders?: readonly Order[] | undefined;
+  /** Catálogo de repartidores para resolver nombres en tablas y detalles. */
+  couriers?: readonly Courier[] | undefined;
   isAdmin: boolean;
   /**
    * Se invoca después de una planificación o inserción de pedido tardío exitosa para
    * que el composition root refresque el catálogo compartido de pedidos pendientes.
    */
   onCatalogChanged?: (() => void) | undefined;
+  /** Navegación guiada del pipeline: asignar repartidor en Despacho. */
+  onNavigateToFleet?: (() => void) | undefined;
 }
 
 export const RouteManagementView: FC<RouteManagementViewProps> = ({
   useCases,
   zones,
   pendingOrders,
+  couriers,
   isAdmin,
   onCatalogChanged,
+  onNavigateToFleet,
 }) => {
   const routes = useRoutes(useCases, { isAdmin });
   const pending = pendingOrders ?? [];
+  const courierList = couriers ?? [];
 
   const handlePlan = async (input: PlanRoutesInput): Promise<PlanRoutesResult | null> => {
     const result = await routes.planRoutes(input);
@@ -59,23 +67,25 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
 
   return (
     <section className="routes-layout" aria-labelledby="routes-view-title">
-      <header className="routes-header">
-        <div className="routes-header__title-group">
-          <h2 id="routes-view-title">Planificación y Operaciones de Ruta</h2>
-          <p>Genera planes de ruta, consulta las rutas planificadas y opera sus paradas.</p>
-        </div>
-
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          isLoading={routes.isLoadingRoutes}
-          onClick={() => void routes.loadRoutes()}
-          aria-label="Refrescar listado de rutas"
-        >
-          ↻ Actualizar
-        </Button>
-      </header>
+      <KineticHeader
+        id="routes-view-title"
+        level="h2"
+        eyebrow="Etapa 3 · Planificación"
+        title="Planificación y operaciones de ruta"
+        description="Agrupa los pedidos pendientes en rutas con capacidad controlada, ajusta el orden de las paradas y opera cada ruta antes del despacho."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            isLoading={routes.isLoadingRoutes}
+            onClick={() => void routes.loadRoutes()}
+            aria-label="Refrescar listado de rutas"
+          >
+            ↻ Actualizar
+          </Button>
+        }
+      />
 
       {routes.error && (
         <Alert type="error" title="Atención" onClose={routes.clearFeedback}>
@@ -108,14 +118,14 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
         </div>
       ) : (
         <Alert type="info" title="Modo consulta">
-          Sólo el personal administrativo puede generar planificaciones, reordenar paradas, cancelar rutas o
-          reubicar pedidos. Puedes consultar el listado y el detalle de cada ruta.
+          Sólo el personal administrativo puede generar planificaciones, reordenar paradas,
+          cancelar rutas o reubicar pedidos. Puedes consultar el listado y el detalle de cada ruta.
         </Alert>
       )}
 
       <Card variant="elevated" className="routes-list-card">
         <div className="routes-list-card__header">
-          <h3 className="routes-list-card__title">Rutas Planificadas (GET /routes)</h3>
+          <h3 className="routes-list-card__title">Rutas planificadas</h3>
           <span className="routes-badge-count">
             {routes.routes.length} {routes.routes.length === 1 ? 'ruta' : 'rutas'}
           </span>
@@ -140,6 +150,7 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
         <RouteTable
           routes={routes.routes}
           zones={zones}
+          couriers={courierList}
           isLoading={routes.isLoadingRoutes}
           onInspect={(routeId) => void routes.inspectRoute(routeId)}
         />
@@ -163,6 +174,7 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
           route={routes.selectedRoute}
           routes={routes.routes}
           zones={zones}
+          couriers={courierList}
           isAdmin={isAdmin}
           isLoadingDetail={routes.isLoadingDetail}
           detailError={routes.detailError}
@@ -174,6 +186,7 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
           onMoveOrder={routes.moveOrder}
           onReload={() => void routes.reloadSelectedRoute()}
           onClose={routes.clearSelectedRoute}
+          onNavigateToFleet={onNavigateToFleet}
         />
       )}
     </section>

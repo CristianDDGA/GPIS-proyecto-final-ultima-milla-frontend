@@ -2,6 +2,7 @@ import { useMemo, type FC, type FormEvent } from 'react';
 import type { CourierUseCases } from '../../../couriers/application/courierUseCases.js';
 import type { ActiveCourierRouteStop } from '../../../couriers/domain/index.js';
 import type { OrderStatus } from '../../../orders/domain/index.js';
+import type { Zone } from '../../../zones/domain/index.js';
 import type { DeliveryUseCases } from '../../application/deliveryUseCases.js';
 import {
   deliveryActionLabel,
@@ -14,7 +15,11 @@ import {
   Button,
   Card,
   EmptyState,
+  IsometricCapacityCube,
+  KineticCounter,
+  KineticHeader,
   Select,
+  ShortIdBadge,
   Spinner,
   TextInput,
 } from '../../../../shared/ui/index.js';
@@ -31,6 +36,8 @@ export interface DeliveryExecutionViewProps {
   useCases: DeliveryUseCases;
   courierUseCases: CourierUseCases;
   actor: DeliveryActor;
+  /** Catálogo de zonas para resolver el nombre real de la zona de la ruta. */
+  zones?: readonly Zone[] | undefined;
 }
 
 const ROUTE_STATUS_LABELS: Record<string, string> = {
@@ -44,6 +51,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
   useCases,
   courierUseCases,
   actor,
+  zones,
 }) => {
   const {
     selectedCourierId,
@@ -82,6 +90,9 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
 
   const stops = activeRoute?.stops ?? EMPTY_STOPS;
 
+  const resolveZoneName = (zoneId: string): string =>
+    zones?.find((zone) => zone.id === zoneId)?.name ?? 'Zona sin catalogar';
+
   const statusOf = (orderId: string, fallback: OrderStatus): OrderStatus =>
     deliveryRecords[orderId]?.status ?? fallback;
 
@@ -91,6 +102,10 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
   const allDelivered = stops.length > 0 && deliveredCount === stops.length;
   const canCompleteRoute =
     activeRoute !== null && activeRoute.status === 'en_curso' && allDelivered;
+  const progressPercent = stops.length === 0 ? 0 : Math.round((deliveredCount / stops.length) * 100);
+
+  const selectedCourier = couriers.find((courier) => courier.id === effectiveCourierId) ?? null;
+  const routeCapacity = selectedCourier?.maxOrdersPerTrip ?? Math.max(stops.length, 1);
 
   const completeRouteReason = ((): string => {
     if (!activeRoute) return 'No hay una hoja de ruta activa cargada.';
@@ -142,33 +157,36 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
     void inspectOrder(inspectorOrderId);
   };
 
+  const handleInspectStop = (stop: ActiveCourierRouteStop): void => {
+    void inspectOrder(stop.orderId);
+  };
+
   const handleCompleteRoute = (): void => {
     void completeActiveRoute();
   };
 
   return (
     <section className="deliveries-layout" aria-labelledby="deliveries-view-title">
-      <header className="deliveries-header">
-        <div className="deliveries-header__title-group">
-          <h2 id="deliveries-view-title">Ejecución de Entregas</h2>
-          <p>
-            Consulta la hoja de ruta del repartidor, registra las transiciones de cada pedido y
-            completa la ruta cuando todas las entregas estén confirmadas.
-          </p>
-        </div>
-
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          isLoading={isLoadingDeliveryRecords}
-          disabled={activeRoute === null || stops.length === 0 || isLoadingDeliveryRecords}
-          onClick={() => void syncAllDeliveryRecords()}
-          aria-label="Sincronizar estados de todas las paradas"
-        >
-          {isLoadingDeliveryRecords ? 'Sincronizando...' : '↻ Sincronizar estados'}
-        </Button>
-      </header>
+      <KineticHeader
+        id="deliveries-view-title"
+        level="h2"
+        eyebrow="Etapa 5 · Última milla"
+        title="Ejecución de entregas"
+        description="Avanza cada parada de la hoja de ruta, confirma las entregas y cierra la ruta cuando todo está entregado."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            isLoading={isLoadingDeliveryRecords}
+            disabled={activeRoute === null || stops.length === 0 || isLoadingDeliveryRecords}
+            onClick={() => void syncAllDeliveryRecords()}
+            aria-label="Sincronizar estados de todas las paradas"
+          >
+            {isLoadingDeliveryRecords ? 'Sincronizando...' : '↻ Sincronizar estados'}
+          </Button>
+        }
+      />
 
       {error && (
         <Alert type="error" title="Atención" onClose={clearFeedback}>
@@ -177,7 +195,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
       )}
 
       {successMessage && (
-        <Alert type="success" title="Operación Exitosa" onClose={clearFeedback}>
+        <Alert type="success" title="Operación exitosa" onClose={clearFeedback}>
           {successMessage}
         </Alert>
       )}
@@ -193,7 +211,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
           <div className="deliveries-grid__main">
             <Card variant="elevated" className="deliveries-route-card">
               <div className="deliveries-card__header">
-                <h3 className="deliveries-card__title">Hoja de Ruta Activa</h3>
+                <h3 className="deliveries-card__title">Hoja de ruta activa</h3>
                 <div className="deliveries-card__actions">
                   <Button
                     type="button"
@@ -229,8 +247,12 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
 
               {effectiveCourierId.length > 0 && (
                 <p className="deliveries-hint">
-                  Repartidor:{' '}
-                  <code className="deliveries-code">{effectiveCourierId}</code>
+                  Repartidor en operación:{' '}
+                  <strong>
+                    {selectedCourier?.displayName ??
+                      (actor.role === 'repartidor' ? actor.displayName : null) ??
+                      'Repartidor de la sesión'}
+                  </strong>
                 </p>
               )}
 
@@ -271,20 +293,12 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                 <>
                   <dl className="deliveries-route-meta">
                     <div className="deliveries-route-meta__item">
-                      <dt>Identificador de ruta</dt>
-                      <dd>
-                        <code className="deliveries-code">{activeRoute.routeId}</code>
-                      </dd>
+                      <dt>Zona</dt>
+                      <dd>{resolveZoneName(activeRoute.zoneId)}</dd>
                     </div>
                     <div className="deliveries-route-meta__item">
                       <dt>Fecha de servicio</dt>
                       <dd>{activeRoute.serviceDate}</dd>
-                    </div>
-                    <div className="deliveries-route-meta__item">
-                      <dt>Zona</dt>
-                      <dd>
-                        <code className="deliveries-code">{activeRoute.zoneId}</code>
-                      </dd>
                     </div>
                     <div className="deliveries-route-meta__item">
                       <dt>Estado de la ruta</dt>
@@ -296,7 +310,47 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                         </span>
                       </dd>
                     </div>
+                    <div className="deliveries-route-meta__item">
+                      <dt>Código de ruta</dt>
+                      <dd>
+                        <ShortIdBadge id={activeRoute.routeId} prefix="RUT" copyable={false} />
+                      </dd>
+                    </div>
                   </dl>
+
+                  <div className="deliveries-progress" aria-label="Progreso de la ruta">
+                    <IsometricCapacityCube
+                      occupied={deliveredCount}
+                      capacity={Math.max(stops.length, routeCapacity)}
+                      status={allDelivered ? 'completada' : 'en_curso'}
+                      showCaption={false}
+                    />
+                    <div className="deliveries-progress__body">
+                      <div className="deliveries-progress__counters">
+                        <KineticCounter
+                          label="Entregados"
+                          value={`${deliveredCount}/${stops.length}`}
+                          tone="delivered"
+                        />
+                        <KineticCounter label="Avance" value={`${progressPercent}%`} tone="accent" />
+                      </div>
+                      <div
+                        className="deliveries-progress__track"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={stops.length}
+                        aria-valuenow={deliveredCount}
+                        aria-label="Pedidos entregados de la hoja de ruta"
+                      >
+                        <span
+                          className={`deliveries-progress__fill ${
+                            allDelivered ? 'deliveries-progress__fill--complete' : ''
+                          }`.trim()}
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
                   {stops.length === 0 ? (
                     <p className="deliveries-empty-inline">
@@ -310,9 +364,15 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                         const next = getNextAllowedDeliveryStatus(currentStatus);
                         const isSyncing = syncingOrderIds.includes(stop.orderId);
                         const isAdvancing = advancingOrderId === stop.orderId;
+                        const isInspecting = inspectorOrderId === stop.orderId && isLoadingInspector;
 
                         return (
-                          <li key={stop.orderId} className="deliveries-stop">
+                          <li
+                            key={stop.orderId}
+                            className={`deliveries-stop ${
+                              inspectorOrderId === stop.orderId ? 'deliveries-stop--selected' : ''
+                            }`.trim()}
+                          >
                             <div className="deliveries-stop__position">
                               <span className="deliveries-stop__position-value">
                                 {stop.position}
@@ -322,9 +382,14 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
 
                             <div className="deliveries-stop__body">
                               <div className="deliveries-stop__heading">
-                                <span className="deliveries-stop__address">
+                                <button
+                                  type="button"
+                                  className="deliveries-stop__address"
+                                  onClick={() => handleInspectStop(stop)}
+                                  aria-label={`Inspeccionar la parada ${stop.position} en ${stop.deliveryAddress}`}
+                                >
                                   {stop.deliveryAddress}
-                                </span>
+                                </button>
                                 <span
                                   className={`deliveries-status-badge deliveries-status-badge--${currentStatus}`}
                                 >
@@ -334,7 +399,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
 
                               <div className="deliveries-stop__meta">
                                 <span>Hora de entrega: {stop.deliveryTime}</span>
-                                <code className="deliveries-code">{stop.orderId}</code>
+                                <ShortIdBadge id={stop.orderId} prefix="PED" />
                               </div>
 
                               {record ? (
@@ -354,6 +419,17 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                               )}
 
                               <div className="deliveries-stop__actions">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleInspectStop(stop)}
+                                  isLoading={isInspecting}
+                                  disabled={isSyncing || isAdvancing}
+                                >
+                                  Inspeccionar
+                                </Button>
+
                                 <Button
                                   type="button"
                                   size="sm"
@@ -411,7 +487,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                       onClick={handleCompleteRoute}
                       aria-label="Completar la hoja de ruta activa"
                     >
-                      {isCompletingRoute ? 'Completando...' : 'Completar Ruta'}
+                      {isCompletingRoute ? 'Completando...' : 'Completar ruta'}
                     </Button>
                   </div>
                 </>
@@ -421,7 +497,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
 
           <div className="deliveries-grid__side">
             <Card variant="elevated" className="deliveries-identity-card">
-              <h3 className="deliveries-card__title">Repartidor en Operación</h3>
+              <h3 className="deliveries-card__title">Repartidor en operación</h3>
 
               {actor.role === 'personal' ? (
                 <>
@@ -462,8 +538,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                     {actor.displayName ?? 'Repartidor sin nombre visible'}
                   </p>
                   <p className="deliveries-identity-summary__meta">
-                    Identificador de repartidor:{' '}
-                    <code className="deliveries-code">{actor.courierId ?? 'No vinculado'}</code>
+                    Perfil de reparto vinculado a la sesión activa.
                   </p>
                 </div>
               )}
@@ -496,35 +571,48 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
             </Card>
 
             <Card variant="elevated" className="deliveries-inspector-card">
-              <h3 className="deliveries-card__title">Inspector Individual de Orden de Entrega</h3>
+              <h3 className="deliveries-card__title">Inspector de orden de entrega</h3>
 
               <form className="deliveries-inspector-form" onSubmit={handleInspect} noValidate>
-                <TextInput
-                  id="delivery-inspector-order-id"
-                  label="Identificador del pedido"
-                  placeholder="UUID del pedido de entrega"
-                  value={inspectorOrderId}
-                  onChange={(event) => setInspectorOrderId(event.target.value)}
-                  helperText="Formato UUID. Consulta el estado actual, la versión y las fechas de entrega."
-                  isRequired
-                  disabled={isLoadingInspector}
-                />
-
-                {inspectorOptions.length > 0 && (
+                {inspectorOptions.length > 0 ? (
                   <Select
                     label="Paradas de la ruta activa"
                     placeholder="Selecciona una parada de la ruta"
                     options={inspectorOptions}
                     value={inspectorSelectValue}
-                    onChange={(event) => setInspectorOrderId(event.target.value)}
+                    onChange={(event) => {
+                      setInspectorOrderId(event.target.value);
+                      void inspectOrder(event.target.value);
+                    }}
                     disabled={isLoadingInspector}
-                    helperText="Atajo para consultar una parada de la hoja de ruta activa."
+                    helperText="Un clic sobre cualquier parada de la hoja de ruta también la inspecciona."
                   />
+                ) : (
+                  <p className="deliveries-hint">
+                    Carga una hoja de ruta para inspeccionar sus paradas directamente.
+                  </p>
                 )}
 
-                <Button type="submit" size="sm" isLoading={isLoadingInspector}>
+                <Button type="submit" size="sm" isLoading={isLoadingInspector} disabled={inspectorOrderId.trim().length === 0}>
                   {isLoadingInspector ? 'Consultando...' : 'Consultar estado de entrega'}
                 </Button>
+
+                <details className="deliveries-advanced">
+                  <summary className="deliveries-advanced__summary">
+                    Opción avanzada · buscar por código
+                  </summary>
+                  <div className="deliveries-advanced__body">
+                    <TextInput
+                      id="delivery-inspector-order-id"
+                      label="Código del pedido"
+                      placeholder="Identificador completo del pedido"
+                      value={inspectorOrderId}
+                      onChange={(event) => setInspectorOrderId(event.target.value)}
+                      helperText="Consulta el estado actual, la versión y las fechas de entrega."
+                      disabled={isLoadingInspector}
+                    />
+                  </div>
+                </details>
               </form>
 
               {inspectorError && (
@@ -538,14 +626,14 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                   <div className="deliveries-inspector-result__item">
                     <dt>Pedido</dt>
                     <dd>
-                      <code className="deliveries-code">{inspectedOrder.orderId}</code>
+                      <ShortIdBadge id={inspectedOrder.orderId} prefix="PED" />
                     </dd>
                   </div>
                   <div className="deliveries-inspector-result__item">
                     <dt>Ruta</dt>
                     <dd>
                       {inspectedOrder.routeId ? (
-                        <code className="deliveries-code">{inspectedOrder.routeId}</code>
+                        <ShortIdBadge id={inspectedOrder.routeId} prefix="RUT" copyable={false} />
                       ) : (
                         'Sin ruta asignada'
                       )}
