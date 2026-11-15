@@ -18,26 +18,27 @@ import {
   useAuth,
   type AuthRole,
 } from '../features/auth/index.js';
-import { ZoneManagementView, type Zone } from '../features/zones/index.js';
+import { HttpZoneRepository, ZoneManagementView, type Zone } from '../features/zones/index.js';
 import { OrderManagementView, type Order } from '../features/orders/index.js';
 import { RouteManagementView } from '../features/routes/index.js';
 import { CourierFleetDispatchView, type Courier } from '../features/couriers/index.js';
 import { DeliveryExecutionView, type DeliveryActor } from '../features/deliveries/index.js';
+import { DispatchManagementView } from '../features/dispatch/index.js';
 import { composeUseCases } from './compose-use-cases.js';
 
-type AppTab = 'zones' | 'orders' | 'routes' | 'fleet' | 'deliveries' | 'users';
+type AppTab = 'zones' | 'orders' | 'routes' | 'dispatch' | 'deliveries' | 'users';
 
 const TAB_LABELS: Readonly<Record<AppTab, string>> = {
   zones: 'Zonas',
   orders: 'Pedidos',
   routes: 'Rutas',
-  fleet: 'Despacho',
+  dispatch: 'Despacho',
   deliveries: 'Entregas',
   users: 'Accesos',
 };
 
 const TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
-  personal: ['zones', 'orders', 'routes', 'fleet', 'deliveries', 'users'],
+  personal: ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'users'],
   repartidor: ['deliveries', 'routes', 'orders', 'zones'],
   cliente: ['orders', 'zones'],
 };
@@ -48,13 +49,13 @@ const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
   cliente: 'orders',
 };
 
-const APP_TABS: readonly AppTab[] = ['zones', 'orders', 'routes', 'fleet', 'deliveries', 'users'];
+const APP_TABS: readonly AppTab[] = ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'users'];
 
 const STEP_BY_TAB: Readonly<Record<AppTab, number>> = {
   zones: 1,
   orders: 2,
   routes: 3,
-  fleet: 4,
+  dispatch: 4,
   deliveries: 5,
   users: 6,
 };
@@ -64,7 +65,7 @@ const PIPELINE_STAGES: readonly { readonly tab: AppTab; readonly label: string }
   { tab: 'zones', label: 'Cobertura' },
   { tab: 'orders', label: 'Demanda' },
   { tab: 'routes', label: 'Planificación' },
-  { tab: 'fleet', label: 'Despacho' },
+  { tab: 'dispatch', label: 'Despacho' },
   { tab: 'deliveries', label: 'Última milla' },
 ];
 
@@ -81,11 +82,14 @@ function readRequestedTab(): string | null {
 function resolveTab(requested: string | null, role: AuthRole | null): AppTab {
   const fallback: AppTab = role === null ? 'zones' : DEFAULT_TAB_BY_ROLE[role];
 
-  if (requested === null || role === null || !isAppTab(requested)) {
+  // Compatibilidad: el antiguo identificador de la pestaña de despacho era "fleet".
+  const normalized = requested === 'fleet' ? 'dispatch' : requested;
+
+  if (normalized === null || role === null || !isAppTab(normalized)) {
     return fallback;
   }
 
-  return TABS_BY_ROLE[role].includes(requested) ? requested : fallback;
+  return TABS_BY_ROLE[role].includes(normalized) ? normalized : fallback;
 }
 
 function pipelineStatusLabel(activeTab: AppTab): string {
@@ -110,6 +114,7 @@ export function App() {
   );
   const [authGateway] = useState(() => new HttpAuthGateway(httpClient));
   const useCases = useMemo(() => composeUseCases(httpClient), [httpClient]);
+  const zoneRepository = useMemo(() => new HttpZoneRepository(httpClient), [httpClient]);
   const auth = useAuth(authGateway);
 
   const resetSessionViewState = useCallback(() => {
@@ -518,17 +523,26 @@ export function App() {
               onCatalogChanged={() => {
                 void loadSharedCatalog();
               }}
-              onNavigateToFleet={() => selectTab('fleet')}
+              onNavigateToFleet={() => selectTab('dispatch')}
             />
           )}
 
-          {activeTab === 'fleet' && (
-            <CourierFleetDispatchView
-              useCases={useCases.couriers}
-              listPlanifiedRoutes={listPlanifiedRoutes}
-              zones={zones}
-              onNavigateToDeliveries={() => selectTab('deliveries')}
-            />
+          {activeTab === 'dispatch' && (
+            <>
+              <CourierFleetDispatchView
+                useCases={useCases.couriers}
+                listPlanifiedRoutes={listPlanifiedRoutes}
+                zones={zones}
+                onNavigateToDeliveries={() => selectTab('deliveries')}
+              />
+
+              <div className="app-dispatch-module">
+                <DispatchManagementView
+                  useCases={useCases.dispatch}
+                  zoneCatalog={zoneRepository}
+                />
+              </div>
+            </>
           )}
 
           {activeTab === 'deliveries' && (

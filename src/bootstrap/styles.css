@@ -655,3 +655,12 @@ h1 {
   max-width: 100%;
   overflow-x: auto;
 }
+/* --- Módulo heredado de Despacho (HU-DES-01 / HU-DES-02) --- */
+.app-dispatch-module {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+  min-width: 0;
+}
