@@ -1,18 +1,28 @@
 import type { HttpClient } from '../../../../shared/infrastructure/http/index.js';
 import type { Zone, ZoneRepository, CreateZoneInput } from '../../../zones/domain/index.js';
+import { HttpZoneRepository } from '../../../zones/infrastructure/http/index.js';
 
+/**
+ * Adaptador de catálogo de zonas para el feature de pedidos.
+ * Reutiliza el repositorio HTTP de zonas (con sus guardas de contrato en
+ * tiempo de ejecución) para exponer el puerto `ZoneRepository` completo.
+ */
 export class HttpOrderZoneCatalog implements ZoneRepository {
-  constructor(private readonly client: HttpClient) {}
+  private readonly zoneRepository: HttpZoneRepository;
 
-  async getAll(): Promise<Zone[]> {
-    const result = await this.client.get<unknown>('/zones');
-    if (!result || typeof result !== 'object' || !('items' in result) || !Array.isArray(result.items)) {
-      throw new Error('La respuesta de zonas no cumple el contrato de la API.');
-    }
-    return result.items as Zone[];
+  constructor(client: HttpClient) {
+    this.zoneRepository = new HttpZoneRepository(client);
   }
 
-  async create(input: CreateZoneInput): Promise<Zone> {
-    return this.client.post<Zone>('/zones', input);
+  public getAll(): Promise<Zone[]> {
+    return this.zoneRepository.getAll();
+  }
+
+  public getById(id: string): Promise<Zone | null> {
+    return this.zoneRepository.getById(id);
+  }
+
+  public create(input: CreateZoneInput): Promise<Zone> {
+    return this.zoneRepository.create(input);
   }
 }

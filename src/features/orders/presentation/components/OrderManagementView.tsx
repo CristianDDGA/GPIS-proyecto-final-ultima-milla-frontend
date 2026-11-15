@@ -4,10 +4,18 @@ import type { OrderUseCases } from '../../application/orderUseCases.js';
 import { useOrders } from '../hooks/useOrders.js';
 import { OrderForm } from './OrderForm.js';
 import { OrderList } from './OrderList.js';
-import { Alert, Button, Card } from '../../../../shared/ui/index.js';
+import { Alert, Button, Card, Select, TextInput } from '../../../../shared/ui/index.js';
 import '../styles/orders.css';
 
-export const OrderManagementView: FC<{ useCases: OrderUseCases }> = ({ useCases }) => {
+export interface OrderManagementViewProps {
+  useCases: OrderUseCases;
+  canCreateOrder?: boolean | undefined;
+}
+
+export const OrderManagementView: FC<OrderManagementViewProps> = ({
+  useCases,
+  canCreateOrder = true,
+}) => {
   const readLocation = () => {
     const params = new URLSearchParams(window.location.search);
     return { deliveryDate: params.get('deliveryDate') || '', zoneId: params.get('zoneId') || '', orderId: params.get('orderId') || '' };
@@ -134,44 +142,68 @@ export const OrderManagementView: FC<{ useCases: OrderUseCases }> = ({ useCases 
             <dt>Actualizado (UTC)</dt><dd>{detail.updatedAt}</dd>
           </dl>}
         </Card>
-      ) : <div className="orders-grid">
-        <Card variant="elevated" className="orders-form-card">
-          <h3 className="orders-form-card__title">Programar Nuevo Pedido</h3>
-          <OrderForm
-            zones={zones}
-            isLoadingZones={isLoadingZones}
-            onSubmit={createOrder}
-            isSubmitting={isSubmitting}
-          />
-        </Card>
+      ) : (
+        <>
+          {!canCreateOrder && (
+            <Alert type="info" title="Modo consulta">
+              Tu rol permite consultar pedidos, pero no crear nuevos pedidos.
+            </Alert>
+          )}
 
-        <Card variant="elevated" className="orders-list-card">
-          <div className="orders-list-card__header">
-            <h3 className="orders-list-card__title">Pedidos Programados</h3>
-            <span className="orders-badge-count">
-              {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
-            </span>
+          <div className={`orders-grid${canCreateOrder ? '' : ' orders-grid--single'}`}>
+            {canCreateOrder && (
+              <Card variant="elevated" className="orders-form-card">
+                <h3 className="orders-form-card__title">Programar Nuevo Pedido</h3>
+                <OrderForm
+                  zones={zones}
+                  isLoadingZones={isLoadingZones}
+                  onSubmit={createOrder}
+                  isSubmitting={isSubmitting}
+                />
+              </Card>
+            )}
+
+            <Card variant="elevated" className="orders-list-card">
+              <div className="orders-list-card__header">
+                <h3 className="orders-list-card__title">Pedidos Programados</h3>
+                <span className="orders-badge-count">
+                  {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
+                </span>
+              </div>
+
+              <form className="orders-filters" onSubmit={applyFilters} aria-label="Filtrar pedidos">
+                <TextInput
+                  id="filter-date"
+                  type="date"
+                  label="Fecha de entrega"
+                  value={draftFilters.deliveryDate}
+                  onChange={event => setDraftFilters(previous => ({ ...previous, deliveryDate: event.target.value }))}
+                  disabled={isLoadingOrders}
+                />
+                <Select
+                  id="filter-zone"
+                  label="Zona"
+                  options={[
+                    { value: '', label: 'Todas las zonas' },
+                    ...zones.map(zone => ({ value: zone.id, label: zone.name })),
+                  ]}
+                  value={draftFilters.zoneId}
+                  onChange={event => setDraftFilters(previous => ({ ...previous, zoneId: event.target.value }))}
+                  disabled={isLoadingOrders}
+                />
+                <div className="orders-filters__actions">
+                  <Button type="submit" disabled={isLoadingOrders}>Filtrar</Button>
+                  <Button type="button" variant="secondary" onClick={() => {
+                    setDraftFilters({ ...location, deliveryDate: '', zoneId: '' }); setFilters({});
+                    navigate({ ...location, deliveryDate: '', zoneId: '' });
+                  }}>Limpiar filtros</Button>
+                </div>
+              </form>
+              {!ordersError && <OrderList orders={orders} isLoading={isLoadingOrders} hasActiveFilters={Boolean(location.deliveryDate || location.zoneId)} onSelect={orderId => navigate({ ...location, orderId })} />}
+            </Card>
           </div>
-
-          <form onSubmit={applyFilters} aria-label="Filtrar pedidos">
-            <label htmlFor="filter-date">Fecha de entrega</label>
-            <input id="filter-date" type="date" value={draftFilters.deliveryDate}
-              onChange={event => setDraftFilters(previous => ({ ...previous, deliveryDate: event.target.value }))} />
-            <label htmlFor="filter-zone">Zona</label>
-            <select id="filter-zone" value={draftFilters.zoneId}
-              onChange={event => setDraftFilters(previous => ({ ...previous, zoneId: event.target.value }))}>
-              <option value="">Todas las zonas</option>
-              {zones.map(zone => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
-            </select>
-            <Button type="submit" disabled={isLoadingOrders}>Filtrar</Button>
-            <Button type="button" variant="secondary" onClick={() => {
-              setDraftFilters({ ...location, deliveryDate: '', zoneId: '' }); setFilters({});
-              navigate({ ...location, deliveryDate: '', zoneId: '' });
-            }}>Limpiar filtros</Button>
-          </form>
-          {!ordersError && <OrderList orders={orders} isLoading={isLoadingOrders} onSelect={orderId => navigate({ ...location, orderId })} />}
-        </Card>
-      </div>}
+        </>
+      )}
     </section>
   );
 };

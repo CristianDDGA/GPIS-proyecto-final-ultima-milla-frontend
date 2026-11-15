@@ -1,10 +1,11 @@
 import type { FC } from 'react';
 import type { Zone } from '../../domain/index.js';
-import { EmptyState, Spinner } from '../../../../shared/ui/index.js';
+import { Button, EmptyState, Spinner } from '../../../../shared/ui/index.js';
 
 export interface ZoneListProps {
   zones: Zone[];
   isLoading: boolean;
+  onSelectZone?: ((id: string) => void) | undefined;
 }
 
 function formatDate(isoDateString?: string): string {
@@ -21,7 +22,7 @@ function formatDate(isoDateString?: string): string {
   }
 }
 
-export const ZoneList: FC<ZoneListProps> = ({ zones, isLoading }) => {
+export const ZoneList: FC<ZoneListProps> = ({ zones, isLoading, onSelectZone }) => {
   if (isLoading && zones.length === 0) {
     return (
       <div className="zones-loading-container" role="status">
@@ -35,7 +36,7 @@ export const ZoneList: FC<ZoneListProps> = ({ zones, isLoading }) => {
     return (
       <EmptyState
         title="No hay zonas registradas"
-        description="Aún no se han configurado áreas de cobertura. Utiliza el formulario para añadir la primera zona de entrega."
+        description="Aún no se han configurado áreas de cobertura para la última milla."
       />
     );
   }
@@ -48,6 +49,7 @@ export const ZoneList: FC<ZoneListProps> = ({ zones, isLoading }) => {
             <th scope="col">Nombre de Zona</th>
             <th scope="col">Identificador</th>
             <th scope="col">Fecha de Registro</th>
+            {onSelectZone && <th scope="col">Detalle</th>}
           </tr>
         </thead>
         <tbody>
@@ -58,6 +60,19 @@ export const ZoneList: FC<ZoneListProps> = ({ zones, isLoading }) => {
                 <code>{zone.id}</code>
               </td>
               <td className="zones-table__date">{formatDate(zone.createdAt)}</td>
+              {onSelectZone && (
+                <td className="zones-table__actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onSelectZone(zone.id)}
+                    aria-label={`Ver detalle de la zona ${zone.name}`}
+                  >
+                    Ver detalle
+                  </Button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

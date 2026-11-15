@@ -1,10 +1,11 @@
 import type { FC } from 'react';
 import type { Order } from '../../domain/index.js';
-import { EmptyState, Spinner } from '../../../../shared/ui/index.js';
+import { Button, EmptyState, Spinner } from '../../../../shared/ui/index.js';
 
 export interface OrderListProps {
   orders: Order[];
   isLoading: boolean;
+  hasActiveFilters?: boolean;
   onSelect?: (id: string) => void;
 }
 
@@ -13,7 +14,7 @@ function formatDisplayDate(dateStr: string, timeStr: string): string {
   return `${dateStr} a las ${timeStr || '00:00'}`;
 }
 
-export const OrderList: FC<OrderListProps> = ({ orders, isLoading, onSelect }) => {
+export const OrderList: FC<OrderListProps> = ({ orders, isLoading, hasActiveFilters = false, onSelect }) => {
   if (isLoading && orders.length === 0) {
     return (
       <output className="orders-loading-container">
@@ -26,8 +27,16 @@ export const OrderList: FC<OrderListProps> = ({ orders, isLoading, onSelect }) =
   if (orders.length === 0) {
     return (
       <EmptyState
-        title="No hay pedidos registrados"
-        description="Aún no se han programado entregas. Completa el formulario para registrar un nuevo pedido en el sistema."
+        title={
+          hasActiveFilters
+            ? 'Sin coincidencias para los filtros activos'
+            : 'No hay pedidos registrados'
+        }
+        description={
+          hasActiveFilters
+            ? 'No existen pedidos registrados que coincidan con la fecha o zona seleccionadas.'
+            : 'Aún no hay pedidos registrados en el sistema.'
+        }
       />
     );
   }
@@ -61,7 +70,19 @@ export const OrderList: FC<OrderListProps> = ({ orders, isLoading, onSelect }) =
                     {order.status || 'pendiente'}
                   </span>
                 </td>
-                {onSelect && <td><button type="button" onClick={() => onSelect(order.id)} aria-label={`Ver detalle del pedido ${order.id}`}>Ver detalle</button></td>}
+                {onSelect && (
+                  <td>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onSelect(order.id)}
+                      aria-label={`Ver detalle del pedido ${order.id}`}
+                    >
+                      Ver detalle
+                    </Button>
+                  </td>
+                )}
               </tr>
             );
           })}

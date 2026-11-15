@@ -97,6 +97,11 @@
   border: 1px solid var(--color-border, #e2e8f0);
 }
 
+/* Modo consulta: el listado ocupa todo el ancho disponible. */
+.orders-grid.orders-grid--single {
+  grid-template-columns: 1fr;
+}
+
 .orders-loading-container {
   display: flex;
   flex-direction: column;
@@ -143,7 +148,7 @@
 }
 
 .orders-table tr:hover td {
-  background-color: #f8fafc;
+  background-color: var(--color-bg-app, #f8fafc);
 }
 
 .orders-table__address {
@@ -177,11 +182,26 @@
 .orders-status-badge--en_camino {
   background-color: var(--color-primary-light, #eff6ff);
   color: var(--color-primary, #1d4ed8);
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--color-primary-border, #bfdbfe);
 }
 
 .orders-status-badge--entregado {
   background-color: var(--color-success-bg, #f0fdf4);
   color: var(--color-success, #15803d);
   border: 1px solid var(--color-success-border, #bbf7d0);
+}
+
+.orders-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  align-items: end;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.orders-filters__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-bottom: 0.25rem;
 }

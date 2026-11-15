@@ -93,3 +93,41 @@ h1 {
 .app-nav__tab--active:hover {
   background-color: var(--color-primary-light, #eff6ff);
 }
+
+/* --- Shell: sesión, carga y navegación multi-rol (27 endpoints) --- */
+
+.app-shell--centered {
+  min-height: 60vh;
+  justify-content: center;
+}
+
+.app-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.app-loading-card p {
+  margin: 0;
+}
+
+.app-nav {
+  flex-wrap: wrap;
+}
+
+.app-nav__tab:focus-visible {
+  outline: 2px solid var(--color-primary-ring, rgba(29, 78, 216, 0.25));
+  outline-offset: 2px;
+}
+
+.app-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.app-panel:focus {
+  outline: none;
+}
