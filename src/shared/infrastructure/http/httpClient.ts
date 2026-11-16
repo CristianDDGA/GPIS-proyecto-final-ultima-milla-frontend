@@ -1,16 +1,45 @@
+function readNestedRecord(value: unknown, key: string): Record<string, unknown> | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (!(key in record)) {
+    return undefined;
+  }
+
+  const nested = record[key];
+  if (typeof nested !== 'object' || nested === null || Array.isArray(nested)) {
+    return undefined;
+  }
+
+  return nested as Record<string, unknown>;
+}
+
+function readString(value: unknown, key: string): string | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const candidate = record[key];
+  return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate : undefined;
+}
+
 export class HttpError extends Error {
+  public readonly code: string | undefined;
+
   constructor(
     public readonly status: number,
     public readonly statusText: string,
     public readonly details?: unknown,
   ) {
     const detailMessage =
-      typeof details === 'object' && details !== null && 'message' in details
-        ? String((details as { message: unknown }).message)
-        : undefined;
+      readString(details, 'message') ?? readString(readNestedRecord(details, 'error'), 'message');
 
-    super(detailMessage || `Error HTTP ${status}: ${statusText}`);
+    super(detailMessage ?? `Error HTTP ${status}: ${statusText}`);
     this.name = 'HttpError';
+    this.code = readString(details, 'code') ?? readString(readNestedRecord(details, 'error'), 'code');
   }
 }
 
@@ -22,20 +51,67 @@ export interface HttpClient {
   get<T>(endpoint: string, options?: RequestOptions): Promise<T>;
   post<T>(endpoint: string, body?: unknown, options?: RequestOptions): Promise<T>;
   put<T>(endpoint: string, body?: unknown, options?: RequestOptions): Promise<T>;
+  patch<T>(endpoint: string, body?: unknown, options?: RequestOptions): Promise<T>;
   delete<T>(endpoint: string, options?: RequestOptions): Promise<T>;
+}
+
+export interface HttpClientAuthConfig {
+  getAccessToken?: (() => string | null) | undefined;
+  onUnauthorized?: (() => void) | undefined;
+}
+
+const UNAUTHENTICATED_ENDPOINTS: ReadonlySet<string> = new Set([
+  '/auth/login',
+  '/auth/register',
+  '/auth/logout',
+  '/health',
+]);
+
+function normalizeEndpoint(endpoint: string): string {
+  const withoutQuery = endpoint.split('?')[0] ?? endpoint;
+  const withoutFragment = withoutQuery.split('#')[0] ?? withoutQuery;
+  return withoutFragment.startsWith('/') ? withoutFragment : `/${withoutFragment}`;
+}
+
+function headerKey(headers: Record<string, string>, name: string): string | undefined {
+  const lowerCaseName = name.toLowerCase();
+  return Object.keys(headers).find((key) => key.toLowerCase() === lowerCaseName);
 }
 
 export class FetchHttpClient implements HttpClient {
   private readonly baseUrl: string;
+  private getAccessToken: (() => string | null) | undefined;
+  private onUnauthorized: (() => void) | undefined;
 
-  constructor(baseUrl?: string) {
+  constructor(baseUrl?: string, authConfig: HttpClientAuthConfig = {}) {
     const rawBaseUrl = baseUrl ?? import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
     this.baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+    this.getAccessToken = authConfig.getAccessToken;
+    this.onUnauthorized = authConfig.onUnauthorized;
+  }
+
+  public setAccessTokenProvider(provider: (() => string | null) | undefined): void {
+    this.getAccessToken = provider;
+  }
+
+  public setUnauthorizedHandler(handler: (() => void) | undefined): void {
+    this.onUnauthorized = handler;
   }
 
   private buildUrl(endpoint: string): string {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     return `${this.baseUrl}${cleanEndpoint}`;
+  }
+
+  private applyAuthorizationHeader(headers: Record<string, string>): void {
+    const token = this.getAccessToken?.();
+    if (!token || token.trim().length === 0) {
+      return;
+    }
+    if (headerKey(headers, 'Authorization') !== undefined) {
+      return;
+    }
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   private async request<T>(endpoint: string, init: RequestOptions = {}): Promise<T> {
@@ -45,6 +121,8 @@ export class FetchHttpClient implements HttpClient {
       Accept: 'application/json',
       ...(init.headers ?? {}),
     };
+
+    this.applyAuthorizationHeader(headers);
 
     let body = init.body;
     if (init.body && typeof init.body === 'object' && !(init.body instanceof FormData)) {
@@ -76,6 +154,10 @@ export class FetchHttpClient implements HttpClient {
         errorDetails = await response.json();
       } catch {
         errorDetails = await response.text();
+      }
+
+      if (response.status === 401 && !UNAUTHENTICATED_ENDPOINTS.has(normalizeEndpoint(endpoint))) {
+        this.onUnauthorized?.();
       }
 
       throw new HttpError(response.status, response.statusText, errorDetails);
@@ -112,6 +194,17 @@ export class FetchHttpClient implements HttpClient {
     const init: RequestOptions = {
       ...options,
       method: 'PUT',
+    };
+    if (body !== undefined) {
+      init.body = body as BodyInit;
+    }
+    return this.request<T>(endpoint, init);
+  }
+
+  public patch<T>(endpoint: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    const init: RequestOptions = {
+      ...options,
+      method: 'PATCH',
     };
     if (body !== undefined) {
       init.body = body as BodyInit;

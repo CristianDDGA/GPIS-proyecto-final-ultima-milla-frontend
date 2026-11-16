@@ -93,7 +93,7 @@ export function normalizeCourier(raw: unknown): Courier {
   const id = String(raw.id ?? raw.courierId ?? raw.courier_id ?? '');
   if (!isUuid(id)) throw new Error('El identificador del repartidor no es un UUID válido.');
 
-  const name = String(raw.name ?? raw.nombre ?? '').trim();
+  const name = String(raw.name ?? raw.displayName ?? raw.nombre ?? '').trim();
   if (!name) throw new Error('El nombre del repartidor no puede estar vacío.');
 
   const rawMax = Number(raw.maxOrdersPerTrip ?? raw.max_orders_per_trip ?? raw.capacity ?? 4);

@@ -37,4 +37,3 @@ export class HttpOrderGateway implements OrderGateway {
   }
 }
 
-export const defaultOrderGateway = new HttpOrderGateway();

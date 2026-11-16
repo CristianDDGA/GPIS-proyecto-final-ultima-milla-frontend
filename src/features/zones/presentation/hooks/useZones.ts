@@ -1,16 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Zone } from '../../domain/index.js';
-import { GetZonesUseCase, CreateZoneUseCase } from '../../application/index.js';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Zone, ZoneRepository } from '../../domain/index.js';
+import { CreateZoneUseCase, GetZoneByIdUseCase, GetZonesUseCase } from '../../application/index.js';
 import { defaultZoneRepository } from '../../infrastructure/http/index.js';
 
-export function useZones(repository = defaultZoneRepository) {
+export function useZones(repository: ZoneRepository = defaultZoneRepository) {
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const detailRequest = useRef(0);
 
   const getZonesUseCase = useMemo(() => new GetZonesUseCase(repository), [repository]);
+  const getZoneByIdUseCase = useMemo(() => new GetZoneByIdUseCase(repository), [repository]);
   const createZoneUseCase = useMemo(() => new CreateZoneUseCase(repository), [repository]);
 
   const loadZones = useCallback(async () => {
@@ -26,6 +31,40 @@ export function useZones(repository = defaultZoneRepository) {
       setIsLoading(false);
     }
   }, [getZonesUseCase]);
+
+  const inspectZone = useCallback(
+    async (id: string): Promise<void> => {
+      const request = ++detailRequest.current;
+      setIsLoadingDetail(true);
+      setDetailError(null);
+      setSelectedZone(null);
+      try {
+        const zone = await getZoneByIdUseCase.execute(id);
+        if (request !== detailRequest.current) return;
+        if (zone === null) {
+          setDetailError('No se encontró la zona solicitada.');
+          return;
+        }
+        setSelectedZone(zone);
+      } catch (err) {
+        if (request !== detailRequest.current) return;
+        const message = err instanceof Error ? err.message : 'Error desconocido al cargar el detalle de la zona';
+        setDetailError(message);
+      } finally {
+        if (request === detailRequest.current) {
+          setIsLoadingDetail(false);
+        }
+      }
+    },
+    [getZoneByIdUseCase],
+  );
+
+  const clearSelectedZone = useCallback(() => {
+    detailRequest.current += 1;
+    setSelectedZone(null);
+    setDetailError(null);
+    setIsLoadingDetail(false);
+  }, []);
 
   const createZone = useCallback(
     async (name: string): Promise<boolean> => {
@@ -63,7 +102,12 @@ export function useZones(repository = defaultZoneRepository) {
     isCreating,
     error,
     successMessage,
+    selectedZone,
+    isLoadingDetail,
+    detailError,
     loadZones,
+    inspectZone,
+    clearSelectedZone,
     createZone,
     clearFeedback,
   };

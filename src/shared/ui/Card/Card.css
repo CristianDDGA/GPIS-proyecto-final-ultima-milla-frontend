@@ -1,13 +1,13 @@
 .ui-card {
   background-color: var(--color-surface, #ffffff);
-  border-radius: var(--radius-lg, 0.75rem);
+  border-radius: var(--radius-xl, 1.25rem);
   padding: 1.5rem;
-  transition: box-shadow var(--transition-fast, 150ms);
+  transition: box-shadow var(--transition-normal, 250ms);
 }
 
 .ui-card--elevated {
-  border: 1px solid var(--color-border, #e2e8f0);
-  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+  border: 1px solid var(--color-border, #dde4f0);
+  box-shadow: 0 1px 2px rgba(10, 16, 32, 0.04), 0 18px 40px -34px rgba(10, 16, 32, 0.4);
 }
 
 .ui-card--outlined {

@@ -1,22 +1,64 @@
 import { useCallback, useEffect, useState, type FC, type SubmitEvent } from 'react';
-import type { Order, OrderFilters } from '../../domain/index.js';
+import type { Order, OrderFilters, OrderStatus } from '../../domain/index.js';
 import type { OrderUseCases } from '../../application/orderUseCases.js';
 import { useOrders } from '../hooks/useOrders.js';
 import { OrderForm } from './OrderForm.js';
 import { OrderList } from './OrderList.js';
-import { Alert, Button, Card } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  Card,
+  KineticHeader,
+  KineticCounter,
+  Select,
+  ShortIdBadge,
+  TextInput,
+} from '../../../../shared/ui/index.js';
 import '../styles/orders.css';
 
-export const OrderManagementView: FC<{ useCases: OrderUseCases }> = ({ useCases }) => {
+export interface OrderManagementViewProps {
+  useCases: OrderUseCases;
+  canCreateOrder?: boolean | undefined;
+  /** Navegación guiada del pipeline: planificar rutas para la fecha del pedido. */
+  onNavigateToRoutes?: ((deliveryDate: string) => void) | undefined;
+}
+
+const STATUS_TIMELINE: readonly { readonly status: OrderStatus; readonly label: string }[] = [
+  { status: 'pendiente', label: 'Pendiente' },
+  { status: 'asignado_a_ruta', label: 'Asignado a ruta' },
+  { status: 'recogido', label: 'Recogido' },
+  { status: 'en_camino', label: 'En camino' },
+  { status: 'entregado', label: 'Entregado' },
+];
+
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  pendiente: 'Pendiente',
+  asignado_a_ruta: 'Asignado a ruta',
+  recogido: 'Recogido',
+  en_camino: 'En camino',
+  entregado: 'Entregado',
+};
+
+export const OrderManagementView: FC<OrderManagementViewProps> = ({
+  useCases,
+  canCreateOrder = true,
+  onNavigateToRoutes,
+}) => {
   const readLocation = () => {
     const params = new URLSearchParams(window.location.search);
-    return { deliveryDate: params.get('deliveryDate') || '', zoneId: params.get('zoneId') || '', orderId: params.get('orderId') || '' };
+    return {
+      deliveryDate: params.get('deliveryDate') || '',
+      zoneId: params.get('zoneId') || '',
+      orderId: params.get('orderId') || '',
+    };
   };
   const [location, setLocation] = useState(readLocation);
   const [draftFilters, setDraftFilters] = useState(() => readLocation());
   const [detail, setDetail] = useState<Order | null>(null);
   const [detailState, setDetailState] = useState<'loading' | 'found' | 'missing' | 'error'>('loading');
-  const focusDetail = useCallback((element: HTMLHeadingElement | null) => { element?.focus(); }, []);
+  const focusDetail = useCallback((element: HTMLHeadingElement | null) => {
+    element?.focus();
+  }, []);
   const {
     orders,
     zones,
@@ -60,12 +102,19 @@ export const OrderManagementView: FC<{ useCases: OrderUseCases }> = ({ useCases 
     let current = true;
     setDetail(null);
     setDetailState('loading');
-    void useCases.getOrderById.execute(location.orderId).then(order => {
-      if (!current) return;
-      setDetail(order);
-      setDetailState(order ? 'found' : 'missing');
-    }).catch(() => { if (current) setDetailState('error'); });
-    return () => { current = false; };
+    void useCases.getOrderById
+      .execute(location.orderId)
+      .then((order) => {
+        if (!current) return;
+        setDetail(order);
+        setDetailState(order ? 'found' : 'missing');
+      })
+      .catch(() => {
+        if (current) setDetailState('error');
+      });
+    return () => {
+      current = false;
+    };
   }, [location.orderId, useCases.getOrderById]);
 
   const applyFilters = (event: SubmitEvent<HTMLFormElement>) => {
@@ -83,26 +132,30 @@ export const OrderManagementView: FC<{ useCases: OrderUseCases }> = ({ useCases 
   };
 
   const isRefreshing = isLoadingZones || isLoadingOrders;
+  const activeFilters = Boolean(location.deliveryDate || location.zoneId);
+  const pendingCount = orders.filter((order) => order.status === 'pendiente').length;
 
   return (
     <section className="orders-layout" aria-labelledby="orders-view-title">
-      <header className="orders-header">
-        <div className="orders-header__title-group">
-          <h2 id="orders-view-title">Gestión de Pedidos de Entrega (HU-PED-01)</h2>
-          <p>Registra y programa nuevos pedidos de última milla asignándolos a sus zonas de cobertura.</p>
-        </div>
-
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          isLoading={isRefreshing}
-          onClick={handleRefresh}
-          aria-label="Refrescar zonas y pedidos"
-        >
-          {isRefreshing ? 'Actualizando...' : '↻ Actualizar'}
-        </Button>
-      </header>
+      <KineticHeader
+        id="orders-view-title"
+        level="h2"
+        eyebrow="Etapa 2 · Demanda"
+        title="Gestión de pedidos"
+        description="Registra nuevos pedidos de última milla y consulta su estado. La fecha y la zona de cada pedido alimentan la planificación de rutas."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            isLoading={isRefreshing}
+            onClick={handleRefresh}
+            aria-label="Refrescar zonas y pedidos"
+          >
+            {isRefreshing ? 'Actualizando...' : '↻ Actualizar'}
+          </Button>
+        }
+      />
 
       {error && (
         <Alert type="error" title="Atención" onClose={clearFeedback}>
@@ -111,67 +164,204 @@ export const OrderManagementView: FC<{ useCases: OrderUseCases }> = ({ useCases 
       )}
 
       {successMessage && (
-        <Alert type="success" title="Pedido Registrado" onClose={clearFeedback}>
+        <Alert type="success" title="Pedido registrado" onClose={clearFeedback}>
           {successMessage}
         </Alert>
       )}
 
       {location.orderId ? (
-        <Card variant="elevated">
-          <Button type="button" variant="secondary" onClick={() => navigate({ ...location, orderId: '' })}>Volver al listado</Button>
-          <h3 tabIndex={-1} ref={focusDetail}>Detalle del pedido</h3>
-          {detailState === 'loading' && <p role="status">Cargando detalle...</p>}
-          {detailState === 'missing' && <p role="status">Pedido no encontrado.</p>}
-          {detailState === 'error' && <Alert type="error" title="Error">No se pudo consultar el pedido.</Alert>}
-          {detailState === 'found' && detail && detail.id === location.orderId && <dl>
-            <dt>ID</dt><dd>{detail.id}</dd>
-            <dt>Dirección de entrega</dt><dd>{detail.deliveryAddress}</dd>
-            <dt>Zona</dt><dd>{zones.find(zone => zone.id === detail.zoneId)?.name || detail.zoneId}</dd>
-            <dt>Fecha de entrega</dt><dd>{detail.deliveryDate}</dd>
-            <dt>Hora de entrega</dt><dd>{detail.deliveryTime}</dd>
-            <dt>Estado</dt><dd>{detail.status}</dd>
-            <dt>Creado (UTC)</dt><dd>{detail.createdAt}</dd>
-            <dt>Actualizado (UTC)</dt><dd>{detail.updatedAt}</dd>
-          </dl>}
-        </Card>
-      ) : <div className="orders-grid">
-        <Card variant="elevated" className="orders-form-card">
-          <h3 className="orders-form-card__title">Programar Nuevo Pedido</h3>
-          <OrderForm
-            zones={zones}
-            isLoadingZones={isLoadingZones}
-            onSubmit={createOrder}
-            isSubmitting={isSubmitting}
-          />
-        </Card>
-
-        <Card variant="elevated" className="orders-list-card">
-          <div className="orders-list-card__header">
-            <h3 className="orders-list-card__title">Pedidos Programados</h3>
-            <span className="orders-badge-count">
-              {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
-            </span>
+        <Card variant="elevated" className="orders-detail-card">
+          <div className="orders-detail__header">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate({ ...location, orderId: '' })}
+            >
+              Volver al listado
+            </Button>
+            <h3 tabIndex={-1} ref={focusDetail} className="orders-detail__title">
+              Detalle del pedido
+            </h3>
           </div>
 
-          <form onSubmit={applyFilters} aria-label="Filtrar pedidos">
-            <label htmlFor="filter-date">Fecha de entrega</label>
-            <input id="filter-date" type="date" value={draftFilters.deliveryDate}
-              onChange={event => setDraftFilters(previous => ({ ...previous, deliveryDate: event.target.value }))} />
-            <label htmlFor="filter-zone">Zona</label>
-            <select id="filter-zone" value={draftFilters.zoneId}
-              onChange={event => setDraftFilters(previous => ({ ...previous, zoneId: event.target.value }))}>
-              <option value="">Todas las zonas</option>
-              {zones.map(zone => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
-            </select>
-            <Button type="submit" disabled={isLoadingOrders}>Filtrar</Button>
-            <Button type="button" variant="secondary" onClick={() => {
-              setDraftFilters({ ...location, deliveryDate: '', zoneId: '' }); setFilters({});
-              navigate({ ...location, deliveryDate: '', zoneId: '' });
-            }}>Limpiar filtros</Button>
-          </form>
-          {!ordersError && <OrderList orders={orders} isLoading={isLoadingOrders} onSelect={orderId => navigate({ ...location, orderId })} />}
+          {detailState === 'loading' && <p role="status">Cargando detalle...</p>}
+          {detailState === 'missing' && <p role="status">Pedido no encontrado.</p>}
+          {detailState === 'error' && (
+            <Alert type="error" title="Error">No se pudo consultar el pedido.</Alert>
+          )}
+          {detailState === 'found' && detail && detail.id === location.orderId && (
+            <>
+              <div className="orders-detail__grid">
+                <dl className="orders-detail__list">
+                  <dt>ID</dt>
+                  <dd className="orders-detail__mono">{detail.id}</dd>
+                  <dt>Dirección de entrega</dt>
+                  <dd>{detail.deliveryAddress}</dd>
+                  <dt>Zona</dt>
+                  <dd>{zones.find((zone) => zone.id === detail.zoneId)?.name || detail.zoneId}</dd>
+                  <dt>Fecha de entrega</dt>
+                  <dd>{detail.deliveryDate}</dd>
+                  <dt>Hora de entrega</dt>
+                  <dd>{detail.deliveryTime}</dd>
+                  <dt>Estado</dt>
+                  <dd>
+                    <span className={`orders-status-badge orders-status-badge--${detail.status}`}>
+                      {STATUS_LABELS[detail.status] ?? detail.status}
+                    </span>
+                    <span className="orders-detail__raw-status">{detail.status}</span>
+                  </dd>
+                  <dt>Creado (UTC)</dt>
+                  <dd className="orders-detail__mono">{detail.createdAt}</dd>
+                  <dt>Actualizado (UTC)</dt>
+                  <dd className="orders-detail__mono">{detail.updatedAt}</dd>
+                </dl>
+
+                <aside className="orders-timeline" aria-label="Línea de tiempo del pedido">
+                  <p className="orders-timeline__title">Progreso operativo</p>
+                  <ol className="orders-timeline__list">
+                    {STATUS_TIMELINE.map((step) => {
+                      const stepIndex = STATUS_TIMELINE.findIndex(
+                        (candidate) => candidate.status === detail.status,
+                      );
+                      const currentIndex = STATUS_TIMELINE.findIndex(
+                        (candidate) => candidate.status === step.status,
+                      );
+                      const state =
+                        currentIndex < stepIndex
+                          ? 'done'
+                          : currentIndex === stepIndex
+                            ? 'current'
+                            : 'pending';
+                      return (
+                        <li
+                          key={step.status}
+                          className={`orders-timeline__item orders-timeline__item--${state}`}
+                        >
+                          <span className="orders-timeline__dot" aria-hidden="true" />
+                          <span className="orders-timeline__label">{step.label}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  <ShortIdBadge id={detail.id} prefix="PED" />
+                </aside>
+              </div>
+
+              {onNavigateToRoutes !== undefined && (
+                <div className="orders-detail__actions">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => onNavigateToRoutes(detail.deliveryDate)}
+                  >
+                    Ir a planificar rutas de esta fecha →
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </Card>
-      </div>}
+      ) : (
+        <>
+          {!canCreateOrder && (
+            <Alert type="info" title="Modo consulta">
+              Tu rol permite consultar pedidos, pero no crear nuevos pedidos.
+            </Alert>
+          )}
+
+          <div className="orders-kpis">
+            <KineticCounter label="Pedidos visibles" value={orders.length} tone="accent" />
+            <KineticCounter label="Pendientes" value={pendingCount} tone="transit" />
+            <KineticCounter
+              label="Filtros activos"
+              value={activeFilters ? 'Sí' : 'No'}
+              hint={activeFilters ? 'Fecha o zona aplicada' : 'Catálogo completo'}
+            />
+          </div>
+
+          <div className={`orders-grid${canCreateOrder ? '' : ' orders-grid--single'}`}>
+            {canCreateOrder && (
+              <Card variant="elevated" className="orders-form-card">
+                <h3 className="orders-form-card__title">Programar nuevo pedido</h3>
+                <OrderForm
+                  zones={zones}
+                  isLoadingZones={isLoadingZones}
+                  onSubmit={createOrder}
+                  isSubmitting={isSubmitting}
+                />
+              </Card>
+            )}
+
+            <Card variant="elevated" className="orders-list-card">
+              <div className="orders-list-card__header">
+                <h3 className="orders-list-card__title">Pedidos programados</h3>
+                <span className="orders-badge-count">
+                  {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
+                </span>
+              </div>
+
+              <form
+                className="orders-filters app-glass"
+                onSubmit={applyFilters}
+                aria-label="Filtrar pedidos"
+              >
+                <TextInput
+                  id="filter-date"
+                  type="date"
+                  label="Fecha de entrega"
+                  value={draftFilters.deliveryDate}
+                  onChange={(event) =>
+                    setDraftFilters((previous) => ({
+                      ...previous,
+                      deliveryDate: event.target.value,
+                    }))
+                  }
+                  disabled={isLoadingOrders}
+                />
+                <Select
+                  id="filter-zone"
+                  label="Zona"
+                  options={[
+                    { value: '', label: 'Todas las zonas' },
+                    ...zones.map((zone) => ({ value: zone.id, label: zone.name })),
+                  ]}
+                  value={draftFilters.zoneId}
+                  onChange={(event) =>
+                    setDraftFilters((previous) => ({ ...previous, zoneId: event.target.value }))
+                  }
+                  disabled={isLoadingOrders}
+                />
+                <div className="orders-filters__actions">
+                  <Button type="submit" disabled={isLoadingOrders}>
+                    Filtrar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setDraftFilters({ ...location, deliveryDate: '', zoneId: '' });
+                      setFilters({});
+                      navigate({ ...location, deliveryDate: '', zoneId: '' });
+                    }}
+                  >
+                    Limpiar filtros
+                  </Button>
+                </div>
+              </form>
+              {!ordersError && (
+                <OrderList
+                  orders={orders}
+                  isLoading={isLoadingOrders}
+                  hasActiveFilters={activeFilters}
+                  onSelect={(orderId) => navigate({ ...location, orderId })}
+                />
+              )}
+            </Card>
+          </div>
+        </>
+      )}
     </section>
   );
 };

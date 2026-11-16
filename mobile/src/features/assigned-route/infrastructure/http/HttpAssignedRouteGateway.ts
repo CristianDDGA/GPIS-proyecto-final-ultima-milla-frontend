@@ -14,15 +14,22 @@ export class AssignedRouteRequestError extends Error {
 }
 
 export class HttpAssignedRouteGateway implements AssignedRouteGateway {
-  constructor(private readonly baseUrl: string) {}
+  constructor(
+    private readonly baseUrl: string,
+    private readonly authToken?: string,
+  ) {}
 
   async getAssignedRoute(courierId: string): Promise<AssignedRoute | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
+      const headers: Record<string, string> = { Accept: 'application/json' };
+      if (this.authToken) {
+        headers.Authorization = `Bearer ${this.authToken}`;
+      }
       const response = await fetch(
         `${this.baseUrl}/couriers/${encodeURIComponent(courierId)}/route`,
-        {headers: {Accept: 'application/json'}, signal: controller.signal},
+        {headers, signal: controller.signal} as unknown as RequestInit,
       );
       if (response.status === 404) {
         throw new AssignedRouteRequestError('COURIER_NOT_FOUND', 'El repartidor no existe o no está disponible para la demostración.');
