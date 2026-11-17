@@ -529,6 +529,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
           <IsometricLogisticsHub />
           <IsometricFloatingCube className="auth-float auth-float--2" tone="cyan" size="md" />
           <IsometricFloatingCube className="auth-float auth-float--3" tone="steel" size="sm" />
+          <IsometricFloatingCube className="auth-float auth-float--4" tone="cyan" size="sm" />
         </div>
       </div>
 

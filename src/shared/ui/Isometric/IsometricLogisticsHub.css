@@ -36,6 +36,18 @@
 
 .iso-hub__ground.iso-hub__face--top {
   fill: var(--hub-ground-top);
+  stroke: rgba(232, 243, 255, 0.5);
+  stroke-width: 0.05;
+}
+
+.iso-hub__ground.iso-hub__face--left {
+  stroke: rgba(226, 240, 255, 0.32);
+  stroke-width: 0.04;
+}
+
+.iso-hub__ground.iso-hub__face--right {
+  stroke: rgba(226, 240, 255, 0.26);
+  stroke-width: 0.04;
 }
 
 .iso-hub__ground.iso-hub__face--left {
@@ -310,9 +322,9 @@
    ========================================================================== */
 
 .iso-hub {
-  --hub-ground-top: oklch(0.94 0.018 250);
-  --hub-ground-left: oklch(0.88 0.026 252);
-  --hub-ground-right: oklch(0.81 0.034 254);
+  --hub-ground-top: oklch(0.92 0.025 250 / 0.5);
+  --hub-ground-left: oklch(0.82 0.045 252 / 0.4);
+  --hub-ground-right: oklch(0.7 0.06 254 / 0.34);
   --hub-hub-top: oklch(0.64 0.19 258);
   --hub-hub-left: oklch(0.53 0.2 258);
   --hub-hub-right: oklch(0.44 0.19 260);

@@ -176,15 +176,15 @@
 .auth-viewport {
   position: relative;
   z-index: 2;
-  width: min(100% - 3rem, 78rem);
+  width: min(100% - 3rem, 82rem);
   min-height: 100dvh;
   margin: 0 auto;
   padding: clamp(1.25rem, 3vh, 2.5rem) 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 29rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
   align-content: center;
-  gap: clamp(2rem, 5vw, 5.5rem);
+  gap: clamp(2rem, 4vw, 4rem);
   color: var(--auth-text-primary);
   font-family: var(--font-auth-sans, 'Instrument Sans', system-ui, sans-serif);
 }
@@ -428,9 +428,13 @@
   z-index: 2;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: clamp(1.25rem, 4vh, 2.25rem);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 2.5vh, 1.75rem);
+  width: 100%;
+  height: 100%;
   min-width: 0;
+  text-align: center;
 }
 
 .auth-scene__logo {
@@ -446,10 +450,26 @@
   padding: 0.5rem 0;
 }
 
+/* Halo sólido (sin gradientes) que separa el diorama del fondo. */
+.auth-scene__stage::before {
+  content: '';
+  position: absolute;
+  width: min(70%, 24rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background-color: rgba(56, 189, 248, 0.12);
+  filter: blur(58px);
+  z-index: 0;
+  pointer-events: none;
+}
+
 .auth-scene .iso-hub {
-  width: min(100%, 34rem);
+  position: relative;
+  z-index: 1;
+  width: min(100%, 32rem);
   margin-inline: auto;
   gap: 0;
+  filter: drop-shadow(0 32px 42px rgba(2, 6, 23, 0.55));
 }
 
 .auth-scene .iso-hub__caption {
@@ -531,23 +551,30 @@
 }
 
 .auth-float--1 {
-  top: 4%;
-  right: 4%;
+  top: 2%;
+  left: 8%;
   animation-duration: 6.4s;
 }
 
 .auth-float--2 {
-  bottom: 12%;
-  right: 12%;
+  top: 6%;
+  right: 6%;
   animation-duration: 7.2s;
   animation-delay: -2.2s;
 }
 
 .auth-float--3 {
-  bottom: 22%;
-  left: 0;
+  bottom: 6%;
+  left: 12%;
   animation-duration: 8s;
   animation-delay: -4.4s;
+}
+
+.auth-float--4 {
+  bottom: 2%;
+  right: 10%;
+  animation-duration: 8.8s;
+  animation-delay: -6.6s;
 }
 
 @keyframes auth-iso-float {
@@ -565,7 +592,7 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 29rem;
+  max-width: 28rem;
   justify-self: center;
   overflow: hidden;
   padding: clamp(1.5rem, 2.6vw, 2.25rem);
@@ -1034,8 +1061,8 @@
 @media (max-width: 1024px) {
   .auth-viewport {
     width: min(100% - 2rem, 62rem);
-    grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
-    gap: 2rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.75rem;
   }
 
   .auth-scene .iso-hub__svg {
@@ -1084,16 +1111,17 @@
 
   .auth-float--1 {
     top: 0.25rem;
-    right: 18%;
+    left: 12%;
   }
 
   .auth-float--2 {
-    display: none;
+    top: 0.5rem;
+    right: 12%;
   }
 
-  .auth-float--3 {
-    bottom: 0.25rem;
-    left: 18%;
+  .auth-float--3,
+  .auth-float--4 {
+    display: none;
   }
 }
 

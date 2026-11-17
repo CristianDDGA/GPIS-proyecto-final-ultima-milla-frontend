@@ -67,7 +67,7 @@ export const IsometricLogisticsHub: FC<IsometricLogisticsHubProps> = ({
   role,
   className = '',
 }) => {
-  const ground = isoBox(-0.6, -0.6, 9.4, 9.4, 0.16, 0, 0);
+  const ground = isoBox(-0.2, -0.2, 7.2, 7.2, 0.16, 0, 0);
   const ring = isoBox(0.35, 0.35, 3.6, 3.6, 0.06, 0, 0);
 
   return (
@@ -75,7 +75,7 @@ export const IsometricLogisticsHub: FC<IsometricLogisticsHubProps> = ({
       className={`iso-hub iso-hub--${healthStatus} ${role !== undefined ? `iso-hub--role-${role}` : ''} ${className}`.trim()}
       aria-label="Ilustración isométrica del centro de distribución de última milla"
     >
-      <svg className="iso-hub__svg" viewBox="0 0 520 336" role="presentation">
+      <svg className="iso-hub__svg" viewBox="120 58 280 195" role="presentation">
         <g transform={`translate(${ORIGIN_X} ${ORIGIN_Y}) scale(${SCALE})`}>
           <polygon className="iso-hub__ground iso-hub__face--left" points={ground.left} />
           <polygon className="iso-hub__ground iso-hub__face--right" points={ground.right} />
