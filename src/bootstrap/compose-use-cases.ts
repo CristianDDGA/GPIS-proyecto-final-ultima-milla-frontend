@@ -6,11 +6,15 @@ import {
 import {
   CheckHealthUseCase,
   CreateManagedUserUseCase,
+  ForgotPasswordUseCase,
   GetCurrentUserUseCase,
   HttpAuthGateway,
   LoginUseCase,
   LogoutUseCase,
   RegisterCustomerUseCase,
+  ResendVerificationUseCase,
+  ResetPasswordUseCase,
+  VerifyEmailUseCase,
   type AuthUseCases,
 } from '../features/auth/index.js';
 
@@ -93,6 +97,10 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       checkHealth: new CheckHealthUseCase(authGateway),
       login: new LoginUseCase(authGateway),
       registerCustomer: new RegisterCustomerUseCase(authGateway),
+      verifyEmail: new VerifyEmailUseCase(authGateway),
+      resendVerification: new ResendVerificationUseCase(authGateway),
+      forgotPassword: new ForgotPasswordUseCase(authGateway),
+      resetPassword: new ResetPasswordUseCase(authGateway),
       getCurrentUser: new GetCurrentUserUseCase(authGateway),
       logout: new LogoutUseCase(authGateway),
       createManagedUser: new CreateManagedUserUseCase(authGateway),

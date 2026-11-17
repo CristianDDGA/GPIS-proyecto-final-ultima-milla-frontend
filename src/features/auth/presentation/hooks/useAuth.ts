@@ -7,6 +7,7 @@ import type {
   HealthStatus,
   LoginInput,
   RegisterCustomerInput,
+  RegisterCustomerOutcome,
 } from '../../domain/authUser.js';
 import {
   firstValidationError,
@@ -32,7 +33,7 @@ export interface UseAuthResult {
   error: string | null;
   isSubmitting: boolean;
   login: (input: LoginInput) => Promise<boolean>;
-  registerCustomer: (input: RegisterCustomerInput) => Promise<boolean>;
+  registerCustomer: (input: RegisterCustomerInput) => Promise<RegisterCustomerOutcome | null>;
   createManagedUser: (input: CreateManagedUserInput) => Promise<AuthUser | null>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<AuthUser | null>;
@@ -176,34 +177,38 @@ export function useAuth(gateway: AuthGateway): UseAuthResult {
   );
 
   const registerCustomer = useCallback(
-    async (input: RegisterCustomerInput): Promise<boolean> => {
+    async (input: RegisterCustomerInput): Promise<RegisterCustomerOutcome | null> => {
       setError(null);
 
       const validation = validateRegisterCustomerInput(input);
       if (!validation.isValid) {
         setError(firstValidationError(validation.errors) ?? 'Revisa los datos de registro.');
-        return false;
+        return null;
       }
 
       setIsSubmitting(true);
 
       try {
-        const session = await useCases.registerCustomer.execute(input);
-        setToken(session.token);
+        const outcome = await useCases.registerCustomer.execute(input);
 
-        if (mountedRef.current) {
-          setUser(session.user);
-          setStatus('authenticated');
-          setError(null);
+        // En modo verificación no hay sesión: el alta queda pendiente del código de correo.
+        if (outcome.kind === 'session') {
+          setToken(outcome.session.token);
+
+          if (mountedRef.current) {
+            setUser(outcome.session.user);
+            setStatus('authenticated');
+            setError(null);
+          }
         }
 
-        return true;
+        return outcome;
       } catch (error_) {
         if (mountedRef.current) {
           setError(toErrorMessage(error_, 'No se pudo completar el registro de la cuenta.'));
         }
 
-        return false;
+        return null;
       } finally {
         if (mountedRef.current) {
           setIsSubmitting(false);

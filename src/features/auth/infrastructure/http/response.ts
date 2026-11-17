@@ -1,4 +1,10 @@
-import { isAuthRole, isPublicRole, type AuthSession, type AuthUser } from '../../domain/index.js';
+import {
+  isAuthRole,
+  isPublicRole,
+  type AuthSession,
+  type AuthUser,
+  type RegisterCustomerOutcome,
+} from '../../domain/index.js';
 
 export const CONTRACT_ERROR_MESSAGE =
   'La respuesta del servidor no cumple el contrato de la API.';
@@ -57,4 +63,22 @@ export function readAuthSession(value: unknown): AuthSession {
 
 export function isHealthOnline(value: unknown): boolean {
   return isRecord(value) && value.status === 'ok';
+}
+/**
+ * El registro puede responder con sesión inmediata (`{ token, user }`) o pedir la verificación
+ * del correo (`{ user, verificationRequired: true }`, backend con `EMAIL_VERIFICATION_REQUIRED=true`).
+ */
+export function readRegisterOutcome(value: unknown): RegisterCustomerOutcome {
+  if (isRecord(value) && isNonEmptyString(value['token']) && isAuthUser(value['user'])) {
+    return {
+      kind: 'session',
+      session: { token: value['token'], user: value['user'] },
+    };
+  }
+
+  if (isRecord(value) && value['verificationRequired'] === true && isAuthUser(value['user'])) {
+    return { kind: 'verification_required', user: value['user'] };
+  }
+
+  throw new Error(CONTRACT_ERROR_MESSAGE);
 }

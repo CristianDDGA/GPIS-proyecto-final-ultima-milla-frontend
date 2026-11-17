@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties, FC, FormEvent, KeyboardEvent } from 'react';
+import { flushSync } from 'react-dom';
+import type { CSSProperties, FC, FormEvent, KeyboardEvent, ReactNode } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import {
+  evaluatePasswordStrength,
   firstValidationError,
+  validateForgotPasswordInput,
   validateLoginInput,
   validateRegisterCustomerInput,
+  validateResetPasswordInput,
+  validateVerifyEmailInput,
   type AuthUser,
   type HealthStatus,
+  type PasswordStrength,
   type RegisterCustomerInput,
+  type ValidationErrors,
 } from '../../domain/index.js';
 import { setToken } from '../../infrastructure/http/authTokenStorage.js';
+import { HttpError } from '../../../../shared/infrastructure/http/index.js';
 import {
   Alert,
   Button,
@@ -25,7 +33,15 @@ export interface AuthViewProps {
   onAuthenticated?: ((user: AuthUser) => void) | undefined;
 }
 
+type AuthScreen = 'login' | 'register' | 'verify-email' | 'forgot-password' | 'reset-password';
+
 type AuthTab = 'login' | 'register';
+
+interface Notice {
+  readonly type: 'success' | 'info';
+  readonly title: string;
+  readonly message: string;
+}
 
 const AUTH_TABS: readonly { readonly value: AuthTab; readonly label: string }[] = [
   { value: 'login', label: 'Iniciar sesión' },
@@ -33,54 +49,22 @@ const AUTH_TABS: readonly { readonly value: AuthTab; readonly label: string }[] 
 ];
 
 const HEALTH_LABELS: Record<HealthStatus, string> = {
-  checking: 'Verificando disponibilidad',
+  checking: 'Verificando servicios',
   online: 'Servicios operativos',
   offline: 'Servicios no disponibles',
 };
 
-const OPERATIONAL_CAPABILITIES: readonly {
-  readonly title: string;
-  readonly description: string;
-  readonly tag: string;
-}[] = [
-  {
-    tag: '01',
-    title: 'Cobertura',
-    description: 'Define zonas y mide la demanda real de cada área de reparto.',
-  },
-  {
-    tag: '02',
-    title: 'Planificación',
-    description: 'Agrupa pedidos en rutas con cupo controlado y reparto equilibrado.',
-  },
-  {
-    tag: '03',
-    title: 'Última milla',
-    description: 'Despacha la flota y confirma cada entrega con telemetría en vivo.',
-  },
-];
+const STRENGTH_LABELS: Record<PasswordStrength, string> = {
+  weak: 'Débil',
+  medium: 'Media',
+  strong: 'Fuerte',
+};
 
-const ROLE_CARDS: readonly {
-  readonly role: string;
-  readonly title: string;
-  readonly description: string;
-}[] = [
-  {
-    role: 'Administrador',
-    title: 'Operación completa',
-    description: 'Zonas, pedidos, rutas, flota y cuentas del equipo.',
-  },
-  {
-    role: 'Repartidor',
-    title: 'Hoja de ruta',
-    description: 'Paradas asignadas y avance de cada entrega.',
-  },
-  {
-    role: 'Cliente',
-    title: 'Seguimiento',
-    description: 'Registro de pedidos y estado de sus entregas.',
-  },
-];
+const STRENGTH_LEVEL: Record<PasswordStrength, number> = { weak: 1, medium: 2, strong: 3 };
+
+const RESEND_COOLDOWN_SECONDS = 60;
+
+const LAVA_BLOBS = [1, 2, 3, 4, 5] as const;
 
 function toErrorMessage(error: unknown, fallbackMessage: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -90,31 +74,49 @@ function toErrorMessage(error: unknown, fallbackMessage: string): string {
   return fallbackMessage;
 }
 
+function isEmailNotVerified(error: unknown): boolean {
+  return error instanceof HttpError && error.code === 'EMAIL_NOT_VERIFIED';
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
 export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
-  const [tab, setTab] = useState<AuthTab>('login');
+  const [screen, setScreen] = useState<AuthScreen>('login');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerDisplayName, setRegisterDisplayName] = useState('');
-  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [liveErrors, setLiveErrors] = useState<Record<string, string>>({});
-  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+  const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
+  const [verifyCode, setVerifyCode] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [requestError, setRequestError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [healthStatus, setHealthStatus] = useState<HealthStatus>('checking');
+
   const mountedRef = useRef(true);
+  const screenTitleRef = useRef<HTMLHeadingElement | null>(null);
   const loginTabRef = useRef<HTMLButtonElement | null>(null);
   const registerTabRef = useRef<HTMLButtonElement | null>(null);
 
+  // -------------------------------------------------------------------------
+  // Salud del backend (píldora de cristal de la vitrina)
+  // -------------------------------------------------------------------------
   const runHealthCheck = useCallback(async (): Promise<void> => {
-    if (!mountedRef.current) {
-      return;
-    }
-
     setHealthStatus('checking');
 
     try {
@@ -138,23 +140,101 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     };
   }, [runHealthCheck]);
 
-  const resetFeedback = useCallback((): void => {
-    setRequestError(null);
-    setSuccessMessage(null);
+  // Enfriamiento del botón "Reenviar código".
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setResendCooldown((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
+
+  // Foco al título de la cámara al cambiar de vista (accesibilidad de SPA).
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => screenTitleRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [screen]);
+
+  // -------------------------------------------------------------------------
+  // Transiciones de vista con View Transitions API (fallback instantáneo)
+  // -------------------------------------------------------------------------
+  const switchScreen = useCallback((next: AuthScreen): void => {
+    const apply = (): void => {
+      setScreen(next);
+      setTouched({});
+      setRequestError(null);
+    };
+
+    if (!prefersReducedMotion() && typeof document.startViewTransition === 'function') {
+      document.startViewTransition(() => {
+        flushSync(apply);
+      });
+      return;
+    }
+
+    apply();
   }, []);
 
-  const clearError = useCallback((): void => {
-    setRequestError(null);
+  const goToLogin = useCallback((): void => {
+    setLoginPassword('');
+    switchScreen('login');
+  }, [switchScreen]);
+
+  const clearError = useCallback((): void => setRequestError(null), []);
+  const clearNotice = useCallback((): void => setNotice(null), []);
+
+  const markTouched = useCallback((field: string): void => {
+    setTouched((previous) => ({ ...previous, [field]: true }));
   }, []);
 
-  const selectTab = useCallback((nextTab: AuthTab): void => {
-    setTab(nextTab);
-    setFieldErrors({});
-    setLiveErrors({});
-    setTouchedFields({});
-    setRequestError(null);
-    setSuccessMessage(null);
-  }, []);
+  // -------------------------------------------------------------------------
+  // Validación (mismas reglas que el backend) por vista
+  // -------------------------------------------------------------------------
+  const validation: ValidationErrors = (() => {
+    switch (screen) {
+      case 'register': {
+        return validateRegisterCustomerInput({
+          email: registerEmail,
+          password: registerPassword,
+          displayName: registerDisplayName,
+        }).errors;
+      }
+      case 'verify-email': {
+        return validateVerifyEmailInput({ email: verifyEmailAddress, code: verifyCode }).errors;
+      }
+      case 'forgot-password': {
+        return validateForgotPasswordInput({ email: forgotEmail }).errors;
+      }
+      case 'reset-password': {
+        return validateResetPasswordInput({
+          email: resetEmail,
+          code: resetCode,
+          newPassword: resetPassword,
+        }).errors;
+      }
+      default: {
+        return validateLoginInput({ email: loginEmail, password: loginPassword }).errors;
+      }
+    }
+  })();
+
+  const errorFor = useCallback(
+    (field: string): string | undefined => (touched[field] ? validation[field] : undefined),
+    [touched, validation],
+  );
+
+  const registerStrength = evaluatePasswordStrength(registerPassword, registerEmail);
+  const resetStrength = evaluatePasswordStrength(resetPassword, resetEmail);
+
+  const activeTab: AuthTab = screen === 'register' ? 'register' : 'login';
+  const segmentedStyle = {
+    '--seg-index': activeTab === 'login' ? 0 : 1,
+    '--seg-count': AUTH_TABS.length,
+  } as CSSProperties;
 
   const handleTabKeyDown = useCallback(
     (event: KeyboardEvent<HTMLButtonElement>): void => {
@@ -163,8 +243,8 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
       }
 
       event.preventDefault();
-      const nextTab: AuthTab = tab === 'login' ? 'register' : 'login';
-      selectTab(nextTab);
+      const nextTab: AuthTab = activeTab === 'login' ? 'register' : 'login';
+      switchScreen(nextTab);
 
       if (nextTab === 'login') {
         loginTabRef.current?.focus();
@@ -172,84 +252,48 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
         registerTabRef.current?.focus();
       }
     },
-    [tab, selectTab],
+    [activeTab, switchScreen],
   );
 
-  // Validación en vivo: sólo se muestran errores de campos ya visitados.
-  const validateLive = useCallback(
-    (values: { email?: string; password?: string; displayName?: string }): void => {
-      const isRegister = tab === 'register';
-      const validation = isRegister
-        ? validateRegisterCustomerInput({
-            email: values.email ?? registerEmail,
-            password: values.password ?? registerPassword,
-            displayName: values.displayName ?? registerDisplayName,
-          })
-        : validateLoginInput({
-            email: values.email ?? loginEmail,
-            password: values.password ?? loginPassword,
-          });
-
-      const nextErrors: Record<string, string> = {};
-      for (const [field, message] of Object.entries(validation.errors)) {
-        if (message !== undefined && touchedFields[field] === true) {
-          nextErrors[field] = message;
-        }
-      }
-      setLiveErrors(nextErrors);
-    },
-    [
-      tab,
-      registerEmail,
-      registerPassword,
-      registerDisplayName,
-      loginEmail,
-      loginPassword,
-      touchedFields,
-    ],
-  );
-
-  const markTouched = useCallback(
-    (field: string): void => {
-      setTouchedFields((previous) => ({ ...previous, [field]: true }));
-    },
-    [],
-  );
-
+  // -------------------------------------------------------------------------
+  // Envíos
+  // -------------------------------------------------------------------------
   const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    resetFeedback();
+    setRequestError(null);
+    setTouched({ email: true, password: true });
 
-    const validation = validateLoginInput({ email: loginEmail, password: loginPassword });
-    setFieldErrors(validation.errors);
-    setTouchedFields({ email: true, password: true });
-
-    if (!validation.isValid) {
-      setRequestError(
-        firstValidationError(validation.errors) ?? 'Revisa los datos de acceso ingresados.',
-      );
+    if (Object.keys(validation).length > 0) {
+      setRequestError(firstValidationError(validation) ?? 'Revisa los datos de acceso.');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const session = await useCases.login.execute({
-        email: loginEmail,
-        password: loginPassword,
-      });
-
+      const session = await useCases.login.execute({ email: loginEmail, password: loginPassword });
       setToken(session.token);
 
+      if (mountedRef.current) {
+        setLoginPassword('');
+        onAuthenticated?.(session.user);
+      }
+    } catch (error_) {
       if (!mountedRef.current) {
         return;
       }
 
-      setLoginPassword('');
-      setSuccessMessage('Sesión iniciada correctamente.');
-      onAuthenticated?.(session.user);
-    } catch (error_) {
-      if (mountedRef.current) {
+      if (isEmailNotVerified(error_)) {
+        setVerifyEmailAddress(loginEmail);
+        setVerifyCode('');
+        setNotice({
+          type: 'info',
+          title: 'Verifica tu correo',
+          message: 'Tu correo aún no está verificado. Ingresa el código de 6 dígitos que enviamos a tu bandeja.',
+        });
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+        switchScreen('verify-email');
+      } else {
         setRequestError(
           toErrorMessage(error_, 'No se pudo iniciar sesión. Verifica tu correo y contraseña.'),
         );
@@ -263,7 +307,13 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
 
   const handleRegisterSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    resetFeedback();
+    setRequestError(null);
+    setTouched({ email: true, password: true, displayName: true });
+
+    if (Object.keys(validation).length > 0) {
+      setRequestError(firstValidationError(validation) ?? 'Revisa los datos de registro.');
+      return;
+    }
 
     const trimmedDisplayName = registerDisplayName.trim();
     const registerInput: RegisterCustomerInput = {
@@ -275,32 +325,31 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
       registerInput.displayName = trimmedDisplayName;
     }
 
-    const validation = validateRegisterCustomerInput({
-      email: registerEmail,
-      password: registerPassword,
-      displayName: trimmedDisplayName,
-    });
-    setFieldErrors(validation.errors);
-    setTouchedFields({ email: true, password: true, displayName: true });
-
-    if (!validation.isValid) {
-      setRequestError(firstValidationError(validation.errors) ?? 'Revisa los datos de registro.');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      const session = await useCases.registerCustomer.execute(registerInput);
-      setToken(session.token);
+      const outcome = await useCases.registerCustomer.execute(registerInput);
 
       if (!mountedRef.current) {
         return;
       }
 
-      setRegisterPassword('');
-      setSuccessMessage('Cuenta creada y sesión iniciada correctamente.');
-      onAuthenticated?.(session.user);
+      if (outcome.kind === 'session') {
+        setToken(outcome.session.token);
+        setRegisterPassword('');
+        onAuthenticated?.(outcome.session.user);
+        return;
+      }
+
+      setVerifyEmailAddress(registerEmail);
+      setVerifyCode('');
+      setNotice({
+        type: 'info',
+        title: 'Verifica tu correo',
+        message: 'Te enviamos un código de 6 dígitos. Ingrésalo para activar tu cuenta.',
+      });
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      switchScreen('verify-email');
     } catch (error_) {
       if (mountedRef.current) {
         setRequestError(toErrorMessage(error_, 'No se pudo completar el registro de la cuenta.'));
@@ -312,300 +361,643 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     }
   };
 
-  const activeTabIndex = tab === 'login' ? 0 : 1;
-  const segmentedStyle = {
-    '--seg-index': activeTabIndex,
-    '--seg-count': AUTH_TABS.length,
-  } as CSSProperties;
+  const handleVerifySubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    setRequestError(null);
+    setTouched({ code: true, email: true });
+
+    if (Object.keys(validation).length > 0) {
+      setRequestError(firstValidationError(validation) ?? 'Revisa el código ingresado.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const session = await useCases.verifyEmail.execute({
+        email: verifyEmailAddress,
+        code: verifyCode,
+      });
+      setToken(session.token);
+
+      if (mountedRef.current) {
+        setVerifyCode('');
+        onAuthenticated?.(session.user);
+      }
+    } catch (error_) {
+      if (mountedRef.current) {
+        setRequestError(toErrorMessage(error_, 'El código no es válido o ha caducado.'));
+      }
+    } finally {
+      if (mountedRef.current) {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleResendVerification = async (): Promise<void> => {
+    if (resendCooldown > 0) {
+      return;
+    }
+
+    setRequestError(null);
+
+    try {
+      await useCases.resendVerification.execute(verifyEmailAddress);
+      if (mountedRef.current) {
+        setNotice({
+          type: 'success',
+          title: 'Código reenviado',
+          message: 'Si el correo está pendiente de verificación, enviamos un nuevo código.',
+        });
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      }
+    } catch (error_) {
+      if (mountedRef.current) {
+        setRequestError(toErrorMessage(error_, 'No se pudo reenviar el código.'));
+      }
+    }
+  };
+
+  const handleForgotSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    setRequestError(null);
+    setTouched({ email: true });
+
+    if (Object.keys(validation).length > 0) {
+      setRequestError(firstValidationError(validation) ?? 'Ingresa un correo electrónico válido.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await useCases.forgotPassword.execute({ email: forgotEmail });
+
+      if (mountedRef.current) {
+        setResetEmail(forgotEmail);
+        setResetCode('');
+        setResetPassword('');
+        setNotice({
+          type: 'success',
+          title: 'Código enviado',
+          message: 'Si la cuenta existe y puede recuperarse, enviamos un código de 6 dígitos a tu correo.',
+        });
+        switchScreen('reset-password');
+      }
+    } catch (error_) {
+      if (mountedRef.current) {
+        setRequestError(toErrorMessage(error_, 'No se pudo solicitar el código de recuperación.'));
+      }
+    } finally {
+      if (mountedRef.current) {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleResetSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    setRequestError(null);
+    setTouched({ email: true, code: true, newPassword: true });
+
+    if (Object.keys(validation).length > 0) {
+      setRequestError(firstValidationError(validation) ?? 'Revisa el código y la nueva contraseña.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await useCases.resetPassword.execute({
+        email: resetEmail,
+        code: resetCode,
+        newPassword: resetPassword,
+      });
+
+      if (mountedRef.current) {
+        setLoginEmail(resetEmail);
+        setLoginPassword('');
+        setResetCode('');
+        setResetPassword('');
+        setNotice({
+          type: 'success',
+          title: 'Contraseña actualizada',
+          message: 'Ya puedes iniciar sesión con tu nueva contraseña.',
+        });
+        switchScreen('login');
+      }
+    } catch (error_) {
+      if (mountedRef.current) {
+        setRequestError(toErrorMessage(error_, 'No se pudo restablecer la contraseña.'));
+      }
+    } finally {
+      if (mountedRef.current) {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Textos por vista
+  // -------------------------------------------------------------------------
+  const screenTitle: Record<AuthScreen, string> = {
+    login: 'Acceso a Torre de Control',
+    register: 'Crea tu cuenta de cliente',
+    'verify-email': 'Verifica tu correo',
+    'forgot-password': 'Recupera tu contraseña',
+    'reset-password': 'Define una nueva contraseña',
+  };
+
+  const screenSubtitle: Record<AuthScreen, string> = {
+    login: 'Ingresa tus credenciales para operar la última milla.',
+    register: 'Confirmaremos tu correo antes de habilitar la operación.',
+    'verify-email':
+      verifyEmailAddress.length > 0
+        ? 'Ingresa el código de 6 dígitos enviado a ' + verifyEmailAddress + '.'
+        : 'Ingresa el código de 6 dígitos enviado a tu correo.',
+    'forgot-password': 'Te enviaremos un código de 6 dígitos para restablecerla.',
+    'reset-password':
+      resetEmail.length > 0
+        ? 'Ingresa el código enviado a ' + resetEmail + ' y tu nueva contraseña.'
+        : 'Ingresa el código recibido y tu nueva contraseña.',
+  };
+
+  const renderStrength = (strength: PasswordStrength): ReactNode => (
+    <div className="auth-strength" data-strength={strength} aria-live="polite">
+      <span className="auth-strength__pills" aria-hidden="true">
+        {[1, 2, 3].map((level) => (
+          <span
+            key={level}
+            className={'auth-strength__pill ' + (level <= STRENGTH_LEVEL[strength] ? 'auth-strength__pill--on' : '')}
+          />
+        ))}
+      </span>
+      <span className="auth-strength__label">Seguridad: {STRENGTH_LABELS[strength]}</span>
+    </div>
+  );
 
   return (
-    <section className="auth-shell" aria-labelledby="auth-view-title">
-      <aside className="auth-hero" aria-label="Presentación de la torre de control">
-        <div className="auth-hero__head">
-          <p className="auth-hero__eyebrow">Gestión de logística</p>
-          <h1 id="auth-view-title" className="auth-hero__title">
-            Última Milla
-          </h1>
-          <p className="auth-hero__subtitle">
-            Torre de control para la operación de reparto urbano: cobertura, demanda,
-            planificación, despacho y entregas confirmadas en una sola secuencia.
-          </p>
-        </div>
+    <section className="auth-viewport" aria-labelledby="auth-view-title">
+      {/* Hermano 1: escenario de lava transparente (Backdrop Root aislado del monolito). */}
+      <div className="auth-lava-stage" aria-hidden="true">
+        <svg className="auth-lava-svg-defs" width="0" height="0" focusable="false" aria-hidden="true">
+          <defs>
+            <filter id="auth-lava-goo" x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="lava-blur" />
+              <feColorMatrix
+                in="lava-blur"
+                mode="matrix"
+                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
+                result="lava-metaballs"
+              />
+              <feComposite in="SourceGraphic" in2="lava-metaballs" operator="atop" />
+            </filter>
+          </defs>
+        </svg>
 
-        <div className="auth-hero__visual">
-          <IsometricLogisticsHub healthStatus={healthStatus} />
-        </div>
+        {LAVA_BLOBS.map((index) => (
+          <span key={index} className={'auth-lava-blob auth-lava-blob--' + index} />
+        ))}
+      </div>
 
-        <div className={`auth-health-pill auth-health-pill--${healthStatus}`} role="status" aria-live="polite">
-          {healthStatus === 'checking' ? (
-            <Spinner size="sm" label="Verificando disponibilidad del servidor" />
-          ) : (
-            <span className="auth-health-pill__dot" aria-hidden="true" />
-          )}
-          <span className="auth-health-pill__label">{HEALTH_LABELS[healthStatus]}</span>
-          <button
-            type="button"
-            className="auth-health-pill__retry"
-            onClick={() => {
-              void runHealthCheck();
-            }}
-            disabled={healthStatus === 'checking'}
-          >
-            Reintentar
-          </button>
-        </div>
-
-        <ul className="auth-capabilities" aria-label="Capacidades operativas del sistema">
-          {OPERATIONAL_CAPABILITIES.map((capability) => (
-            <li key={capability.tag} className="auth-capability">
-              <span className="auth-capability__tag" aria-hidden="true">
-                {capability.tag}
-              </span>
-              <div>
-                <p className="auth-capability__title">{capability.title}</p>
-                <p className="auth-capability__description">{capability.description}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </aside>
-
-      <div className="auth-panel">
-        <div className="auth-panel__card">
-          <header className="auth-panel__head">
-            <h2 className="auth-panel__title">Acceso al sistema</h2>
-            <p className="auth-panel__subtitle">
-              Ingresa con tus credenciales corporativas o crea una cuenta de cliente.
+      {/* Hermano 2: monolito de cristal que refracta la lava. */}
+      <div className="auth-glass-monolith">
+        <aside className="auth-showcase" aria-label="Vitrina isométrica de la torre de control">
+          <header className="auth-showcase__top">
+            <p className="auth-brand">
+              <span className="auth-brand__mark" aria-hidden="true">⬢</span>
+              <span className="auth-brand__name">ÚLTIMA MILLA</span>
             </p>
+
+            <div
+              className={'auth-health-pill auth-health-pill--' + healthStatus}
+              role="status"
+              aria-live="polite"
+            >
+              {healthStatus === 'checking' ? (
+                <Spinner size="sm" label="Verificando disponibilidad del servidor" />
+              ) : (
+                <span className="auth-health-pill__dot" aria-hidden="true" />
+              )}
+              <span className="auth-health-pill__label">{HEALTH_LABELS[healthStatus]}</span>
+              <button
+                type="button"
+                className="auth-health-pill__retry"
+                onClick={() => {
+                  void runHealthCheck();
+                }}
+                disabled={healthStatus === 'checking'}
+              >
+                Reintentar
+              </button>
+            </div>
           </header>
 
-          <div className="auth-tabs segmented" role="tablist" aria-label="Modo de acceso" style={segmentedStyle}>
-            <span className="segmented__thumb" aria-hidden="true" />
-            <button
-              ref={loginTabRef}
-              type="button"
-              role="tab"
-              id="auth-tab-login"
-              aria-selected={tab === 'login'}
-              aria-controls="auth-panel-login"
-              tabIndex={tab === 'login' ? 0 : -1}
-              className={`auth-tab ${tab === 'login' ? 'auth-tab--active' : ''}`}
-              onClick={() => selectTab('login')}
-              onKeyDown={handleTabKeyDown}
-            >
-              Iniciar sesión
-            </button>
-            <button
-              ref={registerTabRef}
-              type="button"
-              role="tab"
-              id="auth-tab-register"
-              aria-selected={tab === 'register'}
-              aria-controls="auth-panel-register"
-              tabIndex={tab === 'register' ? 0 : -1}
-              className={`auth-tab ${tab === 'register' ? 'auth-tab--active' : ''}`}
-              onClick={() => selectTab('register')}
-              onKeyDown={handleTabKeyDown}
-            >
-              Crear cuenta
-            </button>
+          <div className="auth-showcase__stage">
+            <div className="auth-showcase__lava-lens" aria-hidden="true" />
+            <div className="auth-showcase__hub">
+              <IsometricLogisticsHub healthStatus={healthStatus} />
+            </div>
           </div>
 
-          {requestError && (
-            <Alert type="error" title="Atención" onClose={clearError}>
-              {requestError}
-            </Alert>
-          )}
+          <footer className="auth-showcase__footer">
+            <h1 id="auth-view-title" className="auth-showcase__title">
+              Torre de Control de Despacho Urbano
+            </h1>
+            <p className="auth-showcase__subtitle">
+              Cobertura, rutas y entregas confirmadas en una sola secuencia operativa.
+            </p>
+          </footer>
+        </aside>
 
-          {successMessage && (
-            <Alert type="success" title="Sesión iniciada">
-              {successMessage}
-            </Alert>
-          )}
-
-          {tab === 'login' ? (
-            <form
-              id="auth-panel-login"
-              role="tabpanel"
-              aria-labelledby="auth-tab-login"
-              className="auth-form"
-              onSubmit={handleLoginSubmit}
-              noValidate
-            >
-              <TextInput
-                id="auth-login-email"
-                label="Correo electrónico"
-                type="email"
-                name="email"
-                autoComplete="username"
-                placeholder="usuario@logistica.local"
-                value={loginEmail}
-                onChange={(event) => {
-                  setLoginEmail(event.target.value);
-                  setFieldErrors({});
-                  setRequestError(null);
-                  validateLive({ email: event.target.value });
-                }}
-                onBlur={() => {
-                  markTouched('email');
-                  validateLive({ email: loginEmail });
-                }}
-                error={liveErrors['email'] ?? fieldErrors['email']}
-                isRequired
-                maxLength={254}
-                disabled={isSubmitting}
-              />
-
-              <div className="auth-password-field">
-                <TextInput
-                  id="auth-login-password"
-                  label="Contraseña"
-                  type={showLoginPassword ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="current-password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={loginPassword}
-                  onChange={(event) => {
-                    setLoginPassword(event.target.value);
-                    setFieldErrors({});
-                    setRequestError(null);
-                    validateLive({ password: event.target.value });
-                  }}
-                  onBlur={() => {
-                    markTouched('password');
-                    validateLive({ password: loginPassword });
-                  }}
-                  error={liveErrors['password'] ?? fieldErrors['password']}
-                  isRequired
-                  maxLength={128}
-                  disabled={isSubmitting}
-                />
+        <div className="auth-chamber">
+          <div className="auth-chamber__body">
+            {screen === 'login' || screen === 'register' ? (
+              <div
+                className="auth-segmented segmented"
+                role="tablist"
+                aria-label="Modo de acceso"
+                style={segmentedStyle}
+              >
+                <span className="segmented__thumb" aria-hidden="true" />
                 <button
+                  ref={loginTabRef}
                   type="button"
-                  className="auth-password-toggle"
-                  onClick={() => setShowLoginPassword((previous) => !previous)}
-                  aria-pressed={showLoginPassword}
-                  aria-label={showLoginPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  role="tab"
+                  id="auth-tab-login"
+                  aria-selected={activeTab === 'login'}
+                  aria-controls="auth-panel-login"
+                  tabIndex={activeTab === 'login' ? 0 : -1}
+                  className={'auth-tab ' + (activeTab === 'login' ? 'auth-tab--active' : '')}
+                  onClick={() => {
+                    setNotice(null);
+                    switchScreen('login');
+                  }}
+                  onKeyDown={handleTabKeyDown}
                 >
-                  {showLoginPassword ? 'Ocultar' : 'Mostrar'}
+                  Iniciar sesión
                 </button>
-              </div>
-
-              <div className="auth-form__actions">
-                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                  Entrar
-                </Button>
-                <p className="auth-form__hint">
-                  El acceso se valida contra el servicio de identidad corporativo.
-                </p>
-              </div>
-            </form>
-          ) : (
-            <form
-              id="auth-panel-register"
-              role="tabpanel"
-              aria-labelledby="auth-tab-register"
-              className="auth-form"
-              onSubmit={handleRegisterSubmit}
-              noValidate
-            >
-              <TextInput
-                id="auth-register-email"
-                label="Correo electrónico"
-                type="email"
-                name="email"
-                autoComplete="email"
-                placeholder="cliente@logistica.local"
-                value={registerEmail}
-                onChange={(event) => {
-                  setRegisterEmail(event.target.value);
-                  setFieldErrors({});
-                  setRequestError(null);
-                  validateLive({ email: event.target.value });
-                }}
-                onBlur={() => {
-                  markTouched('email');
-                  validateLive({ email: registerEmail });
-                }}
-                error={liveErrors['email'] ?? fieldErrors['email']}
-                isRequired
-                maxLength={254}
-                disabled={isSubmitting}
-              />
-
-              <div className="auth-password-field">
-                <TextInput
-                  id="auth-register-password"
-                  label="Contraseña"
-                  type={showRegisterPassword ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="new-password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={registerPassword}
-                  onChange={(event) => {
-                    setRegisterPassword(event.target.value);
-                    setFieldErrors({});
-                    setRequestError(null);
-                    validateLive({ password: event.target.value });
-                  }}
-                  onBlur={() => {
-                    markTouched('password');
-                    validateLive({ password: registerPassword });
-                  }}
-                  error={liveErrors['password'] ?? fieldErrors['password']}
-                  helperText="Entre 8 y 128 caracteres; se guarda cifrada."
-                  isRequired
-                  maxLength={128}
-                  disabled={isSubmitting}
-                />
                 <button
+                  ref={registerTabRef}
                   type="button"
-                  className="auth-password-toggle"
-                  onClick={() => setShowRegisterPassword((previous) => !previous)}
-                  aria-pressed={showRegisterPassword}
-                  aria-label={showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  role="tab"
+                  id="auth-tab-register"
+                  aria-selected={activeTab === 'register'}
+                  aria-controls="auth-panel-register"
+                  tabIndex={activeTab === 'register' ? 0 : -1}
+                  className={'auth-tab ' + (activeTab === 'register' ? 'auth-tab--active' : '')}
+                  onClick={() => {
+                    setNotice(null);
+                    switchScreen('register');
+                  }}
+                  onKeyDown={handleTabKeyDown}
                 >
-                  {showRegisterPassword ? 'Ocultar' : 'Mostrar'}
-                </button>
-              </div>
-
-              <TextInput
-                id="auth-register-display-name"
-                label="Nombre para mostrar"
-                type="text"
-                name="displayName"
-                autoComplete="name"
-                placeholder="Opcional"
-                value={registerDisplayName}
-                onChange={(event) => {
-                  setRegisterDisplayName(event.target.value);
-                  setFieldErrors({});
-                  setRequestError(null);
-                }}
-                error={fieldErrors['displayName']}
-                helperText="Opcional. Se usará en la cápsula de sesión en lugar de tu correo."
-                maxLength={120}
-                disabled={isSubmitting}
-              />
-
-              <div className="auth-form__actions">
-                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
                   Crear cuenta
-                </Button>
+                </button>
               </div>
-            </form>
-          )}
-        </div>
+            ) : (
+              <button type="button" className="auth-back" onClick={goToLogin}>
+                ← Volver al inicio de sesión
+              </button>
+            )}
 
-        <section className="auth-roles" aria-label="Perfiles del sistema">
-          {ROLE_CARDS.map((card) => (
-            <article key={card.role} className="auth-role">
-              <p className="auth-role__name">{card.role}</p>
-              <p className="auth-role__title">{card.title}</p>
-              <p className="auth-role__description">{card.description}</p>
-            </article>
-          ))}
-        </section>
+            <header className="auth-chamber__head">
+              <h2 ref={screenTitleRef} tabIndex={-1} className="auth-chamber__title">
+                {screenTitle[screen]}
+              </h2>
+              <p className="auth-chamber__subtitle">{screenSubtitle[screen]}</p>
+            </header>
+
+            {requestError !== null && (
+              <Alert type="error" title="Atención" onClose={clearError}>
+                {requestError}
+              </Alert>
+            )}
+
+            {notice !== null && (
+              <Alert type={notice.type} title={notice.title} onClose={clearNotice}>
+                {notice.message}
+              </Alert>
+            )}
+
+            {screen === 'login' && (
+              <form
+                id="auth-panel-login"
+                role="tabpanel"
+                aria-labelledby="auth-tab-login"
+                className="auth-form"
+                onSubmit={handleLoginSubmit}
+                noValidate
+              >
+                <TextInput
+                  id="auth-login-email"
+                  label="Correo electrónico"
+                  type="email"
+                  name="email"
+                  autoComplete="username"
+                  placeholder="usuario@logistica.local"
+                  value={loginEmail}
+                  onChange={(event) => {
+                    setLoginEmail(event.target.value);
+                    setRequestError(null);
+                  }}
+                  onBlur={() => markTouched('email')}
+                  error={errorFor('email')}
+                  isRequired
+                  maxLength={254}
+                  disabled={isSubmitting}
+                />
+
+                <div className="auth-password-field">
+                  <TextInput
+                    id="auth-login-password"
+                    label="Contraseña"
+                    type={showLoginPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
+                    placeholder="Mínimo 8 caracteres"
+                    value={loginPassword}
+                    onChange={(event) => {
+                      setLoginPassword(event.target.value);
+                      setRequestError(null);
+                    }}
+                    onBlur={() => markTouched('password')}
+                    error={errorFor('password')}
+                    isRequired
+                    maxLength={128}
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowLoginPassword((previous) => !previous)}
+                    aria-pressed={showLoginPassword}
+                    aria-label={showLoginPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showLoginPassword ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                  <button
+                    type="button"
+                    className="auth-forgot-link"
+                    onClick={() => {
+                      setForgotEmail(loginEmail);
+                      setNotice(null);
+                      switchScreen('forgot-password');
+                    }}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+
+                <div className="auth-form__actions">
+                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                    Entrar al sistema →
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {screen === 'register' && (
+              <form
+                id="auth-panel-register"
+                role="tabpanel"
+                aria-labelledby="auth-tab-register"
+                className="auth-form"
+                onSubmit={handleRegisterSubmit}
+                noValidate
+              >
+                <TextInput
+                  id="auth-register-email"
+                  label="Correo electrónico"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  placeholder="cliente@logistica.local"
+                  value={registerEmail}
+                  onChange={(event) => {
+                    setRegisterEmail(event.target.value);
+                    setRequestError(null);
+                  }}
+                  onBlur={() => markTouched('email')}
+                  error={errorFor('email')}
+                  isRequired
+                  maxLength={254}
+                  disabled={isSubmitting}
+                />
+
+                <div className="auth-password-field">
+                  <TextInput
+                    id="auth-register-password"
+                    label="Contraseña"
+                    type={showRegisterPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="new-password"
+                    placeholder="Mínimo 8 caracteres"
+                    value={registerPassword}
+                    onChange={(event) => {
+                      setRegisterPassword(event.target.value);
+                      setRequestError(null);
+                    }}
+                    onBlur={() => markTouched('password')}
+                    error={errorFor('password')}
+                    isRequired
+                    maxLength={128}
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowRegisterPassword((previous) => !previous)}
+                    aria-pressed={showRegisterPassword}
+                    aria-label={showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showRegisterPassword ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
+
+                {registerPassword.length > 0 && renderStrength(registerStrength)}
+
+                <TextInput
+                  id="auth-register-display-name"
+                  label="Nombre para mostrar (opcional)"
+                  type="text"
+                  name="displayName"
+                  autoComplete="name"
+                  placeholder="Ej. Ana Paredes"
+                  value={registerDisplayName}
+                  onChange={(event) => {
+                    setRegisterDisplayName(event.target.value);
+                    setRequestError(null);
+                  }}
+                  onBlur={() => markTouched('displayName')}
+                  error={errorFor('displayName')}
+                  maxLength={120}
+                  disabled={isSubmitting}
+                />
+
+                <div className="auth-form__actions">
+                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                    Crear cuenta
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {screen === 'verify-email' && (
+              <form id="auth-panel-verify" className="auth-form" onSubmit={handleVerifySubmit} noValidate>
+                <TextInput
+                  id="auth-verify-code"
+                  className="auth-code-field"
+                  label="Código de verificación"
+                  type="text"
+                  name="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  placeholder="000000"
+                  value={verifyCode}
+                  onChange={(event) => {
+                    setVerifyCode(event.target.value.replace(/\D/gu, '').slice(0, 6));
+                    setRequestError(null);
+                  }}
+                  onBlur={() => markTouched('code')}
+                  error={errorFor('code')}
+                  isRequired
+                  maxLength={6}
+                  disabled={isSubmitting}
+                />
+
+                <div className="auth-form__actions">
+                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                    Confirmar código
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      void handleResendVerification();
+                    }}
+                    disabled={resendCooldown > 0 || isSubmitting}
+                  >
+                    {resendCooldown > 0 ? 'Reenviar en ' + resendCooldown + ' s' : 'Reenviar código'}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {screen === 'forgot-password' && (
+              <form id="auth-panel-forgot" className="auth-form" onSubmit={handleForgotSubmit} noValidate>
+                <TextInput
+                  id="auth-forgot-email"
+                  label="Correo electrónico"
+                  type="email"
+                  name="email"
+                  autoComplete="username"
+                  placeholder="usuario@logistica.local"
+                  value={forgotEmail}
+                  onChange={(event) => {
+                    setForgotEmail(event.target.value);
+                    setRequestError(null);
+                  }}
+                  onBlur={() => markTouched('email')}
+                  error={errorFor('email')}
+                  isRequired
+                  maxLength={254}
+                  disabled={isSubmitting}
+                />
+
+                <div className="auth-form__actions">
+                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                    Enviar código
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {screen === 'reset-password' && (
+              <form id="auth-panel-reset" className="auth-form" onSubmit={handleResetSubmit} noValidate>
+                <TextInput
+                  id="auth-reset-email"
+                  label="Correo electrónico"
+                  type="email"
+                  name="email"
+                  autoComplete="username"
+                  value={resetEmail}
+                  onChange={(event) => {
+                    setResetEmail(event.target.value);
+                    setRequestError(null);
+                  }}
+                  onBlur={() => markTouched('email')}
+                  error={errorFor('email')}
+                  isRequired
+                  maxLength={254}
+                  disabled={isSubmitting}
+                />
+
+                <TextInput
+                  id="auth-reset-code"
+                  className="auth-code-field"
+                  label="Código de recuperación"
+                  type="text"
+                  name="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  placeholder="000000"
+                  value={resetCode}
+                  onChange={(event) => {
+                    setResetCode(event.target.value.replace(/\D/gu, '').slice(0, 6));
+                    setRequestError(null);
+                  }}
+                  onBlur={() => markTouched('code')}
+                  error={errorFor('code')}
+                  isRequired
+                  maxLength={6}
+                  disabled={isSubmitting}
+                />
+
+                <div className="auth-password-field">
+                  <TextInput
+                    id="auth-reset-password"
+                    label="Nueva contraseña"
+                    type={showResetPassword ? 'text' : 'password'}
+                    name="newPassword"
+                    autoComplete="new-password"
+                    placeholder="Mínimo 8 caracteres"
+                    value={resetPassword}
+                    onChange={(event) => {
+                      setResetPassword(event.target.value);
+                      setRequestError(null);
+                    }}
+                    onBlur={() => markTouched('newPassword')}
+                    error={errorFor('newPassword')}
+                    isRequired
+                    maxLength={128}
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowResetPassword((previous) => !previous)}
+                    aria-pressed={showResetPassword}
+                    aria-label={showResetPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showResetPassword ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
+
+                {resetPassword.length > 0 && renderStrength(resetStrength)}
+
+                <div className="auth-form__actions">
+                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                    Restablecer contraseña
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

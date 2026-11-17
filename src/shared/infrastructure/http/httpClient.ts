@@ -63,6 +63,10 @@ export interface HttpClientAuthConfig {
 const UNAUTHENTICATED_ENDPOINTS: ReadonlySet<string> = new Set([
   '/auth/login',
   '/auth/register',
+  '/auth/verify-email',
+  '/auth/resend-verification',
+  '/auth/forgot-password',
+  '/auth/reset-password',
   '/auth/logout',
   '/health',
 ]);

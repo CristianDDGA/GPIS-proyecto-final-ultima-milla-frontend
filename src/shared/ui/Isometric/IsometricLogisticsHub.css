@@ -302,3 +302,114 @@
     animation: none;
   }
 }
+/* ============================================================================
+   Iluminación cenital OKLCH (Fase Login)
+   Se declaran fallbacks hex arriba y oklch() aquí: sin soporte, gana el hex.
+   ========================================================================== */
+
+.iso-hub {
+  --hub-ground-top: oklch(0.94 0.018 250);
+  --hub-ground-left: oklch(0.88 0.026 252);
+  --hub-ground-right: oklch(0.81 0.034 254);
+  --hub-hub-top: oklch(0.64 0.19 258);
+  --hub-hub-left: oklch(0.53 0.2 258);
+  --hub-hub-right: oklch(0.44 0.19 260);
+  --hub-tower-top: oklch(0.82 0.09 250);
+  --hub-tower-left: oklch(0.68 0.12 252);
+  --hub-tower-right: oklch(0.58 0.13 255);
+  --hub-zone-top: oklch(0.87 0.05 250);
+  --hub-zone-left: oklch(0.77 0.07 252);
+  --hub-zone-right: oklch(0.69 0.08 254);
+}
+
+.iso-hub polygon {
+  stroke: rgba(196, 224, 255, 0.18);
+}
+
+.iso-hub__ring.iso-hub__face--top {
+  fill: rgba(125, 190, 255, 0.07);
+  stroke: rgba(125, 190, 255, 0.3);
+}
+
+.iso-hub__block--hub-roof .iso-hub__face--top {
+  fill: oklch(0.74 0.13 250);
+}
+
+.iso-hub__block--hub-roof .iso-hub__face--left {
+  fill: oklch(0.56 0.18 255);
+}
+
+.iso-hub__block--hub-roof .iso-hub__face--right {
+  fill: oklch(0.48 0.17 257);
+}
+
+.iso-hub__block--zone-soft .iso-hub__face--top {
+  fill: oklch(0.9 0.035 250);
+}
+
+.iso-hub__block--zone-soft .iso-hub__face--left {
+  fill: oklch(0.82 0.05 252);
+}
+
+.iso-hub__block--zone-soft .iso-hub__face--right {
+  fill: oklch(0.75 0.06 254);
+}
+
+.iso-hub__block--tower-soft .iso-hub__face--top {
+  fill: oklch(0.85 0.06 250);
+}
+
+.iso-hub__block--tower-soft .iso-hub__face--left {
+  fill: oklch(0.73 0.08 252);
+}
+
+.iso-hub__block--tower-soft .iso-hub__face--right {
+  fill: oklch(0.65 0.09 254);
+}
+
+.iso-hub__package .iso-hub__face--top {
+  fill: oklch(0.88 0.14 88);
+}
+
+.iso-hub__package .iso-hub__face--left {
+  fill: oklch(0.77 0.15 82);
+}
+
+.iso-hub__package .iso-hub__face--right {
+  fill: oklch(0.66 0.14 78);
+}
+
+.iso-hub__package--accent .iso-hub__face--top {
+  fill: oklch(0.88 0.11 175);
+}
+
+.iso-hub__package--accent .iso-hub__face--left {
+  fill: oklch(0.78 0.13 172);
+}
+
+.iso-hub__package--accent .iso-hub__face--right {
+  fill: oklch(0.67 0.13 170);
+}
+
+.iso-hub__route {
+  stroke: #38bdf8;
+  stroke: oklch(0.8 0.14 220);
+  opacity: 0.95;
+}
+
+.iso-hub__node-halo {
+  fill: #38bdf8;
+  fill: oklch(0.8 0.14 220);
+  opacity: 0.2;
+}
+
+.iso-hub__node {
+  fill: #7dd3fc;
+  fill: oklch(0.86 0.11 220);
+  stroke: rgba(6, 11, 24, 0.6);
+}
+
+.iso-hub__node--origin {
+  fill: #2dd4bf;
+  fill: oklch(0.82 0.14 172);
+}
