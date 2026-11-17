@@ -178,7 +178,9 @@
 }
 
 .iso-hub__signal {
-  fill: url(#iso-hub-glow);
+  fill: rgba(56, 189, 248, 0.16);
+  stroke: rgba(56, 189, 248, 0.24);
+  stroke-width: 0.02;
   transform-box: fill-box;
   transform-origin: center;
   animation: iso-signal-pulse 3.4s var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) infinite;

@@ -89,8 +89,8 @@
   --color-warning-border: var(--signal-pending-border);
 
   /* --- Tipografía ---------------------------------------------------------- */
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
-    'Segoe UI Variable Text', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI Variable Text', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace;
 
   --text-xs: 0.75rem;
@@ -170,9 +170,9 @@
   }
 }
 /* ============================================================================
-   Login (Fase 1) · Colorimetría OKLCH, profundidad y animación de lava
-   Se declaran primero los fallbacks sRGB y después oklch(): los navegadores
-   sin soporte de oklch ignoran la segunda declaración y conservan el hex.
+   Login (Fase 1 · pulido Millast) · Colorimetría sólida OKLCH, tipografías
+   propias y lava camaleónica. Cero gradientes en la capa de Login.
+   Se declaran fallbacks sRGB antes de oklch() para navegadores sin soporte.
    ========================================================================== */
 
 @property --auth-light-angle {
@@ -181,50 +181,82 @@
   inherits: false;
 }
 
-@property --auth-caustic-x {
-  syntax: '<percentage>';
-  initial-value: 25%;
+@property --auth-lava-hue-1 {
+  syntax: '<number>';
+  initial-value: 256;
   inherits: false;
 }
 
-@property --auth-caustic-y {
-  syntax: '<percentage>';
-  initial-value: 20%;
+@property --auth-lava-hue-2 {
+  syntax: '<number>';
+  initial-value: 196;
+  inherits: false;
+}
+
+@property --auth-lava-hue-3 {
+  syntax: '<number>';
+  initial-value: 282;
+  inherits: false;
+}
+
+@property --auth-lava-hue-4 {
+  syntax: '<number>';
+  initial-value: 172;
+  inherits: false;
+}
+
+@property --auth-lava-hue-5 {
+  syntax: '<number>';
+  initial-value: 222;
   inherits: false;
 }
 
 :root {
-  /* Escenario abisal */
-  --auth-canvas-base: #060b18;
-  --auth-canvas-base: oklch(0.14 0.035 258);
+  /* Tipografía de marca (Login) */
+  --font-auth-display: 'Syne', 'Space Grotesk', system-ui, sans-serif;
+  --font-auth-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  /* Lava transparente (cáscara radial) */
-  --auth-lava-sapphire: rgba(37, 99, 235, 0.52);
-  --auth-lava-sapphire: oklch(0.6 0.23 258 / 0.52);
-  --auth-lava-cyan: rgba(6, 182, 212, 0.44);
-  --auth-lava-cyan: oklch(0.75 0.17 195 / 0.44);
-  --auth-lava-indigo: rgba(99, 102, 241, 0.4);
-  --auth-lava-indigo: oklch(0.52 0.22 288 / 0.4);
-  --auth-lava-emerald: rgba(16, 185, 129, 0.36);
-  --auth-lava-emerald: oklch(0.72 0.18 168 / 0.36);
+  /* Escenario abisal sólido */
+  --auth-canvas-base: #060a17;
+  --auth-canvas-base: oklch(0.13 0.035 256);
+  --auth-grid-line: rgba(148, 197, 255, 0.075);
 
-  /* Cristal */
-  --auth-glass-surface: rgba(15, 23, 42, 0.52);
-  --auth-glass-surface: oklch(0.2 0.04 258 / 0.5);
-  --auth-glass-chamber-right: rgba(19, 29, 51, 0.76);
-  --auth-glass-chamber-right: oklch(0.21 0.035 258 / 0.74);
-  --auth-glass-input-bg: rgba(8, 13, 26, 0.78);
-  --auth-glass-input-bg: oklch(0.15 0.03 258 / 0.76);
-  --auth-glass-specular: rgba(241, 245, 249, 0.34);
-  --auth-glass-specular: oklch(0.96 0.02 250 / 0.34);
-  --auth-glass-field-border: rgba(148, 163, 184, 0.22);
+  /* Tarjeta y pozos de cristal (colores sólidos translúcidos) */
+  --auth-card-bg: rgba(20, 31, 60, 0.34);
+  --auth-card-bg: oklch(0.24 0.04 256 / 0.34);
+  --auth-card-border: rgba(255, 255, 255, 0.22);
+  --auth-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  --auth-card-shadow: 0 42px 90px -52px rgba(2, 6, 23, 0.92);
+  --auth-input-bg: rgba(9, 15, 30, 0.62);
+  --auth-input-bg: oklch(0.16 0.03 256 / 0.62);
+  --auth-input-border: rgba(148, 197, 255, 0.24);
+  --auth-field-focus: rgba(56, 189, 248, 0.34);
 
-  /* Tipografía y señales sobre cristal */
+  /* Texto */
   --auth-text-primary: #f8fafc;
   --auth-text-label: #cbd5e1;
-  --auth-text-muted: #94a3b8;
-  --auth-field-focus: rgba(59, 130, 246, 0.32);
-  --auth-field-focus: oklch(0.65 0.2 250 / 0.32);
+  --auth-text-muted: #b6c2d4;
+
+  /* Botón glass-isométrico (sólido + base extruida, sin gradiente) */
+  --auth-cta-bg: rgba(45, 110, 240, 0.84);
+  --auth-cta-bg: oklch(0.56 0.19 254 / 0.84);
+  --auth-cta-bg-hover: rgba(58, 124, 255, 0.92);
+  --auth-cta-bg-hover: oklch(0.6 0.19 254 / 0.92);
+  --auth-cta-base: #1e3a8a;
+  --auth-cta-base: oklch(0.36 0.16 254);
+  --auth-cta-border: rgba(230, 240, 255, 0.38);
+  --auth-cta-shadow: 0 16px 30px -16px rgba(4, 9, 24, 0.75);
+
+  /* Segmentado y cristales satélite */
+  --auth-seg-bg: rgba(255, 255, 255, 0.06);
+  --auth-seg-border: rgba(255, 255, 255, 0.14);
+  --auth-seg-thumb: rgba(255, 255, 255, 0.16);
+  --auth-seg-thumb-border: rgba(255, 255, 255, 0.34);
+  --auth-cube-sapphire: rgba(148, 197, 255, 0.14);
+  --auth-cube-cyan: rgba(56, 189, 248, 0.18);
+  --auth-cube-border: rgba(255, 255, 255, 0.32);
+
+  /* Señales */
   --auth-error: #fca5a5;
   --auth-error-bg: rgba(185, 28, 28, 0.16);
   --auth-error-border: rgba(248, 113, 113, 0.36);
@@ -235,20 +267,17 @@
   --auth-warning-bg: rgba(180, 83, 9, 0.18);
   --auth-warning-border: rgba(251, 191, 36, 0.34);
 
-  /* Botón primario luminiscente */
-  /* Ambos extremos con texto blanco ≥ 5.4:1 (AA para texto normal). */
-  --auth-cta-gradient: linear-gradient(135deg, #0059d7, #00738d);
-  --auth-cta-gradient: linear-gradient(135deg, oklch(0.5 0.21 258), oklch(0.5 0.12 215));
-  --auth-cta-shadow: 0 18px 36px -20px rgba(37, 99, 235, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  --auth-shadow: 0 42px 90px -52px rgba(2, 6, 23, 0.92);
-  --auth-radius: 2rem;
-  --auth-lava-blur: 18px;
+  --auth-radius: 1.75rem;
+  --auth-lava-blur: 20px;
 }
 
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --auth-glass-surface: #0f172a;
-    --auth-glass-chamber-right: #111c33;
-    --auth-glass-input-bg: #080d1a;
+    --auth-card-bg: #0f172a;
+    --auth-input-bg: #0b1224;
+    --auth-cta-bg: #1d4ed8;
+    --auth-cta-bg-hover: #2563eb;
+    --auth-seg-bg: #111c33;
+    --auth-seg-thumb: #334155;
   }
 }

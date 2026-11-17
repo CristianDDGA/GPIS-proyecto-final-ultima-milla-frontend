@@ -76,13 +76,6 @@ export const IsometricLogisticsHub: FC<IsometricLogisticsHubProps> = ({
       aria-label="Ilustración isométrica del centro de distribución de última milla"
     >
       <svg className="iso-hub__svg" viewBox="0 0 520 336" role="presentation">
-        <defs>
-          <radialGradient id="iso-hub-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="var(--hub-glow-strong)" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="var(--hub-glow-strong)" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-
         <g transform={`translate(${ORIGIN_X} ${ORIGIN_Y}) scale(${SCALE})`}>
           <polygon className="iso-hub__ground iso-hub__face--left" points={ground.left} />
           <polygon className="iso-hub__ground iso-hub__face--right" points={ground.right} />

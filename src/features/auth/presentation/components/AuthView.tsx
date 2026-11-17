@@ -11,20 +11,15 @@ import {
   validateResetPasswordInput,
   validateVerifyEmailInput,
   type AuthUser,
-  type HealthStatus,
   type PasswordStrength,
   type RegisterCustomerInput,
   type ValidationErrors,
 } from '../../domain/index.js';
 import { setToken } from '../../infrastructure/http/authTokenStorage.js';
 import { HttpError } from '../../../../shared/infrastructure/http/index.js';
-import {
-  Alert,
-  Button,
-  IsometricLogisticsHub,
-  Spinner,
-  TextInput,
-} from '../../../../shared/ui/index.js';
+import { Alert, Button, IsometricLogisticsHub, TextInput } from '../../../../shared/ui/index.js';
+import { IsometricFloatingCube } from './IsometricFloatingCube.js';
+import { MillastLogo } from './MillastLogo.js';
 import '../styles/auth.css';
 
 export interface AuthViewProps {
@@ -48,12 +43,6 @@ const AUTH_TABS: readonly { readonly value: AuthTab; readonly label: string }[] 
   { value: 'register', label: 'Crear cuenta' },
 ];
 
-const HEALTH_LABELS: Record<HealthStatus, string> = {
-  checking: 'Verificando servicios',
-  online: 'Servicios operativos',
-  offline: 'Servicios no disponibles',
-};
-
 const STRENGTH_LABELS: Record<PasswordStrength, string> = {
   weak: 'Débil',
   medium: 'Media',
@@ -65,6 +54,12 @@ const STRENGTH_LEVEL: Record<PasswordStrength, number> = { weak: 1, medium: 2, s
 const RESEND_COOLDOWN_SECONDS = 60;
 
 const LAVA_BLOBS = [1, 2, 3, 4, 5] as const;
+
+const SECONDARY_TITLES: Record<Exclude<AuthScreen, 'login' | 'register'>, string> = {
+  'verify-email': 'Verificar correo',
+  'forgot-password': 'Recuperar clave',
+  'reset-password': 'Nueva contraseña',
+};
 
 function toErrorMessage(error: unknown, fallbackMessage: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -83,6 +78,10 @@ function prefersReducedMotion(): boolean {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
+}
+
+function CtaCube(): ReactNode {
+  return <span className="auth-cta-cube" aria-hidden="true" />;
 }
 
 export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
@@ -106,39 +105,18 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [healthStatus, setHealthStatus] = useState<HealthStatus>('checking');
 
   const mountedRef = useRef(true);
   const screenTitleRef = useRef<HTMLHeadingElement | null>(null);
   const loginTabRef = useRef<HTMLButtonElement | null>(null);
   const registerTabRef = useRef<HTMLButtonElement | null>(null);
 
-  // -------------------------------------------------------------------------
-  // Salud del backend (píldora de cristal de la vitrina)
-  // -------------------------------------------------------------------------
-  const runHealthCheck = useCallback(async (): Promise<void> => {
-    setHealthStatus('checking');
-
-    try {
-      const nextHealthStatus = await useCases.checkHealth.execute();
-      if (mountedRef.current) {
-        setHealthStatus(nextHealthStatus);
-      }
-    } catch {
-      if (mountedRef.current) {
-        setHealthStatus('offline');
-      }
-    }
-  }, [useCases]);
-
   useEffect(() => {
     mountedRef.current = true;
-    void runHealthCheck();
-
     return () => {
       mountedRef.current = false;
     };
-  }, [runHealthCheck]);
+  }, []);
 
   // Enfriamiento del botón "Reenviar código".
   useEffect(() => {
@@ -153,15 +131,16 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     return () => window.clearTimeout(timer);
   }, [resendCooldown]);
 
-  // Foco al título de la cámara al cambiar de vista (accesibilidad de SPA).
+  // Foco al título breve de las sub-vistas (accesibilidad de SPA).
   useEffect(() => {
+    if (screen === 'login' || screen === 'register') {
+      return;
+    }
+
     const frame = window.requestAnimationFrame(() => screenTitleRef.current?.focus());
     return () => window.cancelAnimationFrame(frame);
   }, [screen]);
 
-  // -------------------------------------------------------------------------
-  // Transiciones de vista con View Transitions API (fallback instantáneo)
-  // -------------------------------------------------------------------------
   const switchScreen = useCallback((next: AuthScreen): void => {
     const apply = (): void => {
       setScreen(next);
@@ -191,9 +170,6 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     setTouched((previous) => ({ ...previous, [field]: true }));
   }, []);
 
-  // -------------------------------------------------------------------------
-  // Validación (mismas reglas que el backend) por vista
-  // -------------------------------------------------------------------------
   const validation: ValidationErrors = (() => {
     switch (screen) {
       case 'register': {
@@ -255,9 +231,6 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     [activeTab, switchScreen],
   );
 
-  // -------------------------------------------------------------------------
-  // Envíos
-  // -------------------------------------------------------------------------
   const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setRequestError(null);
@@ -289,7 +262,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
         setNotice({
           type: 'info',
           title: 'Verifica tu correo',
-          message: 'Tu correo aún no está verificado. Ingresa el código de 6 dígitos que enviamos a tu bandeja.',
+          message: 'Ingresa el código de 6 dígitos que enviamos a tu bandeja.',
         });
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
         switchScreen('verify-email');
@@ -346,7 +319,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
       setNotice({
         type: 'info',
         title: 'Verifica tu correo',
-        message: 'Te enviamos un código de 6 dígitos. Ingrésalo para activar tu cuenta.',
+        message: 'Enviamos un código de 6 dígitos para activar tu cuenta.',
       });
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
       switchScreen('verify-email');
@@ -408,7 +381,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
         setNotice({
           type: 'success',
           title: 'Código reenviado',
-          message: 'Si el correo está pendiente de verificación, enviamos un nuevo código.',
+          message: 'Si el correo está pendiente, enviamos un nuevo código.',
         });
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
       }
@@ -441,7 +414,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
         setNotice({
           type: 'success',
           title: 'Código enviado',
-          message: 'Si la cuenta existe y puede recuperarse, enviamos un código de 6 dígitos a tu correo.',
+          message: 'Si la cuenta existe, enviamos un código de 6 dígitos a tu correo.',
         });
         switchScreen('reset-password');
       }
@@ -498,30 +471,16 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     }
   };
 
-  // -------------------------------------------------------------------------
-  // Textos por vista
-  // -------------------------------------------------------------------------
-  const screenTitle: Record<AuthScreen, string> = {
-    login: 'Acceso a Torre de Control',
-    register: 'Crea tu cuenta de cliente',
-    'verify-email': 'Verifica tu correo',
-    'forgot-password': 'Recupera tu contraseña',
-    'reset-password': 'Define una nueva contraseña',
-  };
+  const isSecondary = screen !== 'login' && screen !== 'register';
 
-  const screenSubtitle: Record<AuthScreen, string> = {
-    login: 'Ingresa tus credenciales para operar la última milla.',
-    register: 'Confirmaremos tu correo antes de habilitar la operación.',
-    'verify-email':
-      verifyEmailAddress.length > 0
-        ? 'Ingresa el código de 6 dígitos enviado a ' + verifyEmailAddress + '.'
-        : 'Ingresa el código de 6 dígitos enviado a tu correo.',
-    'forgot-password': 'Te enviaremos un código de 6 dígitos para restablecerla.',
-    'reset-password':
-      resetEmail.length > 0
-        ? 'Ingresa el código enviado a ' + resetEmail + ' y tu nueva contraseña.'
-        : 'Ingresa el código recibido y tu nueva contraseña.',
-  };
+  const secondaryInstruction =
+    screen === 'verify-email'
+      ? verifyEmailAddress.length > 0
+        ? 'Código de 6 dígitos enviado a ' + verifyEmailAddress + '.'
+        : 'Código de 6 dígitos enviado a tu correo.'
+      : screen === 'forgot-password'
+        ? 'Enviaremos un código de 6 dígitos a tu correo.'
+        : 'Código enviado a ' + (resetEmail.length > 0 ? resetEmail : 'tu correo') + '.';
 
   const renderStrength = (strength: PasswordStrength): ReactNode => (
     <div className="auth-strength" data-strength={strength} aria-live="polite">
@@ -538,13 +497,13 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
   );
 
   return (
-    <section className="auth-viewport" aria-labelledby="auth-view-title">
-      {/* Hermano 1: escenario de lava transparente (Backdrop Root aislado del monolito). */}
+    <section className="auth-viewport" aria-label="Acceso a Millast">
+      {/* Hermano 1: lava camaleónica (fuera del Backdrop Root de la tarjeta). */}
       <div className="auth-lava-stage" aria-hidden="true">
         <svg className="auth-lava-svg-defs" width="0" height="0" focusable="false" aria-hidden="true">
           <defs>
             <filter id="auth-lava-goo" x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="lava-blur" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="lava-blur" />
               <feColorMatrix
                 in="lava-blur"
                 mode="matrix"
@@ -561,442 +520,417 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
         ))}
       </div>
 
-      {/* Hermano 2: monolito de cristal que refracta la lava. */}
-      <div className="auth-glass-monolith">
-        <aside className="auth-showcase" aria-label="Vitrina isométrica de la torre de control">
-          <header className="auth-showcase__top">
-            <p className="auth-brand">
-              <span className="auth-brand__mark" aria-hidden="true">⬢</span>
-              <span className="auth-brand__name">ÚLTIMA MILLA</span>
-            </p>
+      {/* Escena isométrica libre: sin caja pegada, sobre la lava. */}
+      <div className="auth-scene">
+        <MillastLogo className="auth-scene__logo" />
 
-            <div
-              className={'auth-health-pill auth-health-pill--' + healthStatus}
-              role="status"
-              aria-live="polite"
-            >
-              {healthStatus === 'checking' ? (
-                <Spinner size="sm" label="Verificando disponibilidad del servidor" />
-              ) : (
-                <span className="auth-health-pill__dot" aria-hidden="true" />
-              )}
-              <span className="auth-health-pill__label">{HEALTH_LABELS[healthStatus]}</span>
+        <div className="auth-scene__stage">
+          <IsometricFloatingCube className="auth-float auth-float--1" tone="sapphire" size="lg" />
+          <IsometricLogisticsHub />
+          <IsometricFloatingCube className="auth-float auth-float--2" tone="cyan" size="md" />
+          <IsometricFloatingCube className="auth-float auth-float--3" tone="steel" size="sm" />
+        </div>
+      </div>
+
+      {/* Tarjeta autónoma de acceso (cristal de relleno uniforme). */}
+      <div className="auth-card">
+        <span className="auth-card__edge" aria-hidden="true">
+          <IsometricFloatingCube tone="cyan" size="md" />
+        </span>
+
+        <div className="auth-card__body">
+          {!isSecondary ? (
+            <div className="auth-segmented segmented" role="tablist" aria-label="Modo de acceso" style={segmentedStyle}>
+              <span className="segmented__thumb" aria-hidden="true" />
               <button
+                ref={loginTabRef}
                 type="button"
-                className="auth-health-pill__retry"
+                role="tab"
+                id="auth-tab-login"
+                aria-selected={activeTab === 'login'}
+                aria-controls="auth-panel-login"
+                tabIndex={activeTab === 'login' ? 0 : -1}
+                className={'auth-tab ' + (activeTab === 'login' ? 'auth-tab--active' : '')}
                 onClick={() => {
-                  void runHealthCheck();
+                  setNotice(null);
+                  switchScreen('login');
                 }}
-                disabled={healthStatus === 'checking'}
+                onKeyDown={handleTabKeyDown}
               >
-                Reintentar
+                Iniciar sesión
+              </button>
+              <button
+                ref={registerTabRef}
+                type="button"
+                role="tab"
+                id="auth-tab-register"
+                aria-selected={activeTab === 'register'}
+                aria-controls="auth-panel-register"
+                tabIndex={activeTab === 'register' ? 0 : -1}
+                className={'auth-tab ' + (activeTab === 'register' ? 'auth-tab--active' : '')}
+                onClick={() => {
+                  setNotice(null);
+                  switchScreen('register');
+                }}
+                onKeyDown={handleTabKeyDown}
+              >
+                Crear cuenta
               </button>
             </div>
-          </header>
+          ) : (
+            <button type="button" className="auth-back" onClick={goToLogin}>
+              ← Volver
+            </button>
+          )}
 
-          <div className="auth-showcase__stage">
-            <div className="auth-showcase__lava-lens" aria-hidden="true" />
-            <div className="auth-showcase__hub">
-              <IsometricLogisticsHub healthStatus={healthStatus} />
-            </div>
-          </div>
+          {isSecondary && (
+            <header className="auth-card__head">
+              <h2 ref={screenTitleRef} tabIndex={-1} className="auth-card__title">
+                {SECONDARY_TITLES[screen as Exclude<AuthScreen, 'login' | 'register'>]}
+              </h2>
+              <p className="auth-card__instruction">{secondaryInstruction}</p>
+            </header>
+          )}
 
-          <footer className="auth-showcase__footer">
-            <h1 id="auth-view-title" className="auth-showcase__title">
-              Torre de Control de Despacho Urbano
-            </h1>
-            <p className="auth-showcase__subtitle">
-              Cobertura, rutas y entregas confirmadas en una sola secuencia operativa.
-            </p>
-          </footer>
-        </aside>
+          {requestError !== null && (
+            <Alert type="error" title="Atención" onClose={clearError}>
+              {requestError}
+            </Alert>
+          )}
 
-        <div className="auth-chamber">
-          <div className="auth-chamber__body">
-            {screen === 'login' || screen === 'register' ? (
-              <div
-                className="auth-segmented segmented"
-                role="tablist"
-                aria-label="Modo de acceso"
-                style={segmentedStyle}
-              >
-                <span className="segmented__thumb" aria-hidden="true" />
-                <button
-                  ref={loginTabRef}
-                  type="button"
-                  role="tab"
-                  id="auth-tab-login"
-                  aria-selected={activeTab === 'login'}
-                  aria-controls="auth-panel-login"
-                  tabIndex={activeTab === 'login' ? 0 : -1}
-                  className={'auth-tab ' + (activeTab === 'login' ? 'auth-tab--active' : '')}
-                  onClick={() => {
-                    setNotice(null);
-                    switchScreen('login');
+          {notice !== null && (
+            <Alert type={notice.type} title={notice.title} onClose={clearNotice}>
+              {notice.message}
+            </Alert>
+          )}
+
+          {screen === 'login' && (
+            <form
+              id="auth-panel-login"
+              role="tabpanel"
+              aria-labelledby="auth-tab-login"
+              className="auth-form"
+              onSubmit={handleLoginSubmit}
+              noValidate
+            >
+              <TextInput
+                id="auth-login-email"
+                label="Correo electrónico"
+                type="email"
+                name="email"
+                autoComplete="username"
+                placeholder="usuario@millast.ec"
+                value={loginEmail}
+                onChange={(event) => {
+                  setLoginEmail(event.target.value);
+                  setRequestError(null);
+                }}
+                onBlur={() => markTouched('email')}
+                error={errorFor('email')}
+                isRequired
+                maxLength={254}
+                disabled={isSubmitting}
+              />
+
+              <div className="auth-password-field">
+                <TextInput
+                  id="auth-login-password"
+                  label="Contraseña"
+                  type={showLoginPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="current-password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={loginPassword}
+                  onChange={(event) => {
+                    setLoginPassword(event.target.value);
+                    setRequestError(null);
                   }}
-                  onKeyDown={handleTabKeyDown}
+                  onBlur={() => markTouched('password')}
+                  error={errorFor('password')}
+                  isRequired
+                  maxLength={128}
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowLoginPassword((previous) => !previous)}
+                  aria-pressed={showLoginPassword}
+                  aria-label={showLoginPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
-                  Iniciar sesión
+                  {showLoginPassword ? 'Ocultar' : 'Mostrar'}
                 </button>
                 <button
-                  ref={registerTabRef}
                   type="button"
-                  role="tab"
-                  id="auth-tab-register"
-                  aria-selected={activeTab === 'register'}
-                  aria-controls="auth-panel-register"
-                  tabIndex={activeTab === 'register' ? 0 : -1}
-                  className={'auth-tab ' + (activeTab === 'register' ? 'auth-tab--active' : '')}
+                  className="auth-forgot-link"
                   onClick={() => {
+                    setForgotEmail(loginEmail);
                     setNotice(null);
-                    switchScreen('register');
+                    switchScreen('forgot-password');
                   }}
-                  onKeyDown={handleTabKeyDown}
                 >
-                  Crear cuenta
+                  ¿Olvidaste tu contraseña?
                 </button>
               </div>
-            ) : (
-              <button type="button" className="auth-back" onClick={goToLogin}>
-                ← Volver al inicio de sesión
-              </button>
-            )}
 
-            <header className="auth-chamber__head">
-              <h2 ref={screenTitleRef} tabIndex={-1} className="auth-chamber__title">
-                {screenTitle[screen]}
-              </h2>
-              <p className="auth-chamber__subtitle">{screenSubtitle[screen]}</p>
-            </header>
+              <div className="auth-form__actions">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={isSubmitting}
+                  disabled={isSubmitting}
+                  rightIcon={<CtaCube />}
+                >
+                  Entrar al sistema
+                </Button>
+              </div>
+            </form>
+          )}
 
-            {requestError !== null && (
-              <Alert type="error" title="Atención" onClose={clearError}>
-                {requestError}
-              </Alert>
-            )}
+          {screen === 'register' && (
+            <form
+              id="auth-panel-register"
+              role="tabpanel"
+              aria-labelledby="auth-tab-register"
+              className="auth-form"
+              onSubmit={handleRegisterSubmit}
+              noValidate
+            >
+              <TextInput
+                id="auth-register-email"
+                label="Correo electrónico"
+                type="email"
+                name="email"
+                autoComplete="email"
+                placeholder="cliente@millast.ec"
+                value={registerEmail}
+                onChange={(event) => {
+                  setRegisterEmail(event.target.value);
+                  setRequestError(null);
+                }}
+                onBlur={() => markTouched('email')}
+                error={errorFor('email')}
+                isRequired
+                maxLength={254}
+                disabled={isSubmitting}
+              />
 
-            {notice !== null && (
-              <Alert type={notice.type} title={notice.title} onClose={clearNotice}>
-                {notice.message}
-              </Alert>
-            )}
-
-            {screen === 'login' && (
-              <form
-                id="auth-panel-login"
-                role="tabpanel"
-                aria-labelledby="auth-tab-login"
-                className="auth-form"
-                onSubmit={handleLoginSubmit}
-                noValidate
-              >
+              <div className="auth-password-field">
                 <TextInput
-                  id="auth-login-email"
-                  label="Correo electrónico"
-                  type="email"
-                  name="email"
-                  autoComplete="username"
-                  placeholder="usuario@logistica.local"
-                  value={loginEmail}
+                  id="auth-register-password"
+                  label="Contraseña"
+                  type={showRegisterPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="new-password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={registerPassword}
                   onChange={(event) => {
-                    setLoginEmail(event.target.value);
+                    setRegisterPassword(event.target.value);
                     setRequestError(null);
                   }}
-                  onBlur={() => markTouched('email')}
-                  error={errorFor('email')}
+                  onBlur={() => markTouched('password')}
+                  error={errorFor('password')}
                   isRequired
-                  maxLength={254}
+                  maxLength={128}
                   disabled={isSubmitting}
                 />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowRegisterPassword((previous) => !previous)}
+                  aria-pressed={showRegisterPassword}
+                  aria-label={showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showRegisterPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
 
-                <div className="auth-password-field">
-                  <TextInput
-                    id="auth-login-password"
-                    label="Contraseña"
-                    type={showLoginPassword ? 'text' : 'password'}
-                    name="password"
-                    autoComplete="current-password"
-                    placeholder="Mínimo 8 caracteres"
-                    value={loginPassword}
-                    onChange={(event) => {
-                      setLoginPassword(event.target.value);
-                      setRequestError(null);
-                    }}
-                    onBlur={() => markTouched('password')}
-                    error={errorFor('password')}
-                    isRequired
-                    maxLength={128}
-                    disabled={isSubmitting}
-                  />
-                  <button
-                    type="button"
-                    className="auth-password-toggle"
-                    onClick={() => setShowLoginPassword((previous) => !previous)}
-                    aria-pressed={showLoginPassword}
-                    aria-label={showLoginPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  >
-                    {showLoginPassword ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                  <button
-                    type="button"
-                    className="auth-forgot-link"
-                    onClick={() => {
-                      setForgotEmail(loginEmail);
-                      setNotice(null);
-                      switchScreen('forgot-password');
-                    }}
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </button>
-                </div>
+              {registerPassword.length > 0 && renderStrength(registerStrength)}
 
-                <div className="auth-form__actions">
-                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                    Entrar al sistema →
-                  </Button>
-                </div>
-              </form>
-            )}
+              <TextInput
+                id="auth-register-display-name"
+                label="Nombre para mostrar (opcional)"
+                type="text"
+                name="displayName"
+                autoComplete="name"
+                placeholder="Ej. Ana Paredes"
+                value={registerDisplayName}
+                onChange={(event) => {
+                  setRegisterDisplayName(event.target.value);
+                  setRequestError(null);
+                }}
+                onBlur={() => markTouched('displayName')}
+                error={errorFor('displayName')}
+                maxLength={120}
+                disabled={isSubmitting}
+              />
 
-            {screen === 'register' && (
-              <form
-                id="auth-panel-register"
-                role="tabpanel"
-                aria-labelledby="auth-tab-register"
-                className="auth-form"
-                onSubmit={handleRegisterSubmit}
-                noValidate
-              >
+              <div className="auth-form__actions">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={isSubmitting}
+                  disabled={isSubmitting}
+                  rightIcon={<CtaCube />}
+                >
+                  Crear cuenta
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {screen === 'verify-email' && (
+            <form id="auth-panel-verify" className="auth-form" onSubmit={handleVerifySubmit} noValidate>
+              <TextInput
+                id="auth-verify-code"
+                className="auth-code-field"
+                label="Código de verificación"
+                type="text"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                placeholder="000000"
+                value={verifyCode}
+                onChange={(event) => {
+                  setVerifyCode(event.target.value.replace(/\D/gu, '').slice(0, 6));
+                  setRequestError(null);
+                }}
+                onBlur={() => markTouched('code')}
+                error={errorFor('code')}
+                isRequired
+                maxLength={6}
+                disabled={isSubmitting}
+              />
+
+              <div className="auth-form__actions">
+                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                  Confirmar código
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    void handleResendVerification();
+                  }}
+                  disabled={resendCooldown > 0 || isSubmitting}
+                >
+                  {resendCooldown > 0 ? 'Reenviar en ' + resendCooldown + ' s' : 'Reenviar código'}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {screen === 'forgot-password' && (
+            <form id="auth-panel-forgot" className="auth-form" onSubmit={handleForgotSubmit} noValidate>
+              <TextInput
+                id="auth-forgot-email"
+                label="Correo electrónico"
+                type="email"
+                name="email"
+                autoComplete="username"
+                placeholder="usuario@millast.ec"
+                value={forgotEmail}
+                onChange={(event) => {
+                  setForgotEmail(event.target.value);
+                  setRequestError(null);
+                }}
+                onBlur={() => markTouched('email')}
+                error={errorFor('email')}
+                isRequired
+                maxLength={254}
+                disabled={isSubmitting}
+              />
+
+              <div className="auth-form__actions">
+                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                  Enviar código
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {screen === 'reset-password' && (
+            <form id="auth-panel-reset" className="auth-form" onSubmit={handleResetSubmit} noValidate>
+              <TextInput
+                id="auth-reset-email"
+                label="Correo electrónico"
+                type="email"
+                name="email"
+                autoComplete="username"
+                value={resetEmail}
+                onChange={(event) => {
+                  setResetEmail(event.target.value);
+                  setRequestError(null);
+                }}
+                onBlur={() => markTouched('email')}
+                error={errorFor('email')}
+                isRequired
+                maxLength={254}
+                disabled={isSubmitting}
+              />
+
+              <TextInput
+                id="auth-reset-code"
+                className="auth-code-field"
+                label="Código de recuperación"
+                type="text"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                placeholder="000000"
+                value={resetCode}
+                onChange={(event) => {
+                  setResetCode(event.target.value.replace(/\D/gu, '').slice(0, 6));
+                  setRequestError(null);
+                }}
+                onBlur={() => markTouched('code')}
+                error={errorFor('code')}
+                isRequired
+                maxLength={6}
+                disabled={isSubmitting}
+              />
+
+              <div className="auth-password-field">
                 <TextInput
-                  id="auth-register-email"
-                  label="Correo electrónico"
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  placeholder="cliente@logistica.local"
-                  value={registerEmail}
+                  id="auth-reset-password"
+                  label="Nueva contraseña"
+                  type={showResetPassword ? 'text' : 'password'}
+                  name="newPassword"
+                  autoComplete="new-password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={resetPassword}
                   onChange={(event) => {
-                    setRegisterEmail(event.target.value);
+                    setResetPassword(event.target.value);
                     setRequestError(null);
                   }}
-                  onBlur={() => markTouched('email')}
-                  error={errorFor('email')}
+                  onBlur={() => markTouched('newPassword')}
+                  error={errorFor('newPassword')}
                   isRequired
-                  maxLength={254}
+                  maxLength={128}
                   disabled={isSubmitting}
                 />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowResetPassword((previous) => !previous)}
+                  aria-pressed={showResetPassword}
+                  aria-label={showResetPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showResetPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
 
-                <div className="auth-password-field">
-                  <TextInput
-                    id="auth-register-password"
-                    label="Contraseña"
-                    type={showRegisterPassword ? 'text' : 'password'}
-                    name="password"
-                    autoComplete="new-password"
-                    placeholder="Mínimo 8 caracteres"
-                    value={registerPassword}
-                    onChange={(event) => {
-                      setRegisterPassword(event.target.value);
-                      setRequestError(null);
-                    }}
-                    onBlur={() => markTouched('password')}
-                    error={errorFor('password')}
-                    isRequired
-                    maxLength={128}
-                    disabled={isSubmitting}
-                  />
-                  <button
-                    type="button"
-                    className="auth-password-toggle"
-                    onClick={() => setShowRegisterPassword((previous) => !previous)}
-                    aria-pressed={showRegisterPassword}
-                    aria-label={showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  >
-                    {showRegisterPassword ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
+              {resetPassword.length > 0 && renderStrength(resetStrength)}
 
-                {registerPassword.length > 0 && renderStrength(registerStrength)}
-
-                <TextInput
-                  id="auth-register-display-name"
-                  label="Nombre para mostrar (opcional)"
-                  type="text"
-                  name="displayName"
-                  autoComplete="name"
-                  placeholder="Ej. Ana Paredes"
-                  value={registerDisplayName}
-                  onChange={(event) => {
-                    setRegisterDisplayName(event.target.value);
-                    setRequestError(null);
-                  }}
-                  onBlur={() => markTouched('displayName')}
-                  error={errorFor('displayName')}
-                  maxLength={120}
-                  disabled={isSubmitting}
-                />
-
-                <div className="auth-form__actions">
-                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                    Crear cuenta
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {screen === 'verify-email' && (
-              <form id="auth-panel-verify" className="auth-form" onSubmit={handleVerifySubmit} noValidate>
-                <TextInput
-                  id="auth-verify-code"
-                  className="auth-code-field"
-                  label="Código de verificación"
-                  type="text"
-                  name="code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  placeholder="000000"
-                  value={verifyCode}
-                  onChange={(event) => {
-                    setVerifyCode(event.target.value.replace(/\D/gu, '').slice(0, 6));
-                    setRequestError(null);
-                  }}
-                  onBlur={() => markTouched('code')}
-                  error={errorFor('code')}
-                  isRequired
-                  maxLength={6}
-                  disabled={isSubmitting}
-                />
-
-                <div className="auth-form__actions">
-                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                    Confirmar código
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      void handleResendVerification();
-                    }}
-                    disabled={resendCooldown > 0 || isSubmitting}
-                  >
-                    {resendCooldown > 0 ? 'Reenviar en ' + resendCooldown + ' s' : 'Reenviar código'}
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {screen === 'forgot-password' && (
-              <form id="auth-panel-forgot" className="auth-form" onSubmit={handleForgotSubmit} noValidate>
-                <TextInput
-                  id="auth-forgot-email"
-                  label="Correo electrónico"
-                  type="email"
-                  name="email"
-                  autoComplete="username"
-                  placeholder="usuario@logistica.local"
-                  value={forgotEmail}
-                  onChange={(event) => {
-                    setForgotEmail(event.target.value);
-                    setRequestError(null);
-                  }}
-                  onBlur={() => markTouched('email')}
-                  error={errorFor('email')}
-                  isRequired
-                  maxLength={254}
-                  disabled={isSubmitting}
-                />
-
-                <div className="auth-form__actions">
-                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                    Enviar código
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {screen === 'reset-password' && (
-              <form id="auth-panel-reset" className="auth-form" onSubmit={handleResetSubmit} noValidate>
-                <TextInput
-                  id="auth-reset-email"
-                  label="Correo electrónico"
-                  type="email"
-                  name="email"
-                  autoComplete="username"
-                  value={resetEmail}
-                  onChange={(event) => {
-                    setResetEmail(event.target.value);
-                    setRequestError(null);
-                  }}
-                  onBlur={() => markTouched('email')}
-                  error={errorFor('email')}
-                  isRequired
-                  maxLength={254}
-                  disabled={isSubmitting}
-                />
-
-                <TextInput
-                  id="auth-reset-code"
-                  className="auth-code-field"
-                  label="Código de recuperación"
-                  type="text"
-                  name="code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  placeholder="000000"
-                  value={resetCode}
-                  onChange={(event) => {
-                    setResetCode(event.target.value.replace(/\D/gu, '').slice(0, 6));
-                    setRequestError(null);
-                  }}
-                  onBlur={() => markTouched('code')}
-                  error={errorFor('code')}
-                  isRequired
-                  maxLength={6}
-                  disabled={isSubmitting}
-                />
-
-                <div className="auth-password-field">
-                  <TextInput
-                    id="auth-reset-password"
-                    label="Nueva contraseña"
-                    type={showResetPassword ? 'text' : 'password'}
-                    name="newPassword"
-                    autoComplete="new-password"
-                    placeholder="Mínimo 8 caracteres"
-                    value={resetPassword}
-                    onChange={(event) => {
-                      setResetPassword(event.target.value);
-                      setRequestError(null);
-                    }}
-                    onBlur={() => markTouched('newPassword')}
-                    error={errorFor('newPassword')}
-                    isRequired
-                    maxLength={128}
-                    disabled={isSubmitting}
-                  />
-                  <button
-                    type="button"
-                    className="auth-password-toggle"
-                    onClick={() => setShowResetPassword((previous) => !previous)}
-                    aria-pressed={showResetPassword}
-                    aria-label={showResetPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  >
-                    {showResetPassword ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
-
-                {resetPassword.length > 0 && renderStrength(resetStrength)}
-
-                <div className="auth-form__actions">
-                  <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                    Restablecer contraseña
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
+              <div className="auth-form__actions">
+                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+                  Restablecer contraseña
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </section>
