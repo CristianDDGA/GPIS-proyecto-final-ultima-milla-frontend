@@ -11,4 +11,3 @@ export * from './ShortIdBadge/ShortIdBadge.js';
 export * from './KineticCounter/KineticCounter.js';
 export * from './KineticHeader/KineticHeader.js';
 export * from './Isometric/IsometricCapacityCube.js';
-export * from './Isometric/IsometricLogisticsHub.js';

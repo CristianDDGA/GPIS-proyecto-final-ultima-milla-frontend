@@ -252,10 +252,6 @@
   --auth-seg-border: rgba(255, 255, 255, 0.14);
   --auth-seg-thumb: rgba(255, 255, 255, 0.16);
   --auth-seg-thumb-border: rgba(255, 255, 255, 0.34);
-  --auth-cube-sapphire: rgba(148, 197, 255, 0.14);
-  --auth-cube-cyan: rgba(56, 189, 248, 0.18);
-  --auth-cube-border: rgba(255, 255, 255, 0.32);
-
   /* Señales */
   --auth-error: #fca5a5;
   --auth-error-bg: rgba(185, 28, 28, 0.16);

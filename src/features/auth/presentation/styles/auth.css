@@ -1,5 +1,5 @@
 /* ============================================================================
-   Auth · Cápsula de sesión (capa funcional) + Login Fase 1 pulido Millast +
+   Auth · Cápsula de sesión (capa funcional) + Login Millast centrado + 
    Administración de usuarios.
    ========================================================================== */
 
@@ -168,25 +168,31 @@
 
 
 /* ============================================================================
-   Login (Fase 1 · pulido Millast) · Composición desacoplada, glassmorphism de
+   Login (Fase 1 · pulido Millast) · Tarjeta única centrada, glassmorphism de
    relleno uniforme, cero gradientes y lava camaleónica.
-   .auth-lava-stage (hermano) · .auth-scene (libre) · .auth-card (autónoma)
+   .auth-lava-stage (fondo) · .auth-viewport (centrado) · .auth-card
    ========================================================================== */
 
 .auth-viewport {
   position: relative;
   z-index: 2;
-  width: min(100% - 3rem, 82rem);
+  width: 100%;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: clamp(1.25rem, 3vh, 2.5rem) 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: clamp(1.25rem, 3vh, 2.5rem) 1rem;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  align-content: center;
-  gap: clamp(2rem, 4vw, 4rem);
+  justify-content: center;
+  gap: clamp(1.1rem, 2.6vh, 1.75rem);
   color: var(--auth-text-primary);
   font-family: var(--font-auth-sans, 'Instrument Sans', system-ui, sans-serif);
+}
+
+/* Marca centrada sobre la tarjeta. */
+.auth-brand-logo {
+  position: relative;
+  z-index: 2;
 }
 
 /* --- Hermano 1: lava transparente camaleónica ---------------------------- */
@@ -421,179 +427,14 @@
   }
 }
 
-/* --- Escena isométrica libre -------------------------------------------- */
-
-.auth-scene {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(1rem, 2.5vh, 1.75rem);
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  text-align: center;
-}
-
-.auth-scene__logo {
-  position: relative;
-  z-index: 3;
-}
-
-.auth-scene__stage {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  padding: 0.5rem 0;
-}
-
-/* Halo sólido (sin gradientes) que separa el diorama del fondo. */
-.auth-scene__stage::before {
-  content: '';
-  position: absolute;
-  width: min(70%, 24rem);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background-color: rgba(56, 189, 248, 0.12);
-  filter: blur(58px);
-  z-index: 0;
-  pointer-events: none;
-}
-
-.auth-scene .iso-hub {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 32rem);
-  margin-inline: auto;
-  gap: 0;
-  filter: drop-shadow(0 32px 42px rgba(2, 6, 23, 0.55));
-}
-
-.auth-scene .iso-hub__caption {
-  display: none;
-}
-
-.auth-scene .iso-hub__svg {
-  max-height: 26rem;
-}
-
-/* Islas 2.5D de vidrio sólido que levitan alrededor del hub. */
-.iso-float-cube {
-  display: inline-flex;
-  filter: drop-shadow(0 12px 20px rgba(2, 6, 23, 0.45));
-}
-
-.iso-float-cube svg {
-  display: block;
-  width: 3rem;
-  height: auto;
-  overflow: visible;
-}
-
-.iso-float-cube--lg svg {
-  width: 4rem;
-}
-
-.iso-float-cube--sm svg {
-  width: 2.25rem;
-}
-
-.iso-float-cube__face {
-  stroke: var(--auth-cube-border);
-  stroke-width: 0.02;
-  stroke-linejoin: round;
-}
-
-.iso-float-cube--sapphire .iso-float-cube__face--top {
-  fill: rgba(148, 197, 255, 0.28);
-}
-
-.iso-float-cube--sapphire .iso-float-cube__face--left {
-  fill: rgba(148, 197, 255, 0.14);
-}
-
-.iso-float-cube--sapphire .iso-float-cube__face--right {
-  fill: rgba(96, 165, 250, 0.2);
-}
-
-.iso-float-cube--cyan .iso-float-cube__face--top {
-  fill: rgba(103, 232, 249, 0.32);
-}
-
-.iso-float-cube--cyan .iso-float-cube__face--left {
-  fill: rgba(56, 189, 248, 0.18);
-}
-
-.iso-float-cube--cyan .iso-float-cube__face--right {
-  fill: rgba(8, 145, 178, 0.24);
-}
-
-.iso-float-cube--steel .iso-float-cube__face--top {
-  fill: rgba(203, 213, 225, 0.24);
-}
-
-.iso-float-cube--steel .iso-float-cube__face--left {
-  fill: rgba(148, 163, 184, 0.14);
-}
-
-.iso-float-cube--steel .iso-float-cube__face--right {
-  fill: rgba(100, 116, 139, 0.2);
-}
-
-.auth-float {
-  position: absolute;
-  z-index: 3;
-  animation: auth-iso-float 6s ease-in-out infinite alternate;
-  pointer-events: none;
-}
-
-.auth-float--1 {
-  top: 2%;
-  left: 8%;
-  animation-duration: 6.4s;
-}
-
-.auth-float--2 {
-  top: 6%;
-  right: 6%;
-  animation-duration: 7.2s;
-  animation-delay: -2.2s;
-}
-
-.auth-float--3 {
-  bottom: 6%;
-  left: 12%;
-  animation-duration: 8s;
-  animation-delay: -4.4s;
-}
-
-.auth-float--4 {
-  bottom: 2%;
-  right: 10%;
-  animation-duration: 8.8s;
-  animation-delay: -6.6s;
-}
-
-@keyframes auth-iso-float {
-  from {
-    transform: translate3d(0, 6px, 0) rotate(-2deg);
-  }
-  to {
-    transform: translate3d(0, -10px, 0) rotate(3deg);
-  }
-}
-
-/* --- Tarjeta autónoma de acceso ----------------------------------------- */
+/* --- Tarjeta de acceso centrada ----------------------------------------- */
 
 .auth-card {
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 28rem;
-  justify-self: center;
+  max-width: 27rem;
+  margin-inline: auto;
   overflow: hidden;
   padding: clamp(1.5rem, 2.6vw, 2.25rem);
   border-radius: var(--auth-radius);
@@ -604,14 +445,6 @@
   backdrop-filter: blur(26px) saturate(170%);
 }
 
-.auth-card__edge {
-  position: absolute;
-  top: -1.05rem;
-  right: -1.05rem;
-  transform: rotate(10deg);
-  opacity: 0.92;
-  pointer-events: none;
-}
 
 .auth-card__body {
   position: relative;
@@ -1047,87 +880,9 @@
 
 /* --- Responsivo ---------------------------------------------------------- */
 
-@media (max-width: 1180px) {
-  .auth-viewport {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
-    gap: clamp(1.75rem, 4vw, 3.5rem);
-  }
-
-  .auth-scene .iso-hub__svg {
-    max-height: 21rem;
-  }
-}
-
-@media (max-width: 1024px) {
-  .auth-viewport {
-    width: min(100% - 2rem, 62rem);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.75rem;
-  }
-
-  .auth-scene .iso-hub__svg {
-    max-height: 18rem;
-  }
-
-  .iso-float-cube--lg svg {
-    width: 3.25rem;
-  }
-}
-
-@media (max-width: 900px) {
-  .auth-viewport {
-    width: min(100% - 2rem, 30rem);
-    min-height: 100dvh;
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-    gap: 1.25rem;
-    padding: clamp(1rem, 2.5vh, 1.5rem) 0;
-  }
-
-  .auth-scene {
-    align-items: center;
-    gap: 0.25rem;
-    width: 100%;
-  }
-
-  /* Sobre la lava brillante del móvil la tarjeta sube ligeramente de opacidad. */
-  .auth-card {
-    background-color: oklch(0.24 0.04 256 / 0.46);
-  }
-
-  .auth-lava-stage {
-    opacity: 0.6;
-  }
-
-  .auth-scene__stage {
-    min-height: 4.5rem;
-    padding: 0;
-  }
-
-  /* La ciudad isométrica se oculta para que el formulario quepa sin scroll. */
-  .auth-scene .iso-hub {
-    display: none;
-  }
-
-  .auth-float--1 {
-    top: 0.25rem;
-    left: 12%;
-  }
-
-  .auth-float--2 {
-    top: 0.5rem;
-    right: 12%;
-  }
-
-  .auth-float--3,
-  .auth-float--4 {
-    display: none;
-  }
-}
-
 @media (max-width: 640px) {
   .auth-viewport {
-    width: min(100% - 1.25rem, 30rem);
+    padding: 1rem 0.75rem;
     gap: 1rem;
   }
 
@@ -1135,19 +890,12 @@
     border-radius: 1.25rem;
     padding: 1.25rem 1.125rem 1.375rem;
   }
-
-  .auth-card__edge {
-    top: -1.15rem;
-    right: -1.15rem;
-    opacity: 0.7;
-  }
 }
 
 /* --- Accesibilidad ------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-lava-blob,
-  .auth-float {
+  .auth-lava-blob {
     animation: none;
   }
 

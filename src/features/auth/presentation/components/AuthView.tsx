@@ -17,8 +17,7 @@ import {
 } from '../../domain/index.js';
 import { setToken } from '../../infrastructure/http/authTokenStorage.js';
 import { HttpError } from '../../../../shared/infrastructure/http/index.js';
-import { Alert, Button, IsometricLogisticsHub, TextInput } from '../../../../shared/ui/index.js';
-import { IsometricFloatingCube } from './IsometricFloatingCube.js';
+import { Alert, Button, TextInput } from '../../../../shared/ui/index.js';
 import { MillastLogo } from './MillastLogo.js';
 import '../styles/auth.css';
 
@@ -520,25 +519,11 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
         ))}
       </div>
 
-      {/* Escena isométrica libre: sin caja pegada, sobre la lava. */}
-      <div className="auth-scene">
-        <MillastLogo className="auth-scene__logo" />
+      {/* Marca centrada sobre la tarjeta de acceso. */}
+      <MillastLogo className="auth-brand-logo" />
 
-        <div className="auth-scene__stage">
-          <IsometricFloatingCube className="auth-float auth-float--1" tone="sapphire" size="lg" />
-          <IsometricLogisticsHub />
-          <IsometricFloatingCube className="auth-float auth-float--2" tone="cyan" size="md" />
-          <IsometricFloatingCube className="auth-float auth-float--3" tone="steel" size="sm" />
-          <IsometricFloatingCube className="auth-float auth-float--4" tone="cyan" size="sm" />
-        </div>
-      </div>
-
-      {/* Tarjeta autónoma de acceso (cristal de relleno uniforme). */}
+      {/* Tarjeta de acceso centrada en el viewport. */}
       <div className="auth-card">
-        <span className="auth-card__edge" aria-hidden="true">
-          <IsometricFloatingCube tone="cyan" size="md" />
-        </span>
-
         <div className="auth-card__body">
           {!isSecondary ? (
             <div className="auth-segmented segmented" role="tablist" aria-label="Modo de acceso" style={segmentedStyle}>
