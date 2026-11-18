@@ -18,6 +18,7 @@ import {
 import { setToken } from '../../infrastructure/http/authTokenStorage.js';
 import { HttpError } from '../../../../shared/infrastructure/http/index.js';
 import { Alert, Button, TextInput } from '../../../../shared/ui/index.js';
+import { MillastMark } from './MillastMark.js';
 import '../styles/auth.css';
 
 export interface AuthViewProps {
@@ -493,15 +494,17 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
       {/* Atmósfera AuthKit: canvas midnight + retícula blueprint + spotlight. */}
       <div className="auth-atmosphere" aria-hidden="true" />
 
-      <div className="auth-shell">
-        <header className="auth-hero">
-          <p className="auth-eyebrow">Torre de control</p>
-          <h1 className="auth-wordmark">Millast</h1>
-        </header>
-
-        {/* Tarjeta de acceso: en escritorio su centro coincide con el del viewport. */}
-        <div className="auth-card">
+      {/* Tarjeta de acceso centrada: la marca vive dentro de la tarjeta. */}
+      <div className="auth-card">
         <div className="auth-card__body">
+          <header className="auth-brand">
+            <MillastMark className="auth-brand__mark" />
+            <div className="auth-brand__lockup">
+              <h1 className="auth-brand__title">Millast</h1>
+              <p className="auth-brand__tagline">Rutas óptimas para tu última milla</p>
+            </div>
+          </header>
+
           {!isSecondary ? (
             <div className="auth-segmented segmented" role="tablist" aria-label="Modo de acceso" style={segmentedStyle}>
               <span className="segmented__thumb" aria-hidden="true" />
@@ -892,8 +895,21 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
               </div>
             </form>
           )}
+
+          <p className="auth-card__footer">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path
+                d="M8 1.6 13.2 3.6v4.1c0 3.1-2.1 5.7-5.2 6.9-3.1-1.2-5.2-3.8-5.2-6.9V3.6L8 1.6Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinejoin="round"
+              />
+              <path d="m5.8 8 1.5 1.5L10.4 6.4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Acceso seguro · cifrado en tránsito
+          </p>
         </div>
-      </div>
       </div>
     </section>
   );
