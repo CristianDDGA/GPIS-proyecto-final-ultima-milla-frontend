@@ -140,9 +140,8 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
       <KineticHeader
         id="orders-view-title"
         level="h2"
-        eyebrow="Etapa 2 · Demanda"
+        eyebrow="Etapa 02 · Demanda"
         title="Gestión de pedidos"
-        description="Registra nuevos pedidos de última milla y consulta su estado. La fecha y la zona de cada pedido alimentan la planificación de rutas."
         actions={
           <Button
             type="button"
@@ -303,7 +302,7 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
               </div>
 
               <form
-                className="orders-filters app-glass"
+                className="orders-filters"
                 onSubmit={applyFilters}
                 aria-label="Filtrar pedidos"
               >

@@ -1,49 +1,27 @@
 .couriers-layout {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   width: 100%;
-}
-
-.couriers-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.couriers-header__title-group h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: var(--color-text-main, #0f172a);
-  letter-spacing: -0.025em;
-}
-
-.couriers-header__title-group p {
-  margin: 0.25rem 0 0;
-  color: var(--color-text-muted, #64748b);
-  font-size: 0.9375rem;
-  max-width: 60ch;
 }
 
 .couriers-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 1.25rem;
   align-items: start;
 }
 
 @media (min-width: 1080px) {
   .couriers-grid {
-    grid-template-columns: minmax(320px, 420px) 1fr;
+    grid-template-columns: minmax(320px, 400px) 1fr;
   }
 }
 
 .couriers-grid__column {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   min-width: 0;
 }
 
@@ -57,8 +35,10 @@
 
 .couriers-card__title {
   margin: 0;
-  font-size: 1.125rem;
-  color: var(--color-text-main, #0f172a);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-obsidian, #080808);
 }
 
 .couriers-form-card,
@@ -67,13 +47,13 @@
 .couriers-route-card {
   display: flex;
   flex-direction: column;
-  gap: 1.125rem;
+  gap: 1rem;
 }
 
 .couriers-form {
   display: flex;
   flex-direction: column;
-  gap: 1.125rem;
+  gap: 0.875rem;
 }
 
 .couriers-form__actions {
@@ -84,19 +64,44 @@
 }
 
 .couriers-badge-count {
-  font-size: 0.75rem;
-  font-weight: 700;
-  background-color: var(--color-surface-subtle, #f1f5f9);
-  color: var(--color-text-muted, #64748b);
-  padding: 0.2rem 0.6rem;
-  border-radius: var(--radius-full, 9999px);
-  border: 1px solid var(--color-border, #e2e8f0);
+  font-family: var(--font-wf-visual-sans-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background-color: var(--color-mist, #f0f0f0);
+  color: var(--color-slate, #5a5a5a);
+  padding: 0.175rem 0.5rem;
+  border-radius: var(--radius-xs, 4px);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
 }
 
-.fleet-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+.fleet-filter.segmented {
+  margin-bottom: 0.25rem;
+}
+
+.fleet-filter .ui-btn {
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  color: var(--color-slate, #5a5a5a);
+  font-weight: 600;
+  border-radius: var(--radius-xs, 4px);
+}
+
+.fleet-filter .ui-btn:hover:not(:disabled) {
+  transform: none;
+  background: transparent;
+  color: var(--color-obsidian, #080808);
+}
+
+.fleet-filter .ui-btn--primary {
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-webflow-blue, #146ef5);
+}
+
+.fleet-filter .ui-btn--primary:hover:not(:disabled) {
+  background: transparent;
 }
 
 .couriers-loading,
@@ -104,8 +109,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1.25rem 0.5rem;
-  color: var(--color-text-muted, #64748b);
+  padding: 1rem 0.5rem;
+  color: var(--color-slate, #5a5a5a);
   font-size: 0.875rem;
 }
 
@@ -121,8 +126,8 @@
 
 .couriers-table-wrapper {
   overflow-x: auto;
-  border-radius: var(--radius-md, 0.5rem);
-  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
 }
 
 .couriers-table {
@@ -133,21 +138,22 @@
 }
 
 .couriers-table th {
-  background-color: var(--color-surface-subtle, #f1f5f9);
-  color: var(--color-text-muted, #64748b);
-  padding: 0.75rem 1rem;
+  background-color: var(--color-mist, #f0f0f0);
+  color: var(--color-slate, #5a5a5a);
+  padding: 0.625rem 0.875rem;
+  font-family: var(--font-wf-visual-sans-mono, monospace);
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--color-ash-border, #d8d8d8);
   white-space: nowrap;
 }
 
 .couriers-table td {
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-  color: var(--color-text-main, #0f172a);
+  padding: 0.75rem 0.875rem;
+  border-bottom: 1px solid var(--color-ash-border, #d8d8d8);
+  color: var(--color-obsidian, #080808);
   vertical-align: middle;
 }
 
@@ -156,30 +162,30 @@
 }
 
 .couriers-table tr:hover td {
-  background-color: var(--color-surface-subtle, #f1f5f9);
+  background-color: var(--color-mist, #f0f0f0);
 }
 
 .couriers-table__name {
   display: block;
   font-weight: 600;
-  color: var(--color-text-main, #0f172a);
+  color: var(--color-obsidian, #080808);
 }
 
 .couriers-table__id {
   display: block;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.75rem;
-  color: var(--color-text-muted, #64748b);
-  overflow-wrap: anywhere;
+  margin-top: 0.1875rem;
 }
 
 .couriers-status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.625rem;
-  border-radius: var(--radius-full, 9999px);
-  font-size: 0.75rem;
+  padding: 0.175rem 0.5rem;
+  border-radius: var(--radius-xs, 4px);
+  font-family: var(--font-wf-visual-sans-mono, monospace);
+  font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
   border: 1px solid transparent;
 }
@@ -188,28 +194,28 @@
 .couriers-status-badge--entregado,
 .couriers-status-badge--en_curso {
   background-color: var(--color-success-bg, #f0fdf4);
-  color: var(--color-success, #15803d);
-  border-color: var(--color-success-border, #bbf7d0);
+  color: var(--color-success, #0f766e);
+  border-color: var(--color-success-border, #60ed76);
 }
 
 .couriers-status-badge--disabled {
   background-color: var(--color-error-bg, #fef2f2);
   color: var(--color-error, #b91c1c);
-  border-color: var(--color-error-border, #fecaca);
+  border-color: var(--color-error-border, #f5b6b6);
 }
 
 .couriers-status-badge--asignado_a_ruta,
 .couriers-status-badge--recogido,
 .couriers-status-badge--en_camino,
 .couriers-status-badge--asignada {
-  background-color: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #1d4ed8);
-  border-color: var(--color-primary-border, #bfdbfe);
+  background-color: rgba(20, 110, 245, 0.08);
+  color: var(--color-webflow-blue, #146ef5);
+  border-color: rgba(20, 110, 245, 0.28);
 }
 
 .couriers-hint {
   margin: 0;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-slate, #5a5a5a);
   font-size: 0.875rem;
   display: flex;
   flex-wrap: wrap;
@@ -218,53 +224,117 @@
 }
 
 .couriers-hint strong {
-  color: var(--color-text-main, #0f172a);
+  color: var(--color-obsidian, #080808);
 }
 
 .couriers-empty-inline {
   margin: 0;
   padding: 0.875rem 1rem;
-  border-radius: var(--radius-md, 0.5rem);
-  background-color: var(--color-surface-subtle, #f1f5f9);
-  color: var(--color-text-muted, #64748b);
+  border-radius: var(--radius-xs, 4px);
+  background-color: var(--color-mist, #f0f0f0);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
+  color: var(--color-slate, #5a5a5a);
   font-size: 0.875rem;
+}
+
+.couriers-assignment-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.875rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: var(--radius-xs, 4px);
+  background: var(--color-mist, #f0f0f0);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
+}
+
+.couriers-assignment-preview__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-obsidian, #080808);
+}
+
+.couriers-assignment-preview__meta {
+  margin: 0.125rem 0 0;
+  font-family: var(--font-wf-visual-sans-mono, monospace);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-slate, #5a5a5a);
+}
+
+.couriers-capacity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 5.5rem;
+}
+
+.couriers-capacity__bar {
+  display: block;
+  height: 0.25rem;
+  border-radius: 2px;
+  background: var(--color-mist, #f0f0f0);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
+  overflow: hidden;
+}
+
+.couriers-capacity__fill {
+  display: block;
+  height: 100%;
+  background: var(--color-webflow-blue, #146ef5);
+}
+
+.couriers-capacity__label {
+  font-family: var(--font-wf-visual-sans-mono, monospace);
+  font-size: 0.6875rem;
+  color: var(--color-slate, #5a5a5a);
+  white-space: nowrap;
 }
 
 .couriers-active-route {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.875rem;
+}
+
+.couriers-active-route__overview {
+  padding: 0.75rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-mist, #f0f0f0);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
 }
 
 .couriers-route-meta {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.625rem;
   margin: 0;
 }
 
 .couriers-route-meta__item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 0.5rem);
-  background-color: var(--color-surface, #ffffff);
+  gap: 0.2rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-ash-border, #d8d8d8);
+  border-radius: var(--radius-xs, 4px);
+  background-color: var(--color-pure-white, #ffffff);
 }
 
 .couriers-route-meta__item dt {
-  font-size: 0.75rem;
+  font-family: var(--font-wf-visual-sans-mono, monospace);
+  font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-muted, #64748b);
+  letter-spacing: 0.08em;
+  color: var(--color-slate, #5a5a5a);
 }
 
 .couriers-route-meta__item dd {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--color-text-main, #0f172a);
+  color: var(--color-obsidian, #080808);
 }
 
 .couriers-stops {
@@ -273,19 +343,18 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
-  counter-reset: courier-stop;
+  gap: 0.5rem;
 }
 
 .couriers-stop {
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-left: 4px solid var(--color-primary, #1d4ed8);
-  border-radius: var(--radius-md, 0.5rem);
-  background-color: var(--color-surface, #ffffff);
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--color-ash-border, #d8d8d8);
+  border-left: 3px solid var(--color-webflow-blue, #146ef5);
+  border-radius: var(--radius-xs, 4px);
+  background-color: var(--color-pure-white, #ffffff);
 }
 
 .couriers-stop__position {
@@ -293,21 +362,23 @@
   flex-direction: column;
   align-items: center;
   gap: 0.125rem;
-  min-width: 2.75rem;
-  color: var(--color-primary, #1d4ed8);
+  min-width: 2.5rem;
+  color: var(--color-webflow-blue, #146ef5);
 }
 
 .couriers-stop__position-value {
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-family: var(--font-wf-visual-sans-mono, monospace);
+  font-size: 1rem;
+  font-weight: 600;
   line-height: 1.1;
 }
 
 .couriers-stop__position-label {
-  font-size: 0.6875rem;
+  font-family: var(--font-wf-visual-sans-mono, monospace);
+  font-size: 0.625rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-muted, #64748b);
+  letter-spacing: 0.08em;
+  color: var(--color-slate, #5a5a5a);
 }
 
 .couriers-stop__body {
@@ -320,13 +391,14 @@
 
 .couriers-stop__address {
   font-weight: 600;
-  color: var(--color-text-main, #0f172a);
+  color: var(--color-obsidian, #080808);
   overflow-wrap: anywhere;
 }
 
 .couriers-stop__meta {
-  font-size: 0.8125rem;
-  color: var(--color-text-muted, #64748b);
+  font-family: var(--font-wf-visual-sans-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--color-slate, #5a5a5a);
 }
 
 @media (max-width: 640px) {
@@ -334,111 +406,4 @@
     flex-direction: column;
     align-items: flex-start;
   }
-}
-/* ============================================================================
-   Flota · Cubos isométricos, medidor de capacidad y filtro Liquid Morph
-   ========================================================================== */
-
-.fleet-filter.segmented {
-  margin-bottom: 0.75rem;
-}
-
-.fleet-filter .ui-btn {
-  position: relative;
-  z-index: 1;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-weight: 600;
-  border-radius: var(--radius-full, 9999px);
-}
-
-.fleet-filter .ui-btn:hover:not(:disabled) {
-  transform: none;
-  background: transparent;
-  color: var(--text-primary);
-}
-
-.fleet-filter .ui-btn--primary {
-  background: transparent;
-  background-image: none;
-  box-shadow: none;
-  color: var(--accent-primary);
-}
-
-.fleet-filter .ui-btn--primary:hover:not(:disabled) {
-  background: transparent;
-}
-
-.couriers-assignment-preview {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem;
-  margin-bottom: 0.75rem;
-  border-radius: var(--radius-lg, 0.875rem);
-  background: linear-gradient(150deg, rgba(232, 240, 254, 0.8), rgba(248, 250, 252, 0.6));
-  border: 1px solid var(--accent-primary-border, #bfd3fa);
-}
-
-.couriers-assignment-preview__title {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.couriers-assignment-preview__meta {
-  margin: 0.125rem 0 0;
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
-}
-
-.couriers-capacity {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 5.5rem;
-}
-
-.couriers-capacity__bar {
-  display: block;
-  height: 0.3125rem;
-  border-radius: var(--radius-full, 9999px);
-  background: rgba(148, 163, 184, 0.24);
-  overflow: hidden;
-}
-
-.couriers-capacity__fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #3b82f6, #0d9488);
-}
-
-.couriers-capacity__label {
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-}
-
-.couriers-active-route__overview {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  border-radius: var(--radius-lg, 0.875rem);
-  background: var(--surface-card-muted);
-  border: 1px solid var(--color-border);
-}
-
-.couriers-active-route__overview .couriers-route-meta {
-  flex: 1 1 16rem;
-}
-
-.couriers-table__id {
-  margin-top: 0.1875rem;
 }

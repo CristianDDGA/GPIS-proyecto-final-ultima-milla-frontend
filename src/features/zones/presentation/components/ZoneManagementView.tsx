@@ -9,7 +9,6 @@ import {
   Alert,
   Button,
   Card,
-  IsometricCapacityCube,
   KineticHeader,
   ShortIdBadge,
   Spinner,
@@ -60,12 +59,6 @@ const ZoneDetailPanel: FC<ZoneDetailPanelProps> = ({
     </div>
 
     <div className="zones-detail-card__hero">
-      <IsometricCapacityCube
-        occupied={orderCount}
-        capacity={Math.max(orderCount, 4)}
-        status="planificada"
-        showCaption={false}
-      />
       <div className="zones-detail-card__hero-text">
         <p className="zones-detail-card__kicker">Área de cobertura</p>
         <p className="zones-detail-card__name">{zone.name}</p>
@@ -157,9 +150,8 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
       <KineticHeader
         id="zones-view-title"
         level="h2"
-        eyebrow="Etapa 1 · Cobertura"
+        eyebrow="Etapa 01 · Cobertura"
         title="Zonas de cobertura"
-        description="Define las áreas geográficas que atiende la operación. Cada zona agrupa la demanda que después se convierte en rutas de reparto."
         actions={
           <Button
             type="button"

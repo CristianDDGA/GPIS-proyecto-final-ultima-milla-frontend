@@ -13,7 +13,6 @@ import {
   Button,
   Card,
   EmptyState,
-  IsometricCapacityCube,
   KineticHeader,
   Select,
   ShortIdBadge,
@@ -167,8 +166,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     [planifiedRoutes, selectedRouteId],
   );
 
-  // The backend only assigns a courier when it is enabled, available and able to
-  // carry every stop of the route, so the selector mirrors those preconditions.
   const availableCouriers = useMemo(
     () =>
       assignableCouriers.filter(
@@ -246,9 +243,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     }
   };
 
-  const activeStopCount = activeRoute?.stops.length ?? 0;
-  const activeRouteCapacity = selectedCourier?.maxOrdersPerTrip ?? Math.max(activeStopCount, 1);
-
   const segmentedStyle = {
     '--seg-index': AVAILABILITY_FILTERS.findIndex((filter) => filter.value === availabilityFilter),
     '--seg-count': AVAILABILITY_FILTERS.length,
@@ -259,9 +253,8 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
       <KineticHeader
         id="couriers-view-title"
         level="h2"
-        eyebrow="Etapa 4 · Despacho"
+        eyebrow="Etapa 04 · Despacho"
         title="Flota y despacho"
-        description="Registra repartidores, administra su disponibilidad y asigna las rutas planificadas que saldrán a la calle."
         actions={
           <Button
             type="button"
@@ -300,7 +293,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 error={fieldErrors['displayName']}
-                helperText="Nombre visible del repartidor en la operación."
                 isRequired
                 maxLength={120}
                 disabled={isCreatingCourier}
@@ -314,7 +306,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                 value={capacity}
                 onChange={(event) => setCapacity(event.target.value)}
                 error={fieldErrors['maxOrdersPerTrip']}
-                helperText="Capacidad operativa del repartidor por ruta."
                 isRequired
                 min={1}
                 step={1}
@@ -359,12 +350,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
 
             {selectedPlanifiedRoute !== null && (
               <div className="couriers-assignment-preview">
-                <IsometricCapacityCube
-                  occupied={selectedPlanifiedRoute.occupiedSlots}
-                  capacity={selectedPlanifiedRoute.capacityLimit}
-                  status={selectedPlanifiedRoute.status}
-                  showCaption={false}
-                />
                 <div>
                   <p className="couriers-assignment-preview__title">
                     {resolveZoneName(selectedPlanifiedRoute.zoneId)}
@@ -374,6 +359,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                     {selectedPlanifiedRoute.capacityLimit} cupos
                   </p>
                 </div>
+                <ShortIdBadge id={selectedPlanifiedRoute.id} prefix="RUT" copyable={false} />
               </div>
             )}
 
@@ -395,7 +381,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                   options={routeOptions}
                   value={selectedRouteId}
                   onChange={(event) => setSelectedRouteId(event.target.value)}
-                  helperText="Solo se muestran rutas en estado planificada."
                   isRequired
                   disabled={planifiedRoutes.length === 0 || isAssigning}
                 />
@@ -413,7 +398,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                   options={availableCourierOptions}
                   value={selectedAssignCourierId}
                   onChange={(event) => setSelectedAssignCourierId(event.target.value)}
-                  helperText="Solo se muestran repartidores habilitados, disponibles y con capacidad suficiente para la ruta elegida."
                   isRequired
                   disabled={availableCouriers.length === 0 || isAssigning}
                 />
@@ -488,7 +472,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                 description={
                   availabilityFilter === 'all'
                     ? 'Registra el primer repartidor para poder asignarle rutas planificadas.'
-                    : 'Ningún repartidor coincide con el filtro de disponibilidad elegido. Cambia el filtro o actualiza el catálogo.'
+                    : 'Ningún repartidor coincide con el filtro de disponibilidad elegido.'
                 }
                 action={
                   <Button
@@ -592,8 +576,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
 
             {selectedCourierId.length === 0 ? (
               <p className="couriers-hint">
-                Selecciona un repartidor en el catálogo con la acción &quot;Ver hoja de ruta&quot;
-                para consultar su ruta.
+                Selecciona un repartidor en el catálogo para consultar su ruta activa.
               </p>
             ) : (
               <p className="couriers-hint">
@@ -627,11 +610,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
             {activeRoute && (
               <div className="couriers-active-route">
                 <div className="couriers-active-route__overview">
-                  <IsometricCapacityCube
-                    occupied={activeStopCount}
-                    capacity={activeRouteCapacity}
-                    status={activeRoute.status}
-                  />
                   <dl className="couriers-route-meta">
                     <div className="couriers-route-meta__item">
                       <dt>Zona</dt>

@@ -15,13 +15,11 @@ import {
   Button,
   Card,
   EmptyState,
-  IsometricCapacityCube,
   KineticCounter,
   KineticHeader,
   Select,
   ShortIdBadge,
   Spinner,
-  TextInput,
 } from '../../../../shared/ui/index.js';
 import '../styles/deliveries.css';
 
@@ -105,7 +103,6 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
   const progressPercent = stops.length === 0 ? 0 : Math.round((deliveredCount / stops.length) * 100);
 
   const selectedCourier = couriers.find((courier) => courier.id === effectiveCourierId) ?? null;
-  const routeCapacity = selectedCourier?.maxOrdersPerTrip ?? Math.max(stops.length, 1);
 
   const completeRouteReason = ((): string => {
     if (!activeRoute) return 'No hay una hoja de ruta activa cargada.';
@@ -145,7 +142,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
 
   const availabilityLabel =
     courierAvailability === null
-      ? 'Sin información de disponibilidad'
+      ? 'Sin información'
       : courierAvailability
         ? 'Disponible'
         : 'No disponible';
@@ -170,9 +167,8 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
       <KineticHeader
         id="deliveries-view-title"
         level="h2"
-        eyebrow="Etapa 5 · Última milla"
+        eyebrow="Etapa 05 · Última milla"
         title="Ejecución de entregas"
-        description="Avanza cada parada de la hoja de ruta, confirma las entregas y cierra la ruta cuando todo está entregado."
         actions={
           <Button
             type="button"
@@ -319,12 +315,6 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                   </dl>
 
                   <div className="deliveries-progress" aria-label="Progreso de la ruta">
-                    <IsometricCapacityCube
-                      occupied={deliveredCount}
-                      capacity={Math.max(stops.length, routeCapacity)}
-                      status={allDelivered ? 'completada' : 'en_curso'}
-                      showCaption={false}
-                    />
                     <div className="deliveries-progress__body">
                       <div className="deliveries-progress__counters">
                         <KineticCounter
@@ -511,7 +501,6 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                     options={courierOptions}
                     value={selectedCourierId}
                     onChange={(event) => setSelectedCourierId(event.target.value)}
-                    helperText="La hoja de ruta se recarga automáticamente al cambiar de repartidor."
                     disabled={isLoadingCouriers || isUpdatingAvailability}
                   />
                   {couriersError && (
@@ -556,17 +545,19 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                     {availabilityLabel}
                   </span>
                 </div>
-                <Button
-                  type="button"
-                  variant={courierAvailability === true ? 'outline' : 'secondary'}
-                  size="sm"
-                  aria-pressed={courierAvailability === true}
-                  isLoading={isUpdatingAvailability}
-                  disabled={effectiveCourierId.length === 0 || isUpdatingAvailability}
-                  onClick={() => void toggleAvailability()}
-                >
-                  {courierAvailability === true ? 'Marcar no disponible' : 'Marcar disponible'}
-                </Button>
+                {actor.role === 'repartidor' && (
+                  <Button
+                    type="button"
+                    variant={courierAvailability === true ? 'outline' : 'secondary'}
+                    size="sm"
+                    aria-pressed={courierAvailability === true}
+                    isLoading={isUpdatingAvailability}
+                    disabled={effectiveCourierId.length === 0 || isUpdatingAvailability}
+                    onClick={() => void toggleAvailability()}
+                  >
+                    {courierAvailability === true ? 'Marcar no disponible' : 'Marcar disponible'}
+                  </Button>
+                )}
               </div>
             </Card>
 
@@ -575,44 +566,32 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
 
               <form className="deliveries-inspector-form" onSubmit={handleInspect} noValidate>
                 {inspectorOptions.length > 0 ? (
-                  <Select
-                    label="Paradas de la ruta activa"
-                    placeholder="Selecciona una parada de la ruta"
-                    options={inspectorOptions}
-                    value={inspectorSelectValue}
-                    onChange={(event) => {
-                      setInspectorOrderId(event.target.value);
-                      void inspectOrder(event.target.value);
-                    }}
-                    disabled={isLoadingInspector}
-                    helperText="Un clic sobre cualquier parada de la hoja de ruta también la inspecciona."
-                  />
-                ) : (
-                  <p className="deliveries-hint">
-                    Carga una hoja de ruta para inspeccionar sus paradas directamente.
-                  </p>
-                )}
-
-                <Button type="submit" size="sm" isLoading={isLoadingInspector} disabled={inspectorOrderId.trim().length === 0}>
-                  {isLoadingInspector ? 'Consultando...' : 'Consultar estado de entrega'}
-                </Button>
-
-                <details className="deliveries-advanced">
-                  <summary className="deliveries-advanced__summary">
-                    Opción avanzada · buscar por código
-                  </summary>
-                  <div className="deliveries-advanced__body">
-                    <TextInput
-                      id="delivery-inspector-order-id"
-                      label="Código del pedido"
-                      placeholder="Identificador completo del pedido"
-                      value={inspectorOrderId}
-                      onChange={(event) => setInspectorOrderId(event.target.value)}
-                      helperText="Consulta el estado actual, la versión y las fechas de entrega."
+                  <>
+                    <Select
+                      label="Paradas de la ruta activa"
+                      placeholder="Selecciona una parada de la ruta"
+                      options={inspectorOptions}
+                      value={inspectorSelectValue}
+                      onChange={(event) => {
+                        setInspectorOrderId(event.target.value);
+                        void inspectOrder(event.target.value);
+                      }}
                       disabled={isLoadingInspector}
                     />
-                  </div>
-                </details>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      isLoading={isLoadingInspector}
+                      disabled={inspectorOrderId.trim().length === 0}
+                    >
+                      {isLoadingInspector ? 'Consultando...' : 'Consultar estado de entrega'}
+                    </Button>
+                  </>
+                ) : (
+                  <p className="deliveries-hint">
+                    Carga una hoja de ruta o haz clic sobre una parada para inspeccionarla.
+                  </p>
+                )}
               </form>
 
               {inspectorError && (

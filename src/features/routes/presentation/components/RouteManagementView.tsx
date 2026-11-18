@@ -70,9 +70,8 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
       <KineticHeader
         id="routes-view-title"
         level="h2"
-        eyebrow="Etapa 3 · Planificación"
+        eyebrow="Etapa 03 · Planificación"
         title="Planificación y operaciones de ruta"
-        description="Agrupa los pedidos pendientes en rutas con capacidad controlada, ajusta el orden de las paradas y opera cada ruta antes del despacho."
         actions={
           <Button
             type="button"
