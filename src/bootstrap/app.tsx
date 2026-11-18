@@ -14,12 +14,11 @@ import {
   useAuth,
   type AuthRole,
 } from '../features/auth/index.js';
-import { HttpZoneRepository, ZoneManagementView, type Zone } from '../features/zones/index.js';
+import { ZoneManagementView, type Zone } from '../features/zones/index.js';
 import { OrderManagementView, type Order } from '../features/orders/index.js';
 import { RouteManagementView } from '../features/routes/index.js';
 import { CourierFleetDispatchView, type Courier } from '../features/couriers/index.js';
 import { DeliveryExecutionView, type DeliveryActor } from '../features/deliveries/index.js';
-import { DispatchManagementView } from '../features/dispatch/index.js';
 import { composeUseCases } from './compose-use-cases.js';
 
 type AppTab = 'zones' | 'orders' | 'routes' | 'dispatch' | 'deliveries' | 'users';
@@ -31,6 +30,15 @@ const TAB_LABELS: Readonly<Record<AppTab, string>> = {
   dispatch: 'Despacho',
   deliveries: 'Entregas',
   users: 'Accesos',
+};
+
+const STEP_BY_TAB: Readonly<Record<AppTab, string>> = {
+  zones: '01',
+  orders: '02',
+  routes: '03',
+  dispatch: '04',
+  deliveries: '05',
+  users: '06',
 };
 
 const TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
@@ -45,7 +53,14 @@ const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
   cliente: 'orders',
 };
 
-const APP_TABS: readonly AppTab[] = ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'users'];
+const APP_TABS: readonly AppTab[] = [
+  'zones',
+  'orders',
+  'routes',
+  'dispatch',
+  'deliveries',
+  'users',
+];
 const ORDER_QUERY_PARAMS = ['orderId', 'deliveryDate', 'zoneId'] as const;
 
 function isAppTab(value: string): value is AppTab {
@@ -79,7 +94,6 @@ export function App() {
   );
   const [authGateway] = useState(() => new HttpAuthGateway(httpClient));
   const useCases = useMemo(() => composeUseCases(httpClient), [httpClient]);
-  const zoneRepository = useMemo(() => new HttpZoneRepository(httpClient), [httpClient]);
   const auth = useAuth(authGateway);
 
   const resetSessionViewState = useCallback(() => {
@@ -113,6 +127,7 @@ export function App() {
   const [requestedTab, setRequestedTab] = useState<string | null>(readRequestedTab);
   const activeTab = resolveTab(requestedTab, currentRole);
   const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const restoreTab = () => setRequestedTab(readRequestedTab());
@@ -120,15 +135,27 @@ export function App() {
     return () => window.removeEventListener('popstate', restoreTab);
   }, []);
 
+  useEffect(() => {
+    const handleScroll = (): void => {
+      setIsScrolled(window.scrollY > 4);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const allowedTabs: readonly AppTab[] =
     currentRole === null ? APP_TABS : TABS_BY_ROLE[currentRole];
-  const navTabs = allowedTabs;
+  const navTabs = useMemo(
+    () => APP_TABS.filter((tab) => allowedTabs.includes(tab)),
+    [allowedTabs],
+  );
 
   const selectTab = useCallback((tab: AppTab, params?: Readonly<Record<string, string>>) => {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
 
-    if (tab !== 'orders') {
+    if (tab !== 'orders' && tab !== 'routes') {
       for (const key of ORDER_QUERY_PARAMS) {
         url.searchParams.delete(key);
       }
@@ -239,10 +266,9 @@ export function App() {
 
   if (auth.status === 'loading') {
     return (
-      <div className="app-frame app-frame--millast">
-        <div className="app-atmosphere" aria-hidden="true" />
+      <div className="app-frame">
         <main className="app-shell app-shell--centered">
-          <div className="mk-loading-card">
+          <div className="wf-loading-card">
             <Spinner size="lg" label="Restaurando la sesión activa" />
             <p role="status">Restaurando la sesión activa...</p>
           </div>
@@ -254,7 +280,6 @@ export function App() {
   if (auth.status !== 'authenticated' || currentUser === null) {
     return (
       <div className="app-frame">
-        <div className="app-mesh" aria-hidden="true" />
         <main className="app-shell app-shell--auth">
           {auth.error !== null && (
             <Alert type="error" title="Atención" onClose={auth.clearError}>
@@ -297,37 +322,41 @@ export function App() {
   };
 
   return (
-    <div className="app-frame app-frame--millast">
-      <div className="app-atmosphere" aria-hidden="true" />
-
-      <header className="mk-topbar">
-        <div className="mk-topbar__inner">
-          <div className="mk-brand">
-            <MillastMark className="mk-brand__mark" />
-            <span className="mk-brand__name">Millast</span>
+    <div className="app-frame wf-app">
+      <header className={'wf-app-topbar ' + (isScrolled ? 'wf-app-topbar--scrolled' : '')}>
+        <div className="wf-app-topbar__inner">
+          <div className="wf-app-brand">
+            <MillastMark className="wf-app-brand__mark" />
+            <span className="wf-app-brand__name">Millast</span>
           </div>
 
           <nav
-            className="mk-nav"
+            className="wf-app-nav"
             role="tablist"
             aria-label="Navegación principal del sistema"
             onKeyDown={handleTabKeyDown}
           >
-            {navTabs.map((tab) => (
-              <button
-                key={tab}
-                id={'app-tab-' + tab}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab}
-                aria-controls={'app-panel-' + tab}
-                tabIndex={activeTab === tab ? 0 : -1}
-                className={'mk-nav__tab ' + (activeTab === tab ? 'mk-nav__tab--active' : '')}
-                onClick={() => selectTab(tab)}
-              >
-                {TAB_LABELS[tab]}
-              </button>
-            ))}
+            {navTabs.map((tab) => {
+              const isSelected = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  id={'app-tab-' + tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  aria-controls={'app-panel-' + tab}
+                  tabIndex={isSelected ? 0 : -1}
+                  className={'wf-app-nav__tab ' + (isSelected ? 'wf-app-nav__tab--active' : '')}
+                  onClick={() => selectTab(tab)}
+                >
+                  <span className="wf-app-nav__step" aria-hidden="true">
+                    {STEP_BY_TAB[tab]}
+                  </span>
+                  <span>{TAB_LABELS[tab]}</span>
+                </button>
+              );
+            })}
           </nav>
 
           <SessionBar
@@ -339,7 +368,7 @@ export function App() {
         </div>
       </header>
 
-      <main className="mk-main">
+      <main className="wf-app-main">
         {auth.error !== null && (
           <Alert type="error" title="Atención" onClose={auth.clearError}>
             {auth.error}
@@ -353,14 +382,15 @@ export function App() {
         )}
 
         {isLoadingCatalog && zones.length === 0 && (
-          <div className="mk-loading-card mk-loading-card--inline">
+          <div className="wf-loading-card wf-loading-card--inline">
             <Spinner size="md" label="Cargando zonas y pedidos" />
             <p role="status">Sincronizando catálogo operativo...</p>
           </div>
         )}
 
         <div
-          className="mk-panel app-panel"
+          key={activeTab}
+          className="wf-app-panel app-panel"
           role="tabpanel"
           id={'app-panel-' + activeTab}
           aria-labelledby={'app-tab-' + activeTab}
@@ -398,21 +428,12 @@ export function App() {
           )}
 
           {activeTab === 'dispatch' && (
-            <>
-              <CourierFleetDispatchView
-                useCases={useCases.couriers}
-                listPlanifiedRoutes={listPlanifiedRoutes}
-                zones={zones}
-                onNavigateToDeliveries={() => selectTab('deliveries')}
-              />
-
-              <div className="app-dispatch-module">
-                <DispatchManagementView
-                  useCases={useCases.dispatch}
-                  zoneCatalog={zoneRepository}
-                />
-              </div>
-            </>
+            <CourierFleetDispatchView
+              useCases={useCases.couriers}
+              listPlanifiedRoutes={listPlanifiedRoutes}
+              zones={zones}
+              onNavigateToDeliveries={() => selectTab('deliveries')}
+            />
           )}
 
           {activeTab === 'deliveries' && (

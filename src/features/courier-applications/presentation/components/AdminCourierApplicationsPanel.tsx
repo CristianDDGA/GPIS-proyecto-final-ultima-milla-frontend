@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import type { FC } from 'react';
+import { useCallback, useEffect, useRef, useState, type FC, type FormEvent } from 'react';
 import type { CourierApplicationUseCases } from '../../application/index.js';
 import {
   APPLICATION_STATUSES,
   APPLICATION_STATUS_LABELS,
-  FILE_KIND_LABELS,
   VEHICLE_TYPE_LABELS,
   type ApplicationDetail,
   type ApplicationFilters,
@@ -12,6 +10,10 @@ import {
   type FileKind,
 } from '../../domain/index.js';
 import { Alert, Button, EmptyState, Select, TextInput } from '../../../../shared/ui/index.js';
+import {
+  ApplicationReviewInspector,
+  formatApplicationDate,
+} from './ApplicationReviewInspector.js';
 
 const PAGE_SIZE = 10;
 
@@ -27,17 +29,9 @@ function toErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;
 }
 
-function formatDate(isoDate: string | null): string {
-  if (isoDate === null) {
-    return '—';
-  }
-  const date = new Date(isoDate);
-  return Number.isNaN(date.getTime())
-    ? '—'
-    : new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(date);
-}
-
-export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUseCases }> = ({ useCases }) => {
+export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUseCases }> = ({
+  useCases,
+}) => {
   const [statusFilter, setStatusFilter] = useState('pendiente');
   const [query, setQuery] = useState('');
   const [appliedFilters, setAppliedFilters] = useState<ApplicationFilters>({ status: 'pendiente' });
@@ -208,10 +202,10 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
   const rangeEnd = Math.min(offset + items.length, total);
 
   return (
-    <section className="mk-admin mk-applications" aria-labelledby="mk-admin-applications-title">
-      <div className="mk-toolbar">
+    <section className="wf-admin wf-applications" aria-label="Solicitudes de repartidor">
+      <div className="wf-toolbar">
         <form
-          className="mk-toolbar__filters"
+          className="wf-toolbar__filters"
           onSubmit={(event) => {
             event.preventDefault();
             setAppliedFilters({
@@ -236,7 +230,7 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           />
-          <div className="mk-toolbar__filter-actions">
+          <div className="wf-toolbar__filter-actions">
             <Button type="submit" variant="secondary" size="sm">
               Filtrar
             </Button>
@@ -267,16 +261,20 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
         </Alert>
       )}
 
-      <div className={'mk-applications__layout' + (detail !== null ? ' mk-applications__layout--detail' : '')}>
-        <div className="mk-table-wrap">
-          <table className="mk-table" aria-label="Solicitudes de repartidor">
+      <div
+        className={
+          'wf-applications__layout' + (detail !== null ? ' wf-applications__layout--detail' : '')
+        }
+      >
+        <div className="wf-table-wrap">
+          <table className="wf-table" aria-label="Solicitudes de repartidor">
             <thead>
               <tr>
                 <th scope="col">Solicitante</th>
                 <th scope="col">Vehículo</th>
                 <th scope="col">Estado</th>
                 <th scope="col">Enviada</th>
-                <th scope="col" className="mk-table__actions-head">
+                <th scope="col" className="wf-table__actions-head">
                   Revisión
                 </th>
               </tr>
@@ -285,34 +283,38 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
               {items.map((application) => (
                 <tr
                   key={application.id}
-                  className={selectedId === application.id ? 'mk-table__row--selected' : ''}
+                  className={selectedId === application.id ? 'wf-table__row--selected' : ''}
                 >
                   <td>
-                    <div className="mk-table__identity">
-                      <span className="mk-table__name">
+                    <div className="wf-table__identity">
+                      <span className="wf-table__name">
                         {application.applicantName ?? application.fullName}
                       </span>
-                      <span className="mk-table__email">{application.applicantEmail}</span>
+                      <span className="wf-table__email">{application.applicantEmail}</span>
                     </div>
                   </td>
                   <td>{VEHICLE_TYPE_LABELS[application.vehicleType]}</td>
                   <td>
-                    <span className={'mk-badge mk-badge--status-' + application.status}>
+                    <span className={'wf-badge wf-badge--status-' + application.status}>
                       {APPLICATION_STATUS_LABELS[application.status]}
                     </span>
                   </td>
-                  <td className="mk-table__mono">{formatDate(application.submittedAt)}</td>
+                  <td className="wf-table__mono">
+                    {formatApplicationDate(application.submittedAt)}
+                  </td>
                   <td>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        void openDetail(application);
-                      }}
-                    >
-                      Revisar
-                    </Button>
+                    <div className="wf-table__actions">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          void openDetail(application);
+                        }}
+                      >
+                        Revisar
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -326,143 +328,45 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
             />
           )}
           {isLoading && items.length === 0 && (
-            <p className="mk-table__loading" role="status">
+            <p className="wf-table__loading" role="status">
               Consultando solicitudes…
             </p>
           )}
         </div>
 
         {detail !== null && (
-          <aside className="mk-application-detail" aria-label="Detalle de la solicitud">
-            <header className="mk-application-detail__header">
-              <div>
-                <p className="mk-eyebrow">Solicitud</p>
-                <h3 className="mk-application-detail__title">{detail.fullName}</h3>
-                <p className="mk-application-detail__email">{detail.applicantEmail}</p>
-              </div>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setDetail(null)}>
-                Cerrar
-              </Button>
-            </header>
-
-            {detailError !== null && (
-              <Alert type="error" title="No se pudo consultar" onClose={() => setDetailError(null)}>
-                {detailError}
-              </Alert>
-            )}
-            {actionError !== null && (
-              <Alert type="error" title="No se pudo completar la revisión" onClose={() => setActionError(null)}>
-                {actionError}
-              </Alert>
-            )}
-            {detailLoading && <p role="status">Cargando documentos…</p>}
-
-            <dl className="mk-detail-list">
-              <div>
-                <dt>Cédula</dt>
-                <dd className="mk-table__mono">{detail.nationalId}</dd>
-              </div>
-              <div>
-                <dt>Teléfono</dt>
-                <dd>{detail.phone}</dd>
-              </div>
-              <div>
-                <dt>Nacimiento</dt>
-                <dd className="mk-table__mono">{detail.birthDate}</dd>
-              </div>
-              <div>
-                <dt>Vehículo</dt>
-                <dd>{VEHICLE_TYPE_LABELS[detail.vehicleType]}</dd>
-              </div>
-              <div>
-                <dt>Licencia</dt>
-                <dd>
-                  {detail.licenseCategory} · {detail.licenseNumber}
-                </dd>
-              </div>
-              <div>
-                <dt>Caducidad</dt>
-                <dd className="mk-table__mono">{detail.licenseExpiresOn}</dd>
-              </div>
-              <div>
-                <dt>Estado</dt>
-                <dd>{APPLICATION_STATUS_LABELS[detail.status]}</dd>
-              </div>
-              <div>
-                <dt>Enviada</dt>
-                <dd className="mk-table__mono">{formatDate(detail.submittedAt)}</dd>
-              </div>
-            </dl>
-
-            {detail.rejectionReason !== null && (
-              <p className="mk-application-detail__reason">
-                Motivo registrado: {detail.rejectionReason}
-              </p>
-            )}
-
-            <div className="mk-application-files">
-              {(['license', 'photo'] as const).map((kind) => (
-                <div key={kind} className="mk-application-file">
-                  <p className="mk-application-file__label">{FILE_KIND_LABELS[kind]}</p>
-                  {fileUrls[kind] !== undefined ? (
-                    <img className="mk-application-file__image" src={fileUrls[kind]} alt={FILE_KIND_LABELS[kind]} />
-                  ) : (
-                    <p className="mk-application-file__empty">Sin documento cargado</p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {detail.status === 'pendiente' && (
-              <div className="mk-application-review">
-                <form className="mk-review-box" onSubmit={handleApprove}>
-                  <p className="mk-review-box__title">Aprobar y promover</p>
-                  <label className="mk-field-inline" htmlFor="mk-approve-capacity">
-                    Capacidad de ruta
-                    <input
-                      id="mk-approve-capacity"
-                      type="number"
-                      min="1"
-                      max="200"
-                      value={capacity}
-                      onChange={(event) => setCapacity(event.target.value)}
-                    />
-                  </label>
-                  <Button type="submit" variant="primary" size="sm" isLoading={isApproving}>
-                    Aprobar solicitud
-                  </Button>
-                </form>
-
-                <form className="mk-review-box" onSubmit={handleReject}>
-                  <p className="mk-review-box__title">Rechazar</p>
-                  <label className="mk-field-inline mk-field-inline--column" htmlFor="mk-reject-reason">
-                    Motivo (5–500 caracteres)
-                    <textarea
-                      id="mk-reject-reason"
-                      rows={3}
-                      value={reason}
-                      maxLength={500}
-                      onChange={(event) => setReason(event.target.value)}
-                    />
-                  </label>
-                  <Button type="submit" variant="danger" size="sm" isLoading={isRejecting}>
-                    Rechazar solicitud
-                  </Button>
-                </form>
-              </div>
-            )}
-          </aside>
+          <ApplicationReviewInspector
+            detail={detail}
+            detailLoading={detailLoading}
+            detailError={detailError}
+            actionError={actionError}
+            fileUrls={fileUrls}
+            capacity={capacity}
+            reason={reason}
+            isApproving={isApproving}
+            isRejecting={isRejecting}
+            onCapacityChange={setCapacity}
+            onReasonChange={setReason}
+            onClearDetailError={() => setDetailError(null)}
+            onClearActionError={() => setActionError(null)}
+            onClose={() => {
+              setDetail(null);
+              setSelectedId(null);
+            }}
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
         )}
       </div>
 
-      <footer className="mk-pagination">
-        <span className="mk-pagination__info">
+      <footer className="wf-pagination">
+        <span className="wf-pagination__info">
           {rangeStart}–{rangeEnd} de {total}
         </span>
-        <div className="mk-pagination__actions">
+        <div className="wf-pagination__actions">
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             size="sm"
             disabled={offset === 0 || isLoading}
             onClick={() => {
@@ -473,7 +377,7 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
           </Button>
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             size="sm"
             disabled={offset + PAGE_SIZE >= total || isLoading}
             onClick={() => {

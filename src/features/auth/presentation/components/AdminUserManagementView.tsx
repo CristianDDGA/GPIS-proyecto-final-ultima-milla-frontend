@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import type { FC } from 'react';
+import { useCallback, useEffect, useRef, useState, type FC, type FormEvent } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import {
   validateCreateManagedUserInput,
@@ -8,15 +7,14 @@ import {
   type ManagedUserFilters,
   type PublicRole,
 } from '../../domain/index.js';
+import { Alert, Button, Select, TextInput } from '../../../../shared/ui/index.js';
+import { UserDirectoryTable } from './admin/UserDirectoryTable.js';
 import {
-  Alert,
-  Button,
-  EmptyState,
-  Modal,
-  Select,
-  ShortIdBadge,
-  TextInput,
-} from '../../../../shared/ui/index.js';
+  UserCreateModal,
+  UserDetailModal,
+  UserResetPasswordModal,
+  UserToggleModal,
+} from './admin/UserModals.js';
 
 const PAGE_SIZE = 10;
 
@@ -33,28 +31,8 @@ const STATUS_OPTIONS = [
   { value: 'false', label: 'Inactivos' },
 ];
 
-const ROLE_LABELS: Record<PublicRole, string> = {
-  admin: 'Administrador',
-  repartidor: 'Repartidor',
-  cliente: 'Cliente',
-};
-
-const VERIFIED_VIA_LABELS: Record<string, string> = {
-  code: 'Código de correo',
-  admin: 'Verificado por admin',
-  legacy: 'Cuenta heredada',
-  demo: 'Modo demo',
-};
-
 function toErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;
-}
-
-function formatDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  return Number.isNaN(date.getTime())
-    ? '—'
-    : new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(date);
 }
 
 export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCases }) => {
@@ -217,7 +195,7 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
         (toggleUser.isActive ? 'Usuario desactivado: ' : 'Usuario activado: ') + toggleUser.email,
       );
       setToggleUser(null);
-      await loadPage({ ...appliedFilters, offset: 0 });
+      await loadPage({ ...appliedFilters, offset });
     } catch (error_) {
       setToggleError(toErrorMessage(error_, 'No se pudo cambiar el estado del usuario.'));
     } finally {
@@ -257,14 +235,11 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
     }
   };
 
-  const rangeStart = total === 0 ? 0 : offset + 1;
-  const rangeEnd = Math.min(offset + items.length, total);
-
   return (
-    <section className="mk-admin" aria-labelledby="mk-admin-users-title">
-      <div className="mk-toolbar">
+    <section className="wf-admin" aria-label="Directorio de usuarios">
+      <div className="wf-toolbar">
         <form
-          className="mk-toolbar__filters"
+          className="wf-toolbar__filters"
           onSubmit={(event) => {
             event.preventDefault();
             applyFilters();
@@ -293,7 +268,7 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           />
-          <div className="mk-toolbar__filter-actions">
+          <div className="wf-toolbar__filter-actions">
             <Button type="submit" variant="secondary" size="sm">
               Filtrar
             </Button>
@@ -320,366 +295,86 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
         </Alert>
       )}
 
-      <div className="mk-table-wrap">
-        <table className="mk-table" aria-label="Directorio de usuarios">
-          <thead>
-            <tr>
-              <th scope="col">Usuario</th>
-              <th scope="col">Rol</th>
-              <th scope="col">Estado</th>
-              <th scope="col">Verificación</th>
-              <th scope="col">Creado</th>
-              <th scope="col" className="mk-table__actions-head">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((user) => (
-              <tr key={user.id}>
-                <td>
-                  <div className="mk-table__identity">
-                    <span className="mk-table__name">{user.displayName ?? user.email}</span>
-                    <span className="mk-table__email">{user.email}</span>
-                  </div>
-                </td>
-                <td>
-                  <span className={'mk-badge mk-badge--role-' + user.publicRole}>
-                    {ROLE_LABELS[user.publicRole]}
-                  </span>
-                </td>
-                <td>
-                  <span className={'mk-badge ' + (user.isActive ? 'mk-badge--ok' : 'mk-badge--off')}>
-                    {user.isActive ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td>
-                  <span className={'mk-badge ' + (user.emailVerified ? 'mk-badge--info' : 'mk-badge--warn')}>
-                    {user.emailVerified ? 'Verificado' : 'Pendiente'}
-                  </span>
-                </td>
-                <td className="mk-table__mono">{formatDate(user.createdAt)}</td>
-                <td>
-                  <div className="mk-table__actions">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        void openDetail(user);
-                      }}
-                    >
-                      Ver
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={user.isActive ? 'ghost' : 'secondary'}
-                      size="sm"
-                      onClick={() => {
-                        setToggleUser(user);
-                        setToggleError(null);
-                      }}
-                    >
-                      {user.isActive ? 'Desactivar' : 'Activar'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setResetUser(user);
-                        setResetPassword('');
-                        setResetErrors({});
-                        setResetError(null);
-                      }}
-                    >
-                      Clave
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {!isLoading && items.length === 0 && (
-          <EmptyState
-            title="Sin usuarios"
-            description="No hay cuentas que coincidan con los filtros activos."
-          />
-        )}
-
-        {isLoading && items.length === 0 && (
-          <p className="mk-table__loading" role="status">
-            Consultando el directorio de usuarios…
-          </p>
-        )}
-      </div>
-
-      <footer className="mk-pagination">
-        <span className="mk-pagination__info">
-          {rangeStart}–{rangeEnd} de {total}
-        </span>
-        <div className="mk-pagination__actions">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={offset === 0 || isLoading}
-            onClick={() => {
-              void loadPage({ ...appliedFilters, offset: Math.max(0, offset - PAGE_SIZE) });
-            }}
-          >
-            Anterior
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={offset + PAGE_SIZE >= total || isLoading}
-            onClick={() => {
-              void loadPage({ ...appliedFilters, offset: offset + PAGE_SIZE });
-            }}
-          >
-            Siguiente
-          </Button>
-        </div>
-      </footer>
+      <UserDirectoryTable
+        items={items}
+        total={total}
+        offset={offset}
+        pageSize={PAGE_SIZE}
+        isLoading={isLoading}
+        onInspect={(user) => {
+          void openDetail(user);
+        }}
+        onToggleStatus={(user) => {
+          setToggleUser(user);
+          setToggleError(null);
+        }}
+        onResetPassword={(user) => {
+          setResetUser(user);
+          setResetPassword('');
+          setResetErrors({});
+          setResetError(null);
+        }}
+        onPageChange={(nextOffset) => {
+          void loadPage({ ...appliedFilters, offset: nextOffset });
+        }}
+      />
 
       {isCreateOpen && (
-        <Modal
-          eyebrow="Directorio"
-          title="Nuevo usuario"
-          description="Crea una cuenta interna con rol y contraseña inicial."
+        <UserCreateModal
+          email={createEmail}
+          password={createPassword}
+          displayName={createDisplayName}
+          role={createRole}
+          errors={createErrors}
+          isCreating={isCreating}
+          onEmailChange={setCreateEmail}
+          onPasswordChange={setCreatePassword}
+          onDisplayNameChange={setCreateDisplayName}
+          onRoleChange={setCreateRole}
+          onClearErrors={() => setCreateErrors({})}
           onClose={() => setIsCreateOpen(false)}
-          footer={
-            <>
-              <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                form="mk-create-user-form"
-                variant="primary"
-                isLoading={isCreating}
-                disabled={isCreating}
-              >
-                Crear usuario
-              </Button>
-            </>
-          }
-        >
-          <form id="mk-create-user-form" className="mk-form" onSubmit={handleCreate} noValidate>
-            {createErrors['form'] !== undefined && (
-              <Alert type="error" title="No se pudo crear" onClose={() => setCreateErrors({})}>
-                {createErrors['form']}
-              </Alert>
-            )}
-
-            <div className={'mk-role-pills'} role="radiogroup" aria-label="Rol del usuario">
-              {(['admin', 'repartidor', 'cliente'] as const).map((role) => (
-                <button
-                  key={role}
-                  type="button"
-                  role="radio"
-                  aria-checked={createRole === role}
-                  className={'mk-role-pill ' + (createRole === role ? 'mk-role-pill--active' : '')}
-                  onClick={() => setCreateRole(role)}
-                >
-                  {ROLE_LABELS[role]}
-                </button>
-              ))}
-            </div>
-
-            <TextInput
-              id="mk-create-email"
-              label="Correo electrónico"
-              type="email"
-              autoComplete="off"
-              placeholder="equipo@millast.ec"
-              value={createEmail}
-              onChange={(event) => {
-                setCreateEmail(event.target.value);
-                setCreateErrors({});
-              }}
-              error={createErrors['email']}
-              isRequired
-              maxLength={254}
-              disabled={isCreating}
-            />
-
-            <TextInput
-              id="mk-create-display-name"
-              label="Nombre para mostrar (opcional)"
-              type="text"
-              autoComplete="off"
-              placeholder="Ej. Ana Paredes"
-              value={createDisplayName}
-              onChange={(event) => {
-                setCreateDisplayName(event.target.value);
-                setCreateErrors({});
-              }}
-              error={createErrors['displayName']}
-              maxLength={120}
-              disabled={isCreating}
-            />
-
-            <TextInput
-              id="mk-create-password"
-              label="Contraseña inicial"
-              type="password"
-              autoComplete="new-password"
-              helperText="Entre 8 y 128 caracteres."
-              value={createPassword}
-              onChange={(event) => {
-                setCreatePassword(event.target.value);
-                setCreateErrors({});
-              }}
-              error={createErrors['password']}
-              isRequired
-              maxLength={128}
-              disabled={isCreating}
-            />
-          </form>
-        </Modal>
+          onSubmit={handleCreate}
+        />
       )}
 
       {detailUser !== null && (
-        <Modal
-          eyebrow="Usuario"
-          title="Detalle de la cuenta"
-          description={detailUser.email}
+        <UserDetailModal
+          user={detailUser}
+          isLoading={isDetailLoading}
+          error={detailError}
+          onClearError={() => setDetailError(null)}
           onClose={() => setDetailUser(null)}
-          footer={
-            <Button type="button" variant="secondary" onClick={() => setDetailUser(null)}>
-              Cerrar
-            </Button>
-          }
-        >
-          {detailError !== null && (
-            <Alert type="error" title="No se pudo consultar" onClose={() => setDetailError(null)}>
-              {detailError}
-            </Alert>
-          )}
-          {isDetailLoading && <p role="status">Consultando usuario…</p>}
-          <div className="mk-detail-grid">
-            <div>
-              <span className="mk-detail-grid__label">Código</span>
-              <ShortIdBadge id={detailUser.id} prefix="USR" />
-            </div>
-            <div>
-              <span className="mk-detail-grid__label">Rol</span>
-              <span>{ROLE_LABELS[detailUser.publicRole]}</span>
-            </div>
-            <div>
-              <span className="mk-detail-grid__label">Estado</span>
-              <span>{detailUser.isActive ? 'Activo' : 'Inactivo'}</span>
-            </div>
-            <div>
-              <span className="mk-detail-grid__label">Verificación</span>
-              <span>
-                {detailUser.emailVerified
-                  ? VERIFIED_VIA_LABELS[detailUser.emailVerifiedVia ?? ''] ?? 'Verificado'
-                  : 'Pendiente'}
-              </span>
-            </div>
-            <div>
-              <span className="mk-detail-grid__label">Nombre</span>
-              <span>{detailUser.displayName ?? '—'}</span>
-            </div>
-            <div>
-              <span className="mk-detail-grid__label">Creado</span>
-              <span>{formatDate(detailUser.createdAt)}</span>
-            </div>
-          </div>
-        </Modal>
+        />
       )}
 
       {toggleUser !== null && (
-        <Modal
-          eyebrow="Confirmación"
-          title={toggleUser.isActive ? 'Desactivar usuario' : 'Activar usuario'}
-          description={toggleUser.email}
-          size="sm"
+        <UserToggleModal
+          user={toggleUser}
+          isToggling={isToggling}
+          error={toggleError}
+          onClearError={() => setToggleError(null)}
           onClose={() => setToggleUser(null)}
-          footer={
-            <>
-              <Button type="button" variant="ghost" onClick={() => setToggleUser(null)}>
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                variant={toggleUser.isActive ? 'danger' : 'primary'}
-                isLoading={isToggling}
-                onClick={() => {
-                  void handleToggle();
-                }}
-              >
-                {toggleUser.isActive ? 'Desactivar' : 'Activar'}
-              </Button>
-            </>
-          }
-        >
-          {toggleError !== null && (
-            <Alert type="error" title="No se pudo cambiar el estado" onClose={() => setToggleError(null)}>
-              {toggleError}
-            </Alert>
-          )}
-          <p className="mk-modal__paragraph">
-            {toggleUser.isActive
-              ? 'La cuenta dejará de poder iniciar sesión. Si es el último administrador activo o tiene una ruta asignada, el backend rechazará la operación.'
-              : 'La cuenta podrá volver a iniciar sesión con su contraseña actual.'}
-          </p>
-        </Modal>
+          onConfirm={() => {
+            void handleToggle();
+          }}
+        />
       )}
 
       {resetUser !== null && (
-        <Modal
-          eyebrow="Seguridad"
-          title="Restablecer contraseña"
-          description={resetUser.email}
+        <UserResetPasswordModal
+          user={resetUser}
+          password={resetPassword}
+          errors={resetErrors}
+          requestError={resetError}
+          isResetting={isResetting}
+          onPasswordChange={setResetPassword}
+          onClearErrors={() => {
+            setResetErrors({});
+            setResetError(null);
+          }}
           onClose={() => setResetUser(null)}
-          footer={
-            <>
-              <Button type="button" variant="ghost" onClick={() => setResetUser(null)}>
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                form="mk-reset-password-form"
-                variant="primary"
-                isLoading={isResetting}
-                disabled={isResetting}
-              >
-                Restablecer
-              </Button>
-            </>
-          }
-        >
-          <form id="mk-reset-password-form" className="mk-form" onSubmit={handleReset} noValidate>
-            {resetError !== null && (
-              <Alert type="error" title="No se pudo restablecer" onClose={() => setResetError(null)}>
-                {resetError}
-              </Alert>
-            )}
-            <TextInput
-              id="mk-reset-password"
-              label="Nueva contraseña"
-              type="password"
-              autoComplete="new-password"
-              helperText="Entre 8 y 128 caracteres."
-              value={resetPassword}
-              onChange={(event) => {
-                setResetPassword(event.target.value);
-                setResetErrors({});
-              }}
-              error={resetErrors['newPassword']}
-              isRequired
-              maxLength={128}
-              disabled={isResetting}
-            />
-          </form>
-        </Modal>
+          onSubmit={handleReset}
+        />
       )}
     </section>
   );

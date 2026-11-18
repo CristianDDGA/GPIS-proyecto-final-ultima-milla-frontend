@@ -2,7 +2,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app.js';
 import './styles.css';
-import './authkit-theme.css';
 
 const rootElement = document.getElementById('root');
 

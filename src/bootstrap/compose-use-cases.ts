@@ -80,15 +80,6 @@ import {
   type CourierApplicationUseCases,
 } from '../features/courier-applications/index.js';
 
-import {
-  DispatchRouteUseCase,
-  GetCouriersUseCase as GetDispatchCouriersUseCase,
-  GetRoutesUseCase as GetDispatchRoutesUseCase,
-  HttpCourierGateway as HttpDispatchCourierGateway,
-  HttpRouteGateway as HttpDispatchRouteGateway,
-  type DispatchUseCases,
-} from '../features/dispatch/index.js';
-
 export interface AppUseCases {
   readonly auth: AuthUseCases;
   readonly courierApplications: CourierApplicationUseCases;
@@ -96,13 +87,11 @@ export interface AppUseCases {
   readonly routes: RouteUseCases;
   readonly couriers: CourierUseCases;
   readonly deliveries: DeliveryUseCases;
-  /** Despacho de rutas planificadas (HU-DES-01 / HU-DES-02) heredado de develop. */
-  readonly dispatch: DispatchUseCases;
 }
 
 /**
  * Composition root: builds every gateway over the same HTTP client instance so the
- * JWT header injection and the global 401 handler apply to all 27 backend endpoints.
+ * JWT header injection and the global 401 handler apply to all backend endpoints.
  */
 export function composeUseCases(httpClient: HttpClient = defaultHttpClient): AppUseCases {
   const authGateway = new HttpAuthGateway(httpClient);
@@ -111,8 +100,6 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
   const routeGateway = new HttpRouteGateway(httpClient);
   const courierGateway = new HttpCourierGateway(httpClient);
   const deliveryGateway = new HttpDeliveryGateway(httpClient);
-  const dispatchRouteGateway = new HttpDispatchRouteGateway(httpClient);
-  const dispatchCourierGateway = new HttpDispatchCourierGateway(httpClient);
   const applicationGateway = new HttpCourierApplicationGateway(httpClient);
 
   return {
@@ -172,11 +159,6 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       getDeliveryOrder: new GetDeliveryOrderUseCase(deliveryGateway),
       changeStatus: new ChangeDeliveryStatusUseCase(deliveryGateway),
       completeRoute: new CompleteRouteUseCase(deliveryGateway),
-    },
-    dispatch: {
-      getRoutes: new GetDispatchRoutesUseCase(dispatchRouteGateway),
-      getCouriers: new GetDispatchCouriersUseCase(dispatchCourierGateway),
-      dispatchRoute: new DispatchRouteUseCase(dispatchRouteGateway),
     },
   };
 }

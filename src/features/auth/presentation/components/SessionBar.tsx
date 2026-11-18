@@ -25,7 +25,7 @@ function initialsOf(name: string): string {
   return (first + last).toUpperCase();
 }
 
-/** Cápsula de sesión AuthKit: identidad, rol y acciones sin ruido técnico. */
+/** Cápsula de sesión Webflow Studio: identidad, rol y acciones directas. */
 export const SessionBar: FC<SessionBarProps> = ({
   user,
   isLoading = false,
@@ -36,20 +36,28 @@ export const SessionBar: FC<SessionBarProps> = ({
   const displayName = hasDisplayName && user.displayName !== null ? user.displayName : user.email;
 
   return (
-    <section className="mk-session" aria-label="Cápsula de sesión del usuario">
-      <span className="mk-session__avatar" aria-hidden="true">
+    <section className="wf-session" aria-label="Cápsula de sesión del usuario">
+      <span className="wf-session__avatar" aria-hidden="true">
         {initialsOf(displayName)}
       </span>
-      <div className="mk-session__identity">
-        <p className="mk-session__name">{displayName}</p>
-        <p className="mk-session__email">{user.email}</p>
+      <div className="wf-session__identity">
+        <p className="wf-session__name">{displayName}</p>
+        <p className="wf-session__email">{user.email}</p>
       </div>
-      <span className={'mk-role mk-role--' + user.publicRole}>{APP_ROLE_LABELS[user.role]}</span>
-      <div className="mk-session__actions">
+      <span className={'wf-session__role wf-session__role--' + user.publicRole}>
+        {APP_ROLE_LABELS[user.role]}
+      </span>
+      <div className="wf-session__actions">
         <Button type="button" variant="ghost" size="sm" onClick={onOpenPassword}>
           Clave
         </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={onLogout} isLoading={isLoading}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onLogout}
+          isLoading={isLoading}
+        >
           Salir
         </Button>
       </div>
