@@ -32,7 +32,6 @@ export const AdminAccessView: FC<AdminAccessViewProps> = ({
   return (
     <section className="wf-access" aria-labelledby="wf-access-title">
       <SectionHeader
-        eyebrow="Etapa 6 · Accesos"
         title={tab === 'users' ? 'Directorio de usuarios' : 'Solicitudes de repartidor'}
         actions={
           <div

@@ -19,8 +19,7 @@
 
   --font-wf-visual-sans-variable: 'Inter', ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-wf-visual-sans-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
-    Monaco, Consolas, monospace;
+  --font-wf-visual-sans-mono: var(--font-wf-visual-sans-variable);
 
   --wf-ease-expo: cubic-bezier(0.22, 1, 0.36, 1);
   --wf-radius-control: 4px;
@@ -130,13 +129,13 @@
 
 .wf-kinetic__word {
   display: inline-block;
-  animation: wf-kinetic-rise 480ms var(--wf-ease-expo) both;
+  animation: wf-kinetic-rise 260ms var(--wf-ease-expo) both;
 }
 
 @keyframes wf-kinetic-rise {
   from {
-    opacity: 0;
-    transform: translateY(0.42em);
+    opacity: 0.25;
+    transform: translateY(0.24em);
   }
   to {
     opacity: 1;
@@ -689,7 +688,6 @@
 /* Código OTP de 6 dígitos */
 .wf-code-field .ui-input-control {
   font-family: var(--font-wf-visual-sans-mono);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
   font-size: 16px;
   letter-spacing: 0.35em;
   text-align: center;
@@ -741,9 +739,9 @@
 
 .wf-strength__label {
   color: var(--color-slate);
-  font-family: var(--font-wf-visual-sans-mono);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
+  font-family: var(--font-wf-visual-sans-variable);
   font-size: 12px;
+  font-weight: 500;
   line-height: 1.4;
 }
 

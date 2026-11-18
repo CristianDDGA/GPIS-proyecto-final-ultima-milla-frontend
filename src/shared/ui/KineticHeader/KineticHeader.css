@@ -9,16 +9,11 @@
 }
 
 .kinetic-header__main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
   max-width: 46rem;
-}
-
-.kinetic-header__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
 }
 
 .kinetic-header__eyebrow {
@@ -31,29 +26,13 @@
   color: var(--color-slate, #5a5a5a);
 }
 
-.kinetic-header__step {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 6px;
-  border-radius: var(--radius-tags, 4px);
-  background: var(--color-mist, #f0f0f0);
-  border: 1px solid var(--color-ash-border, #d8d8d8);
-  color: var(--color-obsidian, #080808);
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
-  font-size: 11px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 .kinetic-header__title {
   margin: 0;
   font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-size: var(--text-heading, 32px);
   font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
   color: var(--color-obsidian, #080808);
 }
 
@@ -64,17 +43,18 @@ h1.kinetic-header__title {
 
 .kinetic-header__word {
   display: inline-block;
-  animation: kinetic-word-rise 480ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  animation: kinetic-word-rise 220ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 .kinetic-header__description {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   max-width: 42rem;
   color: var(--color-slate, #5a5a5a);
   font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-size: 14px;
+  font-weight: 400;
   line-height: 1.5;
-  animation: kinetic-fade 520ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  animation: kinetic-fade 480ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 .kinetic-header__actions {
@@ -86,8 +66,8 @@ h1.kinetic-header__title {
 
 @keyframes kinetic-word-rise {
   from {
-    transform: translateY(0.45em);
-    opacity: 0;
+    transform: translateY(0.2em);
+    opacity: 0.25;
   }
   to {
     transform: translateY(0);
@@ -98,7 +78,7 @@ h1.kinetic-header__title {
 @keyframes kinetic-fade {
   from {
     opacity: 0;
-    transform: translateY(0.3em);
+    transform: translateY(0.25em);
   }
   to {
     opacity: 1;

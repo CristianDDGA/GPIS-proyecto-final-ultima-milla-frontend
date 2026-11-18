@@ -76,9 +76,9 @@
 }
 
 .wf-toolbar__filters .ui-select-field {
-  width: 170px;
-  min-width: 0;
-  flex: 0 0 auto;
+  min-width: 185px;
+  width: auto;
+  flex: 0 1 195px;
 }
 
 .wf-toolbar__filter-actions {
@@ -111,13 +111,10 @@
   background-color: var(--color-mist, #f0f0f0);
   border-bottom: 1px solid var(--color-ash-border, #d8d8d8);
   color: var(--color-slate, #5a5a5a);
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
-  font-size: 11px;
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.08em;
   text-align: left;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -164,9 +161,8 @@
 
 .wf-table__mono {
   color: var(--color-slate, #5a5a5a);
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
-  font-size: 12px;
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -269,9 +265,8 @@
 
 .wf-pagination__info {
   color: var(--color-slate, #5a5a5a);
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
-  font-size: 12px;
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -389,9 +384,9 @@
 
 .wf-strength__label {
   color: var(--color-slate, #5a5a5a);
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-size: 12px;
+  font-weight: 500;
 }
 
 /* --- Detalle de cuenta y panel Master-Detail de Solicitudes --------------- */
@@ -406,11 +401,9 @@
   display: block;
   margin-bottom: 4px;
   color: var(--color-slate, #5a5a5a);
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .wf-applications__layout {
@@ -449,8 +442,9 @@
 .wf-application-detail__eyebrow {
   margin: 0;
   color: var(--color-slate, #5a5a5a);
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 12px;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -489,11 +483,9 @@
 
 .wf-detail-list dt {
   color: var(--color-slate, #5a5a5a);
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .wf-detail-list dd {

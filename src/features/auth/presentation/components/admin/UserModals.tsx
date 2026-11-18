@@ -52,7 +52,6 @@ export const UserCreateModal: FC<UserCreateModalProps> = ({
 
   return (
     <Modal
-      eyebrow="Directorio"
       title="Nuevo usuario"
       onClose={onClose}
       footer={
@@ -166,7 +165,6 @@ export const UserDetailModal: FC<UserDetailModalProps> = ({
   onClose,
 }) => (
   <Modal
-    eyebrow="Usuario"
     title="Detalle de la cuenta"
     description={user.email}
     onClose={onClose}
@@ -233,7 +231,6 @@ export const UserToggleModal: FC<UserToggleModalProps> = ({
   onConfirm,
 }) => (
   <Modal
-    eyebrow="Confirmación"
     title={user.isActive ? 'Desactivar usuario' : 'Activar usuario'}
     description={user.email}
     size="sm"
@@ -295,7 +292,6 @@ export const UserResetPasswordModal: FC<UserResetPasswordModalProps> = ({
 
   return (
     <Modal
-      eyebrow="Seguridad"
       title="Restablecer contraseña"
       description={user.email}
       onClose={onClose}

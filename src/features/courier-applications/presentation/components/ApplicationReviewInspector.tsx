@@ -58,7 +58,6 @@ export const ApplicationReviewInspector: FC<ApplicationReviewInspectorProps> = (
   <aside className="wf-application-detail" aria-label="Detalle de la solicitud">
     <header className="wf-application-detail__header">
       <div>
-        <p className="wf-application-detail__eyebrow">Solicitud</p>
         <h3 className="wf-application-detail__title">{detail.fullName}</h3>
         <p className="wf-application-detail__email">{detail.applicantEmail}</p>
       </div>

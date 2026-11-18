@@ -9,7 +9,6 @@ import {
   Button,
   Card,
   KineticHeader,
-  KineticCounter,
   Select,
   ShortIdBadge,
   TextInput,
@@ -133,14 +132,12 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
 
   const isRefreshing = isLoadingZones || isLoadingOrders;
   const activeFilters = Boolean(location.deliveryDate || location.zoneId);
-  const pendingCount = orders.filter((order) => order.status === 'pendiente').length;
 
   return (
     <section className="orders-layout" aria-labelledby="orders-view-title">
       <KineticHeader
         id="orders-view-title"
         level="h2"
-        eyebrow="Etapa 02 · Demanda"
         title="Gestión de pedidos"
         actions={
           <Button
@@ -208,7 +205,7 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
                     <span className={`orders-status-badge orders-status-badge--${detail.status}`}>
                       {STATUS_LABELS[detail.status] ?? detail.status}
                     </span>
-                    <span className="orders-detail__raw-status">{detail.status}</span>
+                    <span className="orders-detail__raw-status sr-only">{detail.status}</span>
                   </dd>
                   <dt>Creado (UTC)</dt>
                   <dd className="orders-detail__mono">{detail.createdAt}</dd>
@@ -264,22 +261,6 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
         </Card>
       ) : (
         <>
-          {!canCreateOrder && (
-            <Alert type="info" title="Modo consulta">
-              Tu rol permite consultar pedidos, pero no crear nuevos pedidos.
-            </Alert>
-          )}
-
-          <div className="orders-kpis">
-            <KineticCounter label="Pedidos visibles" value={orders.length} tone="accent" />
-            <KineticCounter label="Pendientes" value={pendingCount} tone="transit" />
-            <KineticCounter
-              label="Filtros activos"
-              value={activeFilters ? 'Sí' : 'No'}
-              hint={activeFilters ? 'Fecha o zona aplicada' : 'Catálogo completo'}
-            />
-          </div>
-
           <div className={`orders-grid${canCreateOrder ? '' : ' orders-grid--single'}`}>
             {canCreateOrder && (
               <Card variant="elevated" className="orders-form-card">
@@ -352,6 +333,7 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
               {!ordersError && (
                 <OrderList
                   orders={orders}
+                  zones={zones}
                   isLoading={isLoadingOrders}
                   hasActiveFilters={activeFilters}
                   onSelect={(orderId) => navigate({ ...location, orderId })}

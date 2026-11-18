@@ -70,7 +70,6 @@ export const ChangePasswordModal: FC<ChangePasswordModalProps> = ({
 
   return (
     <Modal
-      eyebrow="Seguridad"
       title="Cambiar contraseña"
       onClose={onClose}
       footer={

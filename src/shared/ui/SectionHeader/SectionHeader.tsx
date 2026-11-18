@@ -34,7 +34,7 @@ export const SectionHeader: FC<SectionHeaderProps> = ({
             <Fragment key={`${title}-${word}-${index}`}>
               <span
                 className="wf-section-header__word"
-                style={{ animationDelay: `${index * 50}ms` }}
+                style={{ animationDelay: `${index * 22}ms` }}
               >
                 {word}
               </span>

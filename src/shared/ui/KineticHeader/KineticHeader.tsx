@@ -12,15 +12,12 @@ export interface KineticHeaderProps {
   readonly id?: string | undefined;
   /** Acciones alineadas a la derecha: refrescar, KPI o CTA del flujo. */
   readonly actions?: ReactNode | undefined;
-  /** Indicador de etapa del pipeline operativo, p. ej. "Paso 3 de 5". */
-  readonly stepLabel?: string | undefined;
   readonly className?: string | undefined;
 }
 
 /**
- * Cabecera cinética: revela el título con un desplazamiento escalonado por
- * palabra (220ms, easing expo) y mantiene jeraquía tipográfica Apple en el
- * eyebrow + descripción. La animación se desactiva con reduced-motion.
+ * Cabecera cinética Webflow Studio (DESIGN.md):
+ * revela el título palabra por palabra con tipografía Inter (peso 600).
  */
 export const KineticHeader: FC<KineticHeaderProps> = ({
   title,
@@ -29,7 +26,6 @@ export const KineticHeader: FC<KineticHeaderProps> = ({
   level = 'h2',
   id,
   actions,
-  stepLabel,
   className = '',
 }) => {
   const Heading = level;
@@ -38,30 +34,25 @@ export const KineticHeader: FC<KineticHeaderProps> = ({
   return (
     <header className={`kinetic-header ${className}`.trim()}>
       <div className="kinetic-header__main">
-        {(eyebrow !== undefined || stepLabel !== undefined) && (
-          <div className="kinetic-header__meta">
-            {stepLabel !== undefined && (
-              <span className="kinetic-header__step">{stepLabel}</span>
-            )}
-            {eyebrow !== undefined && <p className="kinetic-header__eyebrow">{eyebrow}</p>}
-          </div>
+        {eyebrow !== undefined && eyebrow.length > 0 && (
+          <p className="kinetic-header__eyebrow">{eyebrow}</p>
         )}
 
         <Heading id={id} className="kinetic-header__title">
           {words.map((word, index) => (
-            <Fragment key={`${word}-${index}`}>
+            <Fragment key={`${title}-${word}-${index}`}>
               <span
                 className="kinetic-header__word"
-                style={{ animationDelay: `${index * 55}ms` }}
+                style={{ animationDelay: `${index * 22}ms` }}
               >
                 {word}
               </span>
-            {index < words.length - 1 ? ' ' : null}
-          </Fragment>
+              {index < words.length - 1 ? ' ' : null}
+            </Fragment>
           ))}
         </Heading>
 
-        {description !== undefined && (
+        {description !== undefined && description.length > 0 && (
           <p className="kinetic-header__description">{description}</p>
         )}
       </div>

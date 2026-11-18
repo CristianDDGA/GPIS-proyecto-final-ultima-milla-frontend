@@ -75,13 +75,13 @@
 
 .wf-modal__title-word {
   display: inline-block;
-  animation: wf-modal-word-rise 400ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  animation: wf-modal-word-rise 220ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 @keyframes wf-modal-word-rise {
   from {
-    opacity: 0;
-    transform: translateY(0.38em);
+    opacity: 0.25;
+    transform: translateY(0.2em);
   }
   to {
     opacity: 1;

@@ -68,9 +68,6 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <span className="ui-select-chevron" aria-hidden="true">
-            ▼
-          </span>
         </div>
 
         {error && (

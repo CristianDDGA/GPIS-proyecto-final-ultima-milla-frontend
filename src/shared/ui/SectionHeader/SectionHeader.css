@@ -11,7 +11,7 @@
 .wf-section-header__main {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -31,20 +31,20 @@
   font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-size: var(--text-heading, 32px);
   font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
   color: var(--color-obsidian, #080808);
 }
 
 .wf-section-header__word {
   display: inline-block;
-  animation: wf-section-word-rise 460ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  animation: wf-section-word-rise 220ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 @keyframes wf-section-word-rise {
   from {
-    opacity: 0;
-    transform: translateY(0.42em);
+    opacity: 0.25;
+    transform: translateY(0.2em);
   }
   to {
     opacity: 1;
@@ -53,11 +53,12 @@
 }
 
 .wf-section-header__description {
-  margin: 0;
+  margin: 4px 0 0;
   max-width: 56ch;
   color: var(--color-slate, #5a5a5a);
   font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-size: 14px;
+  font-weight: 400;
   line-height: 1.5;
 }
 
@@ -71,11 +72,11 @@
 .wf-section-header__metrics {
   display: flex;
   gap: 12px;
-  font-family: var(--font-wf-visual-sans-mono, 'JetBrains Mono', monospace);
-  font-feature-settings: 'ss02', 'ss10', 'zero';
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-variant-numeric: tabular-nums;
   color: var(--color-slate, #5a5a5a);
   font-size: 13px;
+  font-weight: 500;
 }
 
 .wf-section-header__actions {

@@ -9,24 +9,23 @@
   font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--color-slate, #5a5a5a);
 }
 
 .kinetic-counter__value {
   display: inline-block;
   font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--color-obsidian, #080808);
   animation: kinetic-odometer 420ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 .kinetic-counter__hint {
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-size: 12px;
   color: var(--color-slate, #5a5a5a);
   font-variant-numeric: tabular-nums;
@@ -43,7 +42,7 @@
 
 @keyframes kinetic-odometer {
   from {
-    transform: translateY(0.38em);
+    transform: translateY(0.35em);
     opacity: 0;
   }
   to {

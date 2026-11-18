@@ -53,7 +53,6 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
     <Card variant="elevated" className="routes-operation-card">
       <div className="routes-operation-card__header">
         <h3 className="routes-operation-card__title">Generar plan de rutas</h3>
-        <span className="routes-operation-card__tag">Etapa 03a</span>
       </div>
 
       <form className="routes-form" onSubmit={handleSubmit} aria-label="Generar plan de rutas">

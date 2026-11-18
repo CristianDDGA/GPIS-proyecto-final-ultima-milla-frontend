@@ -76,7 +76,6 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
     <Card variant="elevated" className="routes-operation-card">
       <div className="routes-operation-card__header">
         <h3 className="routes-operation-card__title">Insertar pedido tardío</h3>
-        <span className="routes-operation-card__tag">Etapa 03b</span>
       </div>
 
       <form className="routes-form" onSubmit={handleSubmit} aria-label="Insertar pedido tardío">

@@ -15,7 +15,6 @@ import {
   Button,
   Card,
   EmptyState,
-  KineticCounter,
   KineticHeader,
   Select,
   ShortIdBadge,
@@ -167,7 +166,6 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
       <KineticHeader
         id="deliveries-view-title"
         level="h2"
-        eyebrow="Etapa 05 · Última milla"
         title="Ejecución de entregas"
         actions={
           <Button
@@ -315,30 +313,26 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                   </dl>
 
                   <div className="deliveries-progress" aria-label="Progreso de la ruta">
-                    <div className="deliveries-progress__body">
-                      <div className="deliveries-progress__counters">
-                        <KineticCounter
-                          label="Entregados"
-                          value={`${deliveredCount}/${stops.length}`}
-                          tone="delivered"
-                        />
-                        <KineticCounter label="Avance" value={`${progressPercent}%`} tone="accent" />
-                      </div>
-                      <div
-                        className="deliveries-progress__track"
-                        role="progressbar"
-                        aria-valuemin={0}
-                        aria-valuemax={stops.length}
-                        aria-valuenow={deliveredCount}
-                        aria-label="Pedidos entregados de la hoja de ruta"
-                      >
-                        <span
-                          className={`deliveries-progress__fill ${
-                            allDelivered ? 'deliveries-progress__fill--complete' : ''
-                          }`.trim()}
-                          style={{ width: `${progressPercent}%` }}
-                        />
-                      </div>
+                    <div className="deliveries-progress__summary">
+                      <span className="deliveries-progress__label">
+                        Entregados: <strong>{deliveredCount}</strong> de <strong>{stops.length}</strong>
+                      </span>
+                      <span className="deliveries-progress__percent">{progressPercent}%</span>
+                    </div>
+                    <div
+                      className="deliveries-progress__track"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={stops.length}
+                      aria-valuenow={deliveredCount}
+                      aria-label="Pedidos entregados de la hoja de ruta"
+                    >
+                      <span
+                        className={`deliveries-progress__fill ${
+                          allDelivered ? 'deliveries-progress__fill--complete' : ''
+                        }`.trim()}
+                        style={{ width: `${progressPercent}%` }}
+                      />
                     </div>
                   </div>
 
