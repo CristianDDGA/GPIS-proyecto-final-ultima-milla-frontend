@@ -1,23 +1,18 @@
 # Checklist de Ejecución — Webflow Studio (`DESIGN (1).md`)
 
-## Etapa A — Login Webflow Studio Minimal
-- [x] Copiar `c:\Users\Matius\Downloads\DESIGN (1).md` a `DESIGN.md` en la raíz del frontend.
-- [x] Modularizar Login en `src/features/auth/presentation/` (`useAuthFlows`, `AuthTopNav`, `AuthStudioShowcase`, `KineticText`, `IsometricRouteSculpture`, `AuthPasswordField`, `PasswordStrengthMeter`, 5 formularios).
-- [x] Depurar ruido visual en Login (sin botones duplicados en topbar, sin imagen/lista de texto innecesaria, sin `MILLAST · WEB`).
+## Etapas A–C — Login, Administrador y Cliente
+- [x] Login minimalista Webflow Studio + Kinetic Type + Isometría 2.5D sin redundancias ni scroll.
+- [x] Consola Admin (6 secciones ordenadas sin `01..06`/`Etapa`, `Inter` puro, `IsometricCapacityCube` solo en `Rutas`, sin `dispatch` `404`).
+- [x] Portal Cliente (`Zonas`, `Pedidos`, `Ser repartidor`) y corrección de `<Select>` (flecha única) y logout (`Salir` sin `401`).
 
-## Etapa B — Rol Administrador (`personal`)
-- [x] Purgar `authkit-theme.css` y unificar tokens (`Inter` como única fuente de interfaz, radios `4px`/`8px`, cero sombra en reposo).
-- [x] Eliminar por completo `src/features/dispatch/` (endpoints `404` inexistentes).
-- [x] Mantener las 6 secciones ordenadas (`Zonas`, `Pedidos`, `Rutas`, `Despacho`, `Entregas`, `Accesos`) eliminando numeración `01..06` y etiquetas `Etapa`.
-- [x] Hidratar nombres legibles de zona y añadir paginación en `Pedidos`; mantener `IsometricCapacityCube` solo en `Rutas`; ocultar paneles vacíos en `Despacho` sin repartidor seleccionado.
+## Etapa D — Portal Repartidor (`repartidor`)
+- [x] Evitar petición `GET /couriers` (`403`) al iniciar sesión como `repartidor` (`app.tsx`).
+- [x] Resolver nombre real del repartidor en `Rutas` y retirar enlace administrativo `Asignar repartidor en Despacho →` para `repartidor`.
+- [x] Limpiar filtros de `Rutas` (`RouteFiltersForm`) y controlar lista de 3,800+ pedidos tardíos en `LateOrderPlacementCard`.
+- [x] Modularizar `DeliveryExecutionView` en `CourierOperationCard`, `DeliveryStopList` y `DeliveryOrderInspectorCard`.
+- [x] Precargar registros `/delivery-orders/:id` al cargar `Hoja de ruta activa`, ocultar tarjeta vacía de inspector sin ruta, agregar stepper visual de parada y control explícito `Por confirmar` / `Disponible` / `No disponible`.
 
-## Etapa C — Rol Cliente (`cliente`)
-- [x] Limpiar `Zonas` (sin banner de "Modo consulta") y `Pedidos` (sin acción administrativa `Planificar en Rutas` ni estado crudo visible).
-- [x] Implementar pestaña **Ser repartidor** (`ClientCourierApplicationView`, `ClientApplicationFormCard`, `ClientApplicationDocumentsCard`, `useMyCourierApplication`).
-- [x] Adaptar `readOptionalApplication` para `GET /courier-applications/me` cuando responde `200 { application: null }`.
-
-## Etapa D — Verificación, Pulido y Documentación
-- [x] Corregir flecha doble en `<Select>` (`Select.tsx` / `Select.css`) y ajuste de ancho para `"Todos los estados"`.
-- [x] Evitar peticiones `401` al pulsar `Salir` desde pestañas secundarias (`app.tsx`).
-- [x] Documentar brechas/observaciones de backend sin editar `GPIS-proyecto-final-ultima-milla-backend` (`tasks/backend-observations.md`).
-- [x] Verificar `npm run typecheck`, `npm run build` y navegación en Chromium (`1440×900` Admin y Cliente) con 0 errores de consola y 0 errores de red.
+## Etapa E — Documentación Backend & Prueba Cruzada de 3 Roles
+- [x] Documentar todos los errores y brechas del backend en `docs/BACKEND_HALLAZGOS_Y_ERRORES.md` (sin editar el backend).
+- [x] Probar flujo cruzado completo `Cliente → Admin → Repartidor → Cliente` (pedido y entrega completa de ruta) + autopostulación `Admin → Cliente → Admin → Repartidor` en Chromium con 0 errores de consola/red.
+- [x] Verificar `npm run typecheck` y `npm run build` finales con 0 errores.

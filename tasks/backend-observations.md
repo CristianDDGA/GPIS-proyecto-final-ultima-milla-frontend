@@ -1,36 +1,12 @@
-# Observaciones del Backend (Solo Documentación)
+# Observaciones del Backend (Resumen Rápido)
 
 > [!NOTE]
-> Por instrucción explícita, **no se modificó ningún archivo en `GPIS-proyecto-final-ultima-milla-backend`**. Este documento registra los comportamientos y brechas observadas en el backend durante la reconstrucción y verificación en navegador de los roles **Administrador (`personal`)** y **Cliente (`cliente`)**, junto con la mitigación aplicada temporalmente en el frontend cuando correspondía.
+> El informe completo y clasificado por severidad (**BE-01** a **BE-07**) se encuentra en [docs/BACKEND_HALLAZGOS_Y_ERRORES.md](../docs/BACKEND_HALLAZGOS_Y_ERRORES.md). **No se modificó ningún archivo de `GPIS-proyecto-final-ultima-milla-backend`.**
 
-## 1. `GET /orders` sin paginación ni `zoneName` poblado
-
-- **Ubicación en backend:** `src/modules/orders/presentation/http/order.controller.ts` (`GET /orders`).
-- **Comportamiento observado:**
-  1. Devuelve **todos** los registros en un único arreglo JSON sin parámetros `limit`/`offset` ni metadatos `total` (en la base local de pruebas responde con **3,850 pedidos** en una sola petición).
-  2. `order.toJSON()` expone `zoneId`, pero **no** incluye `zoneName`.
-- **Impacto:** Sobrecarga inicial de red/renderizado en la pestaña **Pedidos** del administrador y visualización previa de UUIDs crudos en la columna de zona.
-- **Mitigación aplicada en frontend (sin tocar backend):**
-  - Paginación del lado del cliente (`PAGE_SIZE = 15`) en `OrderList.tsx`.
-  - Hidratación del nombre legible de la zona cruzando `zoneId` contra el catálogo `zones` ya cargado en memoria.
-- **Corrección sugerida a futuro en backend:** Soportar `?limit=&offset=` con `{ items, total, limit, offset }` en `GET /orders` y proyectar `zoneName` mediante `JOIN` en la consulta SQL de lectura.
-
-## 2. `GET /courier-applications/me` responde `200 { application: null }`
-
-- **Ubicación en backend:** `src/modules/courier-applications/presentation/http/application.router.ts`.
-- **Comportamiento observado:** Cuando un usuario con rol `cliente` no ha creado ningún borrador de postulación, `GET /courier-applications/me` retorna HTTP `200 OK` con `{ "application": null }`.
-- **Impacto previo:** El parser estricto anterior en `courier-applications/infrastructure/http/response.ts` asumía que `data.application` siempre era un objeto no nulo y lanzaba un error de contrato (`"La respuesta del servidor no cumple el contrato de la API."`) al abrir **Ser repartidor** por primera vez.
-- **Mitigación aplicada en frontend (sin tocar backend):** Incorporación de `readOptionalApplication` en `response.ts` y retorno explícito de `null` en `httpCourierApplicationGateway.ts#getMine`.
-
-## 3. Endpoints inexistentes (`404`) consumidos por código heredado del frontend
-
-- **Endpoints faltantes observados respecto al flujo previo:**
-  - `POST /routes/:id/dispatch`
-  - `GET /couriers/:id`
-- **Comportamiento en backend:** El despacho real de una ruta hacia un repartidor se realiza mediante `POST /courier-assignments` y la ruta activa de un repartidor se consulta con `GET /couriers/:id/route`.
-- **Decisión aplicada en frontend:** Se eliminó por completo el módulo legado `src/features/dispatch/` para no emitir peticiones `404` ni duplicar funcionalidades con `CourierFleetDispatchView`.
-
-## 4. Asimetrías menores de contratos de lectura (`routes`, `couriers`, `zones`)
-
-- **Paginación incompleta:** `GET /routes` y `GET /couriers` devuelven `{ items, limit, offset }` sin el campo `total`; `GET /zones` no soporta paginación.
-- **Verificación de correo al postular (`PUT /courier-applications/me`):** El backend devuelve `403 EMAIL_NOT_VERIFIED` si un usuario cliente intenta crear o guardar un borrador de repartidor con una cuenta no verificada (coherente con el dominio, requiere que los usuarios cliente sembrados tengan `email_verified_at` cuando `EMAIL_VERIFICATION_REQUIRED=true`).
+1. **BE-01 (`couriers`/`auth`):** Falta endpoint para que `repartidor` consulte su disponibilidad (`GET /couriers` responde `403`, sin `GET /couriers/me`, y `GET /couriers/:id/route` / `GET /auth/me` omiten `isAvailable`). Mitigado en frontend con selección explícita `"Por confirmar"` → `Marcar disponible` / `No disponible`.
+2. **BE-02 (`auth`/`couriers`):** `POST /auth/users` con rol `repartidor` no crea ni enlaza fila en `logistica.couriers` (`courierId = null`), y `POST /couriers` pasa `NULL::uuid` como `user_id`.
+3. **BE-03 (`deliveries`/`routes`/`orders`):** `complete_route` marca `released_at` en `route_stops`, dejando en `0` los cupos en `GET /routes`, vacío `stops[]` en `GET /routes/:id` y vacío `GET /orders` para el repartidor tras completar la ruta.
+4. **BE-04 (`deliveries`):** `GET /delivery-orders/:id` no valida propiedad de parada cuando el actor es `repartidor` (a diferencia de `POST /delivery-status-changes`).
+5. **BE-05 (`orders`):** `GET /orders` no pagina ni filtra por `status` (`3,850` pedidos locales en una respuesta) y no incluye `zoneName`. Mitigado en frontend en `OrderList.tsx` (`15`/página + hidratación desde `zones`) y `LateOrderPlacementCard.tsx` (filtro + tope de `50` opciones).
+6. **BE-06 (`courier-applications`):** `GET /courier-applications/me` retorna `200 { application: null }` cuando no existe borrador (adaptado con `readOptionalApplication`); `review_courier_application` no sincroniza `app_users.display_name`.
+7. **BE-07 (`routes`/`couriers`/`zones`):** `GET /routes` y `GET /couriers` omiten `total`; `GET /zones` omite `isActive`; `change_order_status` fuerza `logistica.source = 'mobile'` para todo `repartidor`; retirados los `404` heredados (`POST /routes/:id/dispatch`, `GET /couriers/:id`).
