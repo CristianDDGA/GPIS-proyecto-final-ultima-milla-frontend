@@ -376,3 +376,10 @@ export function evaluatePasswordStrength(password: string, email = ''): Password
 
   return 'weak';
 }
+
+/** Mensaje de la política de contraseñas del backend, o null si la clave es válida. */
+export function validatePasswordPolicy(password: string, email = ''): string | null {
+  const errors: ValidationErrors = {};
+  validateNewPasswordField(password, email, errors, 'newPassword');
+  return errors['newPassword'] ?? null;
+}

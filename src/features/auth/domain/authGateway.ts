@@ -10,6 +10,14 @@ import type {
   ResetPasswordInput,
   VerifyEmailInput,
 } from './authUser.js';
+import type {
+  ChangePasswordInput,
+  ManagedUser,
+  ManagedUserFilters,
+  ManagedUserPage,
+  ResetManagedUserPasswordInput,
+  SetManagedUserActiveInput,
+} from './managedUser.js';
 
 export interface AuthGateway {
   checkHealth(): Promise<HealthStatus>;
@@ -22,5 +30,14 @@ export interface AuthGateway {
   resetPassword(input: ResetPasswordInput): Promise<void>;
   getCurrentUser(): Promise<AuthUser>;
   logout(): Promise<void>;
+
+  /** Autoservicio autenticado: rota la sesión y devuelve un token nuevo. */
+  changePassword(input: ChangePasswordInput): Promise<AuthSession>;
+  /** Alta administrativa de una cuenta (POST /auth/users). */
   createManagedUser(input: CreateManagedUserInput): Promise<AuthUser>;
+  /** Directorio administrativo real con filtros y paginación. */
+  listManagedUsers(filters?: ManagedUserFilters): Promise<ManagedUserPage>;
+  getManagedUser(userId: string): Promise<ManagedUser>;
+  setManagedUserActive(input: SetManagedUserActiveInput): Promise<ManagedUser>;
+  resetManagedUserPassword(input: ResetManagedUserPasswordInput): Promise<void>;
 }

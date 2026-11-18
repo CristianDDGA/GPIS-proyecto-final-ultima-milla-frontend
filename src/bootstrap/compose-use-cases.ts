@@ -4,16 +4,21 @@ import {
 } from '../shared/infrastructure/http/index.js';
 
 import {
+  ChangePasswordUseCase,
   CheckHealthUseCase,
   CreateManagedUserUseCase,
   ForgotPasswordUseCase,
   GetCurrentUserUseCase,
+  GetManagedUserUseCase,
   HttpAuthGateway,
+  ListManagedUsersUseCase,
   LoginUseCase,
   LogoutUseCase,
   RegisterCustomerUseCase,
   ResendVerificationUseCase,
+  ResetManagedUserPasswordUseCase,
   ResetPasswordUseCase,
+  SetManagedUserActiveUseCase,
   VerifyEmailUseCase,
   type AuthUseCases,
 } from '../features/auth/index.js';
@@ -60,6 +65,22 @@ import {
 } from '../features/deliveries/index.js';
 
 import {
+  ApproveApplicationUseCase,
+  CancelApplicationUseCase,
+  GetApplicationFileUseCase,
+  GetApplicationUseCase,
+  GetMyApplicationFileUseCase,
+  GetMyApplicationUseCase,
+  HttpCourierApplicationGateway,
+  ListApplicationsUseCase,
+  RejectApplicationUseCase,
+  SaveApplicationDraftUseCase,
+  SubmitApplicationUseCase,
+  UploadApplicationFileUseCase,
+  type CourierApplicationUseCases,
+} from '../features/courier-applications/index.js';
+
+import {
   DispatchRouteUseCase,
   GetCouriersUseCase as GetDispatchCouriersUseCase,
   GetRoutesUseCase as GetDispatchRoutesUseCase,
@@ -70,6 +91,7 @@ import {
 
 export interface AppUseCases {
   readonly auth: AuthUseCases;
+  readonly courierApplications: CourierApplicationUseCases;
   readonly orders: OrderUseCases;
   readonly routes: RouteUseCases;
   readonly couriers: CourierUseCases;
@@ -91,6 +113,7 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
   const deliveryGateway = new HttpDeliveryGateway(httpClient);
   const dispatchRouteGateway = new HttpDispatchRouteGateway(httpClient);
   const dispatchCourierGateway = new HttpDispatchCourierGateway(httpClient);
+  const applicationGateway = new HttpCourierApplicationGateway(httpClient);
 
   return {
     auth: {
@@ -104,6 +127,24 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       getCurrentUser: new GetCurrentUserUseCase(authGateway),
       logout: new LogoutUseCase(authGateway),
       createManagedUser: new CreateManagedUserUseCase(authGateway),
+      changePassword: new ChangePasswordUseCase(authGateway),
+      listManagedUsers: new ListManagedUsersUseCase(authGateway),
+      getManagedUser: new GetManagedUserUseCase(authGateway),
+      setManagedUserActive: new SetManagedUserActiveUseCase(authGateway),
+      resetManagedUserPassword: new ResetManagedUserPasswordUseCase(authGateway),
+    },
+    courierApplications: {
+      getMine: new GetMyApplicationUseCase(applicationGateway),
+      saveDraft: new SaveApplicationDraftUseCase(applicationGateway),
+      uploadFile: new UploadApplicationFileUseCase(applicationGateway),
+      getMyFile: new GetMyApplicationFileUseCase(applicationGateway),
+      submit: new SubmitApplicationUseCase(applicationGateway),
+      cancel: new CancelApplicationUseCase(applicationGateway),
+      list: new ListApplicationsUseCase(applicationGateway),
+      get: new GetApplicationUseCase(applicationGateway),
+      getFile: new GetApplicationFileUseCase(applicationGateway),
+      approve: new ApproveApplicationUseCase(applicationGateway),
+      reject: new RejectApplicationUseCase(applicationGateway),
     },
     orders: {
       getZones: new GetZonesUseCase(orderZoneCatalog),

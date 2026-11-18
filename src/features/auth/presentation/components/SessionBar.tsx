@@ -1,28 +1,14 @@
 import type { FC } from 'react';
-import type { AuthUser, HealthStatus } from '../../domain/index.js';
-import { Alert, Button } from '../../../../shared/ui/index.js';
-import '../styles/auth.css';
+import type { AuthUser } from '../../domain/index.js';
+import { APP_ROLE_LABELS } from '../../domain/index.js';
+import { Button } from '../../../../shared/ui/index.js';
 
 export interface SessionBarProps {
-  user: AuthUser;
-  healthStatus: HealthStatus;
-  isLoading?: boolean | undefined;
-  verificationMessage?: string | null | undefined;
-  onLogout: () => void;
-  onVerifyProfile: () => void;
+  readonly user: AuthUser;
+  readonly isLoading?: boolean | undefined;
+  readonly onOpenPassword: () => void;
+  readonly onLogout: () => void;
 }
-
-const ROLE_LABELS: Record<AuthUser['role'], string> = {
-  personal: 'Administrador',
-  repartidor: 'Repartidor',
-  cliente: 'Cliente',
-};
-
-const HEALTH_LABELS: Record<HealthStatus, string> = {
-  checking: 'Verificando',
-  online: 'En línea',
-  offline: 'Sin conexión',
-};
 
 function initialsOf(name: string): string {
   const words = name
@@ -36,77 +22,37 @@ function initialsOf(name: string): string {
 
   const first = words[0]?.[0] ?? '';
   const last = words.length > 1 ? words[words.length - 1]?.[0] ?? '' : '';
-  return `${first}${last}`.toUpperCase();
+  return (first + last).toUpperCase();
 }
 
-/**
- * Cápsula de sesión de la capa funcional flotante: identidad compacta, rol
- * semántico, estado real del servidor y acciones de sesión sin filtrar
- * identificadores técnicos ni rutas internas de la API.
- */
+/** Cápsula de sesión AuthKit: identidad, rol y acciones sin ruido técnico. */
 export const SessionBar: FC<SessionBarProps> = ({
   user,
-  healthStatus,
   isLoading = false,
-  verificationMessage,
+  onOpenPassword,
   onLogout,
-  onVerifyProfile,
 }) => {
   const hasDisplayName = user.displayName !== null && user.displayName.trim().length > 0;
-  const displayName =
-    hasDisplayName && user.displayName !== null ? user.displayName : user.email;
-  const initials = initialsOf(displayName);
+  const displayName = hasDisplayName && user.displayName !== null ? user.displayName : user.email;
 
   return (
-    <section className="session-bar" aria-label="Barra de sesión del usuario">
-      <div className="session-bar__identity">
-        <span className="session-bar__avatar" aria-hidden="true">
-          {initials}
-        </span>
-        <div className="session-bar__identity-text">
-          <p className="session-bar__name">{displayName}</p>
-          <p className="session-bar__email">{user.email}</p>
-        </div>
+    <section className="mk-session" aria-label="Cápsula de sesión del usuario">
+      <span className="mk-session__avatar" aria-hidden="true">
+        {initialsOf(displayName)}
+      </span>
+      <div className="mk-session__identity">
+        <p className="mk-session__name">{displayName}</p>
+        <p className="mk-session__email">{user.email}</p>
       </div>
-
-      <div className="session-bar__badges">
-        <span className={`session-bar__role-badge session-bar__role-badge--${user.role}`}>
-          {ROLE_LABELS[user.role]}
-        </span>
-
-        <span
-          className={`session-bar__health session-bar__health--${healthStatus}`}
-          role="status"
-          aria-live="polite"
-        >
-          <span className="session-bar__health-dot" aria-hidden="true" />
-          {HEALTH_LABELS[healthStatus]}
-        </span>
-      </div>
-
-      <div className="session-bar__actions">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onVerifyProfile}
-          isLoading={isLoading}
-          aria-label="Validar la sesión activa contra el servidor"
-        >
-          Validar sesión
+      <span className={'mk-role mk-role--' + user.publicRole}>{APP_ROLE_LABELS[user.role]}</span>
+      <div className="mk-session__actions">
+        <Button type="button" variant="ghost" size="sm" onClick={onOpenPassword}>
+          Clave
         </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={onLogout}>
+        <Button type="button" variant="secondary" size="sm" onClick={onLogout} isLoading={isLoading}>
           Salir
         </Button>
       </div>
-
-      {verificationMessage && verificationMessage.trim().length > 0 && (
-        <div className="session-bar__verification">
-          <Alert type="success" title="Perfil verificado" onClose={onVerifyProfile}>
-            {verificationMessage}
-          </Alert>
-        </div>
-      )}
     </section>
   );
 };
