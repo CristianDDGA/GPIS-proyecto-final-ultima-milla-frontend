@@ -183,7 +183,6 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(1.75rem, 5vh, 2.75rem);
   color: var(--auth-frost);
   font-family: var(--font-auth-sans);
   font-size: 16px;
@@ -232,6 +231,19 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(60rem 34rem at 50% 0%, rgba(186, 215, 247, 0.06), transparent 70%);
+}
+
+/* Columna de acceso: en móvil agrupa marca + tarjeta; en escritorio el
+   contenedor sólo mide la tarjeta, para centrarla exactamente. */
+.auth-shell {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 25rem;
+  gap: clamp(1.75rem, 5vh, 2.75rem);
 }
 
 /* --- Héroe: eyebrow con líneas + wordmark iluminado ---------------------- */
@@ -710,6 +722,48 @@
   from {
     opacity: 0;
     transform: translateY(10px);
+  }
+}
+
+/* --- Centrado exacto en escritorio -------------------------------------- */
+
+@media (min-width: 901px) {
+  .auth-shell {
+    gap: 0;
+  }
+
+  /* Fuera del flujo: no desplaza el centro de la tarjeta. */
+  .auth-hero {
+    position: absolute;
+    bottom: calc(100% + 2rem);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: min(92vw, 42rem);
+  }
+}
+
+/* Portátiles muy bajos: sólo wordmark para garantizar que nada se recorte. */
+@media (min-width: 901px) and (max-height: 700px) {
+  .auth-eyebrow {
+    display: none;
+  }
+}
+
+/* Portátiles bajos: héroe más compacto para que nunca se recorte. */
+@media (min-width: 901px) and (max-height: 760px) {
+  .auth-hero {
+    bottom: calc(100% + 1rem);
+    gap: 12px;
+  }
+
+  .auth-eyebrow {
+    font-size: 13px;
+    gap: 10px;
+  }
+
+  .auth-wordmark {
+    font-size: clamp(2rem, 3vw, 2.5rem);
   }
 }
 

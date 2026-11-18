@@ -493,13 +493,14 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
       {/* Atmósfera AuthKit: canvas midnight + retícula blueprint + spotlight. */}
       <div className="auth-atmosphere" aria-hidden="true" />
 
-      <header className="auth-hero">
-        <p className="auth-eyebrow">Torre de control</p>
-        <h1 className="auth-wordmark">Millast</h1>
-      </header>
+      <div className="auth-shell">
+        <header className="auth-hero">
+          <p className="auth-eyebrow">Torre de control</p>
+          <h1 className="auth-wordmark">Millast</h1>
+        </header>
 
-      {/* Tarjeta de acceso centrada en el viewport. */}
-      <div className="auth-card">
+        {/* Tarjeta de acceso: en escritorio su centro coincide con el del viewport. */}
+        <div className="auth-card">
         <div className="auth-card__body">
           {!isSecondary ? (
             <div className="auth-segmented segmented" role="tablist" aria-label="Modo de acceso" style={segmentedStyle}>
@@ -892,6 +893,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
             </form>
           )}
         </div>
+      </div>
       </div>
     </section>
   );
