@@ -1,22 +1,22 @@
+/* DESIGN.md Webflow: Cards = #ffffff, 1px solid #d8d8d8, 8px radius, 24px padding, NO shadow at rest */
 .ui-card {
-  background-color: var(--color-surface, #ffffff);
-  border-radius: var(--radius-xl, 1.25rem);
-  padding: 1.5rem;
-  transition: box-shadow var(--transition-normal, 250ms);
+  background-color: var(--color-pure-white, #ffffff);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
+  border-radius: var(--radius-cards, 8px);
+  padding: var(--card-padding, 24px);
+  box-shadow: none;
+  color: var(--color-obsidian, #080808);
+  transition: border-color 150ms ease;
 }
 
-.ui-card--elevated {
-  border: 1px solid var(--color-border, #dde4f0);
-  box-shadow: 0 1px 2px rgba(10, 16, 32, 0.04), 0 18px 40px -34px rgba(10, 16, 32, 0.4);
-}
-
+.ui-card--elevated,
 .ui-card--outlined {
-  border: 1px solid var(--color-border, #cbd5e1);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
   box-shadow: none;
 }
 
 .ui-card--flat {
-  background-color: var(--color-surface-subtle, #f1f5f9);
-  border: 1px solid transparent;
+  background-color: var(--color-mist, #f0f0f0);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
   box-shadow: none;
 }

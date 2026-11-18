@@ -2,93 +2,87 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  font-family: inherit;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  border-radius: var(--radius-full, 9999px);
+  gap: 8px;
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-weight: 500;
+  letter-spacing: 0;
+  border-radius: var(--radius-buttons, 4px);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color var(--transition-fast, 150ms),
-    border-color var(--transition-fast, 150ms), color var(--transition-fast, 150ms),
-    box-shadow var(--transition-fast, 150ms), transform var(--spring-morph, 380ms ease);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease,
+    transform 120ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1));
   text-decoration: none;
   line-height: 1.25;
   user-select: none;
   outline: none;
+  box-shadow: none;
 }
 
 .ui-btn:focus-visible {
-  box-shadow: 0 0 0 4px var(--color-primary-ring, rgba(0, 81, 213, 0.22));
-  outline: 2px solid var(--color-primary, #0051d5);
-  outline-offset: 1px;
-}
-
-.ui-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
+  outline: 2px solid var(--color-webflow-blue, #146ef5);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
 .ui-btn:active:not(:disabled) {
-  transform: scale(0.985);
+  transform: scale(0.99);
 }
 
 .ui-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.65;
   cursor: not-allowed;
   pointer-events: none;
 }
 
 /* Tamaños */
 .ui-btn--sm {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
+  padding: 7px 12px;
+  font-size: 13px;
+  min-height: 32px;
 }
 
 .ui-btn--md {
-  padding: 0.5625rem 1.125rem;
-  font-size: 0.875rem;
+  padding: 10px 16px;
+  font-size: 14px;
+  min-height: 40px;
 }
 
 .ui-btn--lg {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+  padding: 12px 20px;
+  font-size: 15px;
+  min-height: 44px;
 }
 
-/* Variantes */
+/* Variantes (DESIGN.md Webflow) */
 .ui-btn--primary {
-  background-image: linear-gradient(180deg, #1a63e0, var(--color-primary, #0051d5));
-  color: #ffffff;
-  box-shadow: 0 10px 21px -14px rgba(0, 81, 213, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  background-color: var(--color-webflow-blue, #146ef5);
+  background-image: none;
+  color: var(--color-pure-white, #ffffff);
+  border-color: transparent;
 }
 
 .ui-btn--primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover, #1e40af);
+  background-color: var(--color-indigo-ink, #1366e2);
 }
 
-.ui-btn--secondary {
-  background-color: var(--color-surface-subtle, #f1f5f9);
-  color: var(--color-text-main, #0f172a);
-  border-color: var(--color-border, #e2e8f0);
-}
-
-.ui-btn--secondary:hover:not(:disabled) {
-  background-color: var(--color-border, #e2e8f0);
-}
-
+.ui-btn--secondary,
 .ui-btn--outline {
-  background-color: transparent;
-  color: var(--color-text-main, #0f172a);
-  border-color: var(--color-border, #cbd5e1);
+  background-color: var(--color-pure-white, #ffffff);
+  color: var(--color-obsidian, #080808);
+  border-color: var(--color-ash-border, #d8d8d8);
 }
 
+.ui-btn--secondary:hover:not(:disabled),
 .ui-btn--outline:hover:not(:disabled) {
-  background-color: var(--color-surface-subtle, #f1f5f9);
-  border-color: var(--color-text-muted, #64748b);
+  background-color: var(--color-mist, #f0f0f0);
+  border-color: var(--color-smoke, #bdbdbd);
+  color: var(--color-obsidian, #080808);
 }
 
 .ui-btn--danger {
-  background-color: var(--color-error, #b91c1c);
-  color: #ffffff;
+  background-color: #b42318;
+  color: var(--color-pure-white, #ffffff);
+  border-color: transparent;
 }
 
 .ui-btn--danger:hover:not(:disabled) {
@@ -97,12 +91,13 @@
 
 .ui-btn--ghost {
   background-color: transparent;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-obsidian, #080808);
+  border-color: transparent;
 }
 
 .ui-btn--ghost:hover:not(:disabled) {
-  background-color: var(--color-surface-subtle, #f1f5f9);
-  color: var(--color-text-main, #0f172a);
+  background-color: var(--color-mist, #f0f0f0);
+  color: var(--color-obsidian, #080808);
 }
 
 .ui-btn__loader {
@@ -113,5 +108,5 @@
 .ui-btn__icon {
   display: inline-flex;
   align-items: center;
-  font-size: 1.1em;
+  font-size: 1.05em;
 }

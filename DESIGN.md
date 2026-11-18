@@ -1,71 +1,61 @@
-# Authkit — Style Reference
-> Frosted glass cathedral at midnight
+# Webflow — Style Reference
+> white studio, black ink, one blue mark — a designer's drafting table rendered as a web page.
 
-**Theme:** dark
+**Theme:** light
 
 Source measurements are normalized; roles and recommendations are interpreted. Font summary lists are independent, not paired by position. HTML examples are reconstructions, not source components.
 
-AuthKit renders a midnight product-launch aesthetic: a near-black canvas with frosted-glass surfaces, a grid of faint blueprint lines, and luminous text that appears lit from behind a glass layer. Type is almost entirely white-on-dark with one vivid violet as the single functional accent — every interactive surface wears a soft inset hairline of cool blue-white rather than a hard border. Components sit on translucent layers stacked above ambient glows, with cards that look like glass plates lit from below rather than paper panels. Spacing is generous and rhythmic; the hero is a single full-bleed illuminated wordmark surrounded by floating glass cards rather than a conventional split layout.
+Webflow presents a studio-grade design platform language: a stark white canvas, near-black type, and a single saturated blue that punctuates the interface with quiet authority. Headlines speak at monumental sizes (56–80px) in a custom geometric variable sans, carrying tight negative tracking that makes each character feel chiseled rather than typeset. The visual rhythm is generous — large vertical breathing room between sections, cards floating on soft 8px radii with barely-there shadows, and product imagery embedded in realistic browser chrome to demonstrate capability rather than describe it. Color discipline is extreme: the palette is almost entirely achromatic, with the brand blue (#146ef5) reserved for primary actions, active states, and link emphasis, and the entire chromatic spectrum compressed to just two more hues (a soft green and warm orange) that appear only in micro-illustration contexts.
 
 ## Tokens — Colors
 
 | Name | Value | Token | Role |
 |------|-------|-------|------|
-| Midnight Canvas | `#05060f` | `--color-midnight-canvas` | Page background, deepest card surface, badge fills — the near-black base everything else floats on |
-| Steel Plate | `#2f343e` | `--color-steel-plate` | Elevated surface, button fills for ghost/secondary actions, subtle panel backing |
-| Fog Veil | `#9da7ba` | `--color-fog-veil` | Muted body copy, card text — readable but stepped back from headlines |
-| Moon Mist | `#c7d3ea` | `--color-moon-mist` | Body text, secondary labels, muted helper copy |
-| Frost Glow | `#d1e4fa` | `--color-frost-glow` | Primary text fill for body and links, badge text, icon fills — the default luminous foreground |
-| Ice Highlight | `linear-gradient(0deg, #d8ecf8 0%, #98c0ef 100%)` | `--color-ice-highlight` | Light text on dark surfaces, inverse labels, and high-contrast captions. Do not promote it to the primary CTA color; Headline gradient — top-to-bottom fade from Ice Highlight to soft blue, used on the AuthKit wordmark and key headings |
-| Pure White | `#ffffff` | `--color-pure-white` | Button text, input text, maximum-emphasis foreground |
-| Void Violet | `#663af3` | `--color-void-violet` | Primary CTA fill — the only chromatic accent, used exclusively for the Continue/Submit button inside auth forms; vivid violet against near-black creates focused urgency without breaking the monochromatic mood |
-| Blueprint Blue | `#b6d9fc` | `--color-blueprint-blue` | Decorative icon accent, soft highlight wash on feature illustrations |
-| Ember Glow | `#e46d4c` | `--color-ember-glow` | Secondary accent — appears in demo/showcase contexts (logo recoloring swatches) for brand-color customization display |
-| Signal Blue | `#027dea` | `--color-signal-blue` | Secondary accent — appears in customization swatch grids to demonstrate brand-color options |
-| Deep Teal | `#269684` | `--color-deep-teal` | Secondary accent — appears in customization swatch grids |
-| Gridline Blue | `#3f4959` | `--color-gridline-blue` | Shadow color for outer card drop-shadows — cool dark blue-grey gives elevation a tinted, on-brand feel rather than neutral black |
-| Glass Edge | `#bad7f71f` | `--color-glass-edge` | Hairline borders on buttons, inputs, and links — inset 1px stroke of frosted blue-white that defines edges without hard lines |
-| Luminous Fill | `#c7d3ea1f` | `--color-luminous-fill` | Badge fill and soft surface tint — translucent cool white for tag backgrounds and subtle UI washes |
+| Webflow Blue | `#146ef5` | `--color-webflow-blue` | Blue supporting accent for decorative details and low-frequency emphasis. Do not promote it to the primary CTA color |
+| Indigo Ink | `#1366e2` | `--color-indigo-ink` | Blue supporting accent for decorative details and low-frequency emphasis. Do not promote it to the primary CTA color |
+| Mercury Tint | `#6ca7ff` | `--color-mercury-tint` | Soft blue for icon decorations, gradient transitions, and muted highlight washes within illustrations |
+| Mint Pulse | `#60ed76` | `--color-mint-pulse` | Green supporting accent for decorative details and low-frequency emphasis |
+| Apricot Glow | `#ffa666` | `--color-apricot-glow` | Decorative warm accent in inline illustrations and product mockup contexts |
+| Obsidian | `#080808` | `--color-obsidian` | Primary text, headings, icon strokes, dark surface fills — the near-black that carries the typographic voice |
+| Pure White | `#ffffff` | `--color-pure-white` | Page canvas, card surfaces, button text on dark fills, inverted text |
+| Slate | `#5a5a5a` | `--color-slate` | Secondary body text, icon secondary state, muted descriptions, footer copy |
+| Ash Border | `#d8d8d8` | `--color-ash-border` | Hairline borders on cards, dividers, input outlines, button strokes |
+| Smoke | `#bdbdbd` | `--color-smoke` | Subtle shadow base and disabled control fills |
+| Graphite | `#222222` | `--color-graphite` | Dark surface for inverted sections and modal overlays |
+| Onyx | `#171717` | `--color-onyx` | Deepest dark surface — footer bands and full-bleed dark sections |
+| Mist | `#f0f0f0` | `--color-mist` | Subtle background tint for alternating sections, card hover, and input fills |
+| Charcoal | `#292929` | `--color-charcoal` | Near-black accent surface, slightly lighter than Onyx for layered dark contexts |
 
 ## Tokens — Typography
 
-### Untitled Sans — Body, UI, buttons, inputs, badges, small headings — the working typeface for everything functional · `--font-untitled-sans`
-- **Substitute:** Inter
-- **Weights:** 400, 500, 600, 700
-- **Sizes:** 12px, 14px, 16px, 18px, 24px
-- **Line height:** 1.17, 1.20, 1.33, 1.43, 1.50, 2.29, 2.57
-- **Letter spacing:** -0.0100em
-- **Role:** Body, UI, buttons, inputs, badges, small headings — the working typeface for everything functional
+### WF Visual Sans Variable — The sole sans family for the entire interface — navigation, body, headings, buttons, cards. A custom geometric variable typeface with widths that compress at display sizes. Weight 400 covers body and UI; 500–550 for subheads and labels; 600 reserved for the boldest display headlines. The variable axis enables optical sizing so display weights (56–80px) feel chiseled with tight tracking while body weights (14–16px) remain open and readable. · `--font-wf-visual-sans-variable`
+- **Substitute:** Inter, Satoshi, General Sans
+- **Weights:** 400, 500, 550, 600
+- **Sizes:** 10, 13, 14, 16, 20, 24, 32, 40, 56, 80
+- **Line height:** 1.0, 1.04, 1.2, 1.3, 1.4, 1.5, 1.6
+- **Letter spacing:** -0.01em at display sizes, +0.1em for uppercase eyebrow labels
+- **Role:** The sole sans family for the entire interface — navigation, body, headings, buttons, cards. A custom geometric variable typeface with widths that compress at display sizes. Weight 400 covers body and UI; 500–550 for subheads and labels; 600 reserved for the boldest display headlines. The variable axis enables optical sizing so display weights (56–80px) feel chiseled with tight tracking while body weights (14–16px) remain open and readable.
 
-### aeonikPro — Display headings only — the wordmark 'AuthKit', section headings, hero copy; weight 500 at 44-48px gives the wordmark a wide, calm presence rather than a bold shout · `--font-aeonikpro`
-- **Substitute:** Space Grotesk
-- **Weights:** 400, 500
-- **Sizes:** 28px, 44px, 48px
-- **Line height:** 1.14, 1.16, 1.17, 1.20
-- **Letter spacing:** normal
-- **Role:** Display headings only — the wordmark 'AuthKit', section headings, hero copy; weight 500 at 44-48px gives the wordmark a wide, calm presence rather than a bold shout
-
-### dotDigital — All-caps eyebrow labels ('Introducing', 'Extensible by design', 'Shine bright') — 0.10em tracked monospace-flavored caps act as quiet section markers between the display type and body copy · `--font-dotdigital`
-- **Substitute:** JetBrains Mono
+### WF Visual Sans Mono — Monospaced companion for code snippets, terminal outputs, keyboard shortcuts, and developer-facing micro-copy. Rare on the marketing site but present in product demos. · `--font-wf-visual-sans-mono`
+- **Substitute:** JetBrains Mono, IBM Plex Mono
 - **Weights:** 400
-- **Sizes:** 15px
-- **Line height:** 1.20
-- **Letter spacing:** 0.1000em
-- **OpenType features:** `"tnum" on`
-- **Role:** All-caps eyebrow labels ('Introducing', 'Extensible by design', 'Shine bright') — 0.10em tracked monospace-flavored caps act as quiet section markers between the display type and body copy
+- **Sizes:** 12, 16
+- **Line height:** 1.5, 1.6
+- **OpenType features:** `"ss02", "ss10", "zero"`
+- **Role:** Monospaced companion for code snippets, terminal outputs, keyboard shortcuts, and developer-facing micro-copy. Rare on the marketing site but present in product demos.
 
 ### Type Scale
 
 | Role | Family | Weight | Size | Line Height | Letter Spacing | Token |
 |------|--------|--------|------|-------------|----------------|-------|
-| caption | — | — | 12px | 1.33 | 0px | `--text-caption` |
-| body-sm | — | — | 14px | 1.43 | 0px | `--text-body-sm` |
-| body | — | — | 16px | 1.5 | -0.16px | `--text-body` |
-| subheading | — | — | 18px | 1.33 | 0px | `--text-subheading` |
-| heading-sm | — | — | 24px | 1.17 | -0.24px | `--text-heading-sm` |
-| heading | — | — | 28px | 1.14 | 0px | `--text-heading` |
-| heading-lg | — | — | 44px | 1.16 | 0px | `--text-heading-lg` |
-| display | — | — | 48px | 1.17 | 0px | `--text-display` |
+| caption | — | — | 10px | 1.4 | — | `--text-caption` |
+| body-lg | — | — | 16px | 1.6 | — | `--text-body-lg` |
+| subheading | — | — | 20px | 1.3 | — | `--text-subheading` |
+| heading-sm | — | — | 24px | 1.3 | — | `--text-heading-sm` |
+| heading | — | — | 32px | 1.2 | — | `--text-heading` |
+| heading-lg | — | — | 40px | 1.04 | -0.4px | `--text-heading-lg` |
+| display | — | — | 56px | 1.04 | -0.56px | `--text-display` |
+| display-xl | — | — | 80px | 1 | -0.8px | `--text-display-xl` |
 
 ## Tokens — Spacing & Shapes
 
@@ -81,206 +71,179 @@ AuthKit renders a midnight product-launch aesthetic: a near-black canvas with fr
 | 8 | 8px | `--spacing-8` |
 | 12 | 12px | `--spacing-12` |
 | 16 | 16px | `--spacing-16` |
-| 20 | 20px | `--spacing-20` |
 | 24 | 24px | `--spacing-24` |
 | 32 | 32px | `--spacing-32` |
 | 36 | 36px | `--spacing-36` |
 | 40 | 40px | `--spacing-40` |
 | 48 | 48px | `--spacing-48` |
-| 56 | 56px | `--spacing-56` |
-| 100 | 100px | `--spacing-100` |
-| 120 | 120px | `--spacing-120` |
-| 200 | 200px | `--spacing-200` |
+| 72 | 72px | `--spacing-72` |
+| 80 | 80px | `--spacing-80` |
+| 88 | 88px | `--spacing-88` |
 
 ### Border Radius
 
 | Element | Value |
 |---------|-------|
-| cards | 16px |
-| badges | 6px |
-| inputs | 6px |
-| modals | 16px |
-| buttons | 999px |
-| iconContainers | 9999px |
+| tags | 4px |
+| cards | 8px |
+| images | 8px |
+| inputs | 4px |
+| buttons | 4px |
 
 ### Shadows
 
 | Name | Value | Token |
 |------|-------|-------|
-| sm | `rgba(186, 207, 247, 0.32) 0px 0px 6px 0px` | `--shadow-sm` |
-| md | `rgba(238, 186, 247, 0.24) 0px 0px 12px 0px` | `--shadow-md` |
-| subtle | `rgba(186, 215, 247, 0.12) 0px 0px 0px 1px inset` | `--shadow-subtle` |
-| subtle-2 | `rgba(199, 211, 234, 0.12) -0.5px 0.5px 1px 0px inset, rgb...` | `--shadow-subtle-2` |
-| subtle-3 | `rgba(186, 214, 247, 0.06) 0px 0px 0px 1px inset` | `--shadow-subtle-3` |
-| subtle-4 | `rgba(199, 211, 234, 0.12) 0px 1px 1px 0px inset, rgba(199...` | `--shadow-subtle-4` |
-| subtle-5 | `rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset` | `--shadow-subtle-5` |
-| subtle-6 | `rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168,...` | `--shadow-subtle-6` |
-| subtle-7 | `rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168,...` | `--shadow-subtle-7` |
-| subtle-8 | `rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168,...` | `--shadow-subtle-8` |
-| subtle-9 | `rgba(186, 214, 247, 0.24) 0px 0px 0px 1px inset` | `--shadow-subtle-9` |
+| lg | `rgba(0, 0, 0, 0.01) 0px 54px 22px 0px, rgba(0, 0, 0, 0.04...` | `--shadow-lg` |
+| xl | `rgba(0, 0, 0, 0.02) 0px 67px 27px 0px, rgba(0, 0, 0, 0.06...` | `--shadow-xl` |
+| xl-2 | `rgba(0, 0, 0, 0.01) 0px 148px 42px 0px, rgba(0, 0, 0, 0.0...` | `--shadow-xl-2` |
 
 ### Layout
 
 - **Page max-width:** 1200px
-- **Section gap:** 120px
+- **Section gap:** 80px
 - **Card padding:** 24px
 - **Element gap:** 16px
 
 ## Components
 
-### Pill Button (Primary Ghost)
-**Role:** Default button — used for 'Get started', 'Continue with Google/Microsoft', 'Learn more' links
+### Primary Filled Button
+**Role:** Highest-emphasis action — used for free trial, demo requests, and sign-up flows
 
-999px radius, padding 8px 16px, background rgba(186,214,247,0.06) (faint frost wash), text #ffffff, 1px inset border rgba(186,215,247,0.12) of frosted blue-white. Weight 500, 14px Untitled Sans. Hover lightens the frost wash to rgba(186,214,247,0.12).
+Background: #146ef5. Text: #ffffff, WF Visual Sans Variable 14px weight 500, letter-spacing normal. Padding: 12px 16px. Border-radius: 4px. No border. No shadow. The sharp 4px radius (not pill-shaped) is deliberate — it signals professional tool over consumer app. On hover, background deepens to #1366e2.
 
-### Pill Button (Outlined)
-**Role:** Secondary navigation button — header GitHub icon, secondary CTAs
+### Ghost/Text Button
+**Role:** Secondary action — 'Log in', 'Contact Sales', inline text links
 
-999px radius, padding 8px 16px, transparent background, text #d1e4fa, 1px inset border rgba(186,215,247,0.12). Same geometry as primary ghost; only the fill differs.
+No background. Text: #080808, 14px weight 500. No border. No padding override. Underline appears on hover. For nav items, text color shifts to #146ef5 on active state.
 
-### Violet CTA Button
-**Role:** Sole chromatic CTA — appears only inside auth-form mockups as the 'Continue' submit button
+### Announcement Banner
+**Role:** Top-of-page promotional strip for events, product launches, or campaigns
 
-Solid fill #663af3, white text, 6px radius, padding 12px 24px, weight 500. The only place a non-monochrome button appears; its vivid violet punches against the midnight palette.
+Full-width band with background: #146ef5. Text: #ffffff, 13px weight 500, centered. Padding: 8px 16px. No border, no shadow. Closes via X icon on the right. Creates the first visual note of the page — blue ribbon on white.
 
-### Glass Card (Feature)
-**Role:** Feature cards, icon containers, section panels
+### Top Navigation Bar
+**Role:** Persistent site navigation with logo, primary nav, auth, and CTA
 
-16px radius, background rgba(186,214,247,0.03) (nearly invisible frost tint), padding 24px, no hard border. Elevation built from inset frost highlight + soft outer halo — reads as a glass plate lit from behind.
+Background: #ffffff. Height: ~56px. Left: Webflow wordmark in #146ef5. Center: nav links (Platform, Solutions, Resources, Enterprise, Pricing) in #080808, 14px weight 400, with a small chevron on items with sub-menus. Right: 'Log in' ghost link, 'Contact Sales' ghost link, 'Start for free' primary button. Sticky to top with no border on rest state; gains a 1px #d8d8d8 bottom border on scroll.
 
-### Auth-Form Modal Card
-**Role:** The headline product — floating login/signup cards in the hero
+### Feature Card (Light)
+**Role:** Content cards in feature grids — 'AI site builder', 'Template', 'Blank site'
 
-16px radius, background rgba(5,6,15,0.97), padding 24-32px. Three-layer shadow stack: top inset frost (#d8ecf8 20%), mid inset glow (#a8d8f5 6%), bottom drop (#000 30%). Floats above the hero with the central card scaled larger than its siblings.
+Background: #ffffff. Border: 1px solid #d8d8d8. Border-radius: 8px. Padding: 24px. No shadow. Contains a title (16px weight 600), description (14px weight 400 #5a5a5a), and a small product preview thumbnail (border-radius 8px) in the top-right corner. Cards align in a 3-column grid with 16px gap.
 
-### Text Input
-**Role:** Email, password, and text fields inside auth forms
+### Split Feature Section
+**Role:** Two-column layout pairing descriptive text with a product visual
 
-6px radius, background rgba(199,211,234,0.06), text #ffffff, placeholder #c7d3ea at ~60% opacity, 1px inset border rgba(186,215,247,0.12). Padding 10px horizontal. Focus state increases the border opacity to 0.24.
+Max-width 1200px container. Left column: eyebrow label (13px uppercase +0.1em tracking #5a5a5a), heading (32–40px weight 600 #080808), bullet list with arrow links. Right column: product screenshot or browser-frame mockup at full column width, 8px border-radius. Section gap: 80px vertical.
 
-### Provider Button (Social Login)
-**Role:** Continue with Google / Microsoft / SSO buttons
+### Feature List Item
+**Role:** Expandable or linked feature descriptions with arrow affordance
 
-Full-width pill (999px or 6px radius variant), padding 12px 16px, background rgba(199,211,234,0.06), white text, provider icon left-aligned. Divider 'OR' sits between email submit and social options in 12px muted caps.
+Horizontal flex row. Left: body text (16px weight 400 #080808). Right: right-arrow icon (→) in #5a5a5a. Bottom border: 1px solid #d8d8d8. Padding: 16px 0. On hover, arrow shifts right 4px and text color remains stable. Used in the 'Everything marketing teams love' section.
 
-### Section Eyebrow Label
-**Role:** All-caps section markers ('Introducing', 'Extensible by design', 'Shine bright', 'Light and dark modes supported')
+### Hero Section
+**Role:** Above-the-fold brand statement and primary conversion path
 
-15px dotDigital, weight 400, letter-spacing 0.10em, color #c7d3ea, centered. Flanked by thin horizontal lines that fade from transparent to rgba(186,215,247,0.12) and back.
+Full-bleed #ffffff background. Centered stack: eyebrow tag (optional), headline (56–80px weight 600 #080808, line-height 1.0, letter-spacing -0.01em), subtext (20px weight 400 #5a5a5a, max-width 560px). Below: a 3-card choice row ('How do you want to build?') with 16px gap. No background image; the hero is pure typography on white.
 
-### Feature Icon Tile
-**Role:** Icon containers in the feature row (Single Sign-On, Password, MFA, Social Login, RBAC, Magic Auth)
+### Browser-Frame Mockup
+**Role:** Realistic product screenshot wrapper — demonstrates the editor UI
 
-9999px radius (perfect circle), ~56-64px square, background frosted tint, outlined glyph icon in #d1e4fa. Icons are line-art (1.5px stroke), mono — no fill, no color variation between tiles.
+Outer container: 8px border-radius, multi-layer soft shadow (rgba 0,0,0,0.02 → 0.12 across 4 stops). Top bar: 28px tall, #f0f0f0 background, with three traffic-light dots (red/yellow/green) and a URL field. Content area: full product UI captured at 2x resolution. Used to show the Webflow editor wrapping the actual webflow.com page — a self-referential product demonstration.
 
-### Badge / Tag
-**Role:** Category tags on integration cards (Email & Password, Social Login, MFA, SSO)
+### Cookie Consent Banner
+**Role:** Fixed-bottom GDPR compliance overlay
 
-6px radius, background rgba(199,211,234,0.12), text #d1e4fa, padding 4px 8px, 12px Untitled Sans weight 500. Multi-layer inset shadow gives a faint inner glow.
+Fixed to bottom-left, max-width 380px. Background: #ffffff. Border: 1px solid #d8d8d8. Border-radius: 8px. Padding: 16px. Body text: 13px #080808. Two buttons stacked: 'Reject all' (ghost, #080808 text, 1px #d8d8d8 border) and 'Accept all' (filled #146ef5, white text). 'Manage Preferences' link in #146ef5 above buttons.
 
-### Logo Mark (WorkOS / AuthKit)
-**Role:** Wordmark in header and hero
+### Logo Strip
+**Role:** Social proof band showing enterprise customer logos
 
-WorkOS wordmark is Untitled Sans weight 500 at 16px in #d1e4fa. The AuthKit hero wordmark is aeonikPro weight 500 at ~140-180px (display size extrapolated), filled with the Skywash vertical gradient (#d8ecf8 → #98c0ef).
+Horizontal row of monochrome (grayscale) customer logos on #ffffff or #f0f0f0 background. Logos at consistent height (~24px), even spacing via flex justify-content: space-between. No logos are colored — all rendered in #5a5a5a or #080808 for uniform tonal weight.
 
-### Background Grid Layer
-**Role:** Ambient page atmosphere — blueprint grid behind all sections
+### Eyebrow Label
+**Role:** Small uppercase category label above section headings
 
-Full-bleed SVG/div layer with 1px lines at rgba(186,215,247,0.06), ~80-100px cell spacing, masked to fade at edges. A conic gradient halo sits at the top center creating a spotlight effect.
+WF Visual Sans Variable, 13px, weight 500, letter-spacing +0.1em, text-transform uppercase, color #5a5a5a. Sits 16px above the heading it introduces. Functions as a quiet section marker.
 
-### Theme Toggle (Light/Dark)
-**Role:** Demonstrates the product's light/dark mode support
+### New Tag Badge
+**Role:** Inline indicator marking a feature or option as recently released
 
-Pill-shaped segmented control, 999px radius, two segments (moon icon / sun icon), 32px tall. Active segment has a slightly brighter frost background; inactive is transparent.
-
-### Customization Swatch
-**Role:** Color picker tiles in the 'Your brand. Your style.' section
-
-Small 20-24px squares, 4-6px radius, filled with the brand color (violet, blue, teal, orange). Arranged in a row with 4px gaps. Labeled 'Colour' in 12px muted text.
+Background: #146ef5. Text: 'NEW' in #ffffff, 10px weight 600, uppercase, letter-spacing +0.1em. Padding: 2px 6px. Border-radius: 4px. Displayed inline next to the card or feature title it qualifies.
 
 ## Do's and Don'ts
 
 ### Do
-- Use 999px radius for all interactive elements (buttons, social-login buttons, tag toggles); reserve 16px radius exclusively for cards and modals, 6px for badges and inputs, and 9999px for circular icon containers.
-- Build elevation from inset frost highlights + soft outer halos rather than conventional drop-shadows: pair inset rgba(216,236,248,0.2) 1px top edge with a 24-48px inset glow and a dark cool drop.
-- Use Void Violet (#663af3) exclusively for the auth-form Continue/submit CTA — never as a decorative accent or non-auth button background.
-- Set headline text in aeonikPro weight 500 at 44-48px with the Skywash vertical gradient (#d8ecf8 → #98c0ef); body and UI in Untitled Sans 400-500.
-- Place all-caps eyebrow labels (dotDigital, 15px, 0.10em tracking, #c7d3ea) centered and flanked by fading horizontal lines at rgba(186,215,247,0.12) to mark every section opening.
-- Use rgba(186,215,247,0.12) as the universal hairline border — never solid strokes; the frosted-inset edge is the system's border language.
-- Set section gaps at 120px and card padding at 24px; rhythm should feel cathedral-like rather than dense SaaS.
-- Render text in the Ice Highlight → Frost Glow → Moon Mist → Fog Veil progression (#d8ecf8 → #d1e4fa → #c7d3ea → #9da7ba) for heading → body → muted body → helper copy.
-- Use the conic-gradient spotlight halo (rgba(124,145,182,0.5) at center, fading outward) at the top of every full-bleed hero to anchor the composition.
+- Use #146ef5 exclusively for filled primary actions, active nav states, and link emphasis — it is the only color that should carry interactive weight.
+- Set headlines at 56–80px in WF Visual Sans Variable weight 600 with letter-spacing -0.01em; the tight tracking is what makes display type feel architectural rather than decorative.
+- Use 8px border-radius for cards, images, and large containers; reserve 4px for buttons, inputs, and tags. Never use fully rounded pill buttons (1440px appears only once and is anomalous).
+- Pair #080808 text on #ffffff for a 20:1 contrast ratio — the system is built for maximum legibility, not warmth.
+- Use 1px #d8d8d8 borders to define structure at rest; reach for shadow only on hover or for browser-frame mockups.
+- Set section vertical gaps at 80px and card padding at 24px; the 4px base unit compounds to create generous breathing room without empty waste.
+- Show the product through realistic browser chrome rather than abstract illustrations — the self-referential 'Webflow inside Webflow' demo is a signature device.
 
 ### Don't
-- Do not introduce additional chromatic accents — the palette is monochromatic with one violet CTA; any extra hue breaks the system.
-- Do not use solid colored borders; replace them with 1px inset rgba(186,215,247,0.12) strokes to preserve the glass aesthetic.
-- Do not use bold weights (600+) on aeonikPro display headings — the wordmark's authority comes from weight 500 at large size, not volume.
-- Do not apply conventional drop-shadows; the system reads elevation through inset glow + dark halo.
-- Do not mix radius families on the same component type — every button is pill, every card is 16px, every badge is 6px.
-- Do not place white (#ffffff) on background tints brighter than rgba(186,214,247,0.12) — the contrast floor collapses.
-- Do not use the Skywash gradient on body text or buttons; reserve it for the display wordmark and the largest headings only.
-- Do not introduce light-theme colors into core tokens even though the product supports light mode; the marketing site is dark-first, and light-mode demos are a product feature, not a design-system palette.
+- Don't introduce additional chromatic colors into the UI — green (#60ed76) and orange (#ffa666) are decorative only, confined to inline illustrations.
+- Don't use fully rounded pill buttons for primary actions; the 4px radius signals professional tool and must not soften to 9999px.
+- Don't apply shadows to resting cards; the system defines structure with borders and uses shadow only as interactive feedback.
+- Don't set display headlines below 40px or use weight 400 for hero copy; the monumentality of 56–80px weight 600 is the brand's typographic signature.
+- Don't mix serif or display fonts into the system — WF Visual Sans Variable is the only typeface allowed for interface copy.
+- Don't use more than one font size in a single heading block; the scale steps cleanly and breaks in hierarchy should follow the type scale, not arbitrary sizes.
+- Don't place the brand blue on dark surfaces for hover or active states; use #146ef5 on light surfaces only, and use white or #146ef2 for emphasis on dark backgrounds.
 
 ## Surfaces
 
 | Level | Name | Value | Purpose |
 |-------|------|-------|---------|
-| 0 | Midnight Canvas | `#05060f` | Full-bleed page background, deepest layer |
-| 1 | Steel Plate | `#2f343` | Elevated panels, ghost-button fills |
-| 2 | Frosted Glass | `#bad6f708` | Translucent card surface — barely-visible tint that reads as glass above the canvas |
-| 3 | Deep Glass | `#05060ff7` | Auth-form modal surface — nearly opaque midnight with frosted-edge shadow stack |
+| 0 | Canvas | `#ffffff` | Primary page background for all light sections |
+| 1 | Tinted | `#f0f0f0` | Alternating section bands and subtle card differentiation |
+| 2 | Card | `#ffffff` | Elevated content cards on tinted or canvas backgrounds |
+| 3 | Inverted | `#080808` | Dark mode callouts, footer, or feature sections |
 
 ## Elevation
 
-- **Auth-form modal card:** `inset 0 1px 1px rgba(216, 236, 248, 0.2), inset 0 24px 48px rgba(168, 216, 245, 0.06), 0 16px 32px rgba(0, 0, 0, 0.3)`
-- **Feature card:** `inset 0 1px 1px rgba(199, 211, 234, 0.12), inset 0 24px 48px rgba(199, 211, 234, 0.05), 0 24px 32px rgba(6, 6, 14, 0.7)`
-- **Floating auth-card (hero):** `inset 0 1px 1px rgba(216, 236, 248, 0.2), inset 0 24px 48px rgba(168, 216, 245, 0.06), 0 16px 32px rgba(0, 0, 0, 0.3)`
-- **Glow halo (behind hero wordmark):** `0 0 6px rgba(186, 207, 247, 0.32), 0 0 12px rgba(238, 186, 247, 0.24)`
+- **Card hover state:** `rgba(0, 0, 0, 0.01) 0px 54px 22px 0px, rgba(0, 0, 0, 0.04) 0px 30px 18px 0px, rgba(0, 0, 0, 0.08) 0px 13px 13px 0px, rgba(0, 0, 0, 0.09) 0px 3px 7px 0px`
+- **Browser-frame mockup:** `rgba(0, 0, 0, 0.02) 0px 67px 27px 0px, rgba(0, 0, 0, 0.06) 0px 38px 23px 0px, rgba(0, 0, 0, 0.1) 0px 17px 17px 0px, rgba(0, 0, 0, 0.12) 0px 4px 9px 0px`
+- **Floating CTA / sticky element:** `rgba(0, 0, 0, 0.01) 0px 148px 42px 0px, rgba(0, 0, 0, 0.04) 0px 95px 38px 0px, rgba(0, 0, 0, 0.15) 0px 53px 32px 0px, rgba(0, 0, 0, 0.26) 0px 24px 24px 0px, rgba(0, 0, 0, 0.29) 0px 6px 13px 0px`
 
 ## Imagery
 
-Visuals are dominated by glass-morphism auth-form mockups (email/password inputs, social-login buttons, passwordless code-entry) rendered as floating translucent cards against the midnight canvas. Feature icons are line-art mono glyphs in #d1e4fa inside circular frosted tiles. A faint blueprint grid (1px lines at rgba(186,215,247,0.06)) covers the full page as ambient atmosphere, and a conic-gradient spotlight halo glows at the top of the hero. No photography, no lifestyle imagery, no product screenshots — the product IS the visual: login boxes arranged like glass prototypes in a dark studio.
+Photography and abstract imagery are largely absent from the core pages. Instead, Webflow leads with realistic product mockups wrapped in browser chrome (the 'Webflow inside Webflow' self-demo is the most distinctive visual device). Inline illustrations use a flat, geometric style with a constrained palette of #146ef5, #6ca7ff, #60ed76, and #ffa666 — never photographic, never 3D. Customer logos appear as monochrome grayscale strips. Icons are stroke-based, 1.5–2px weight, and rendered in #080808 or contextual color. The visual space is overwhelmingly text-and-UI dominant; imagery serves to demonstrate product capability rather than create atmosphere.
 
 ## Layout
 
-Full-bleed dark canvas, max-width 1200px content container centered. Hero is a single centered illuminated wordmark ('AuthKit' in gradient display type) under a small eyebrow label, with three floating glass auth-form cards layered behind/below in an overlapping fan (left card tilted left, center card scaled largest, right card tilted right). Below the hero, a light/dark theme toggle sits centered. Feature row is a horizontal 6-icon timeline with thin connecting lines between circular icon tiles. Section rhythm: every section opens with a centered eyebrow label flanked by fading horizontal lines, then a large centered heading (44-48px), then a single line of muted body copy (16-18px), max ~640px width. Customization section features a mock browser-window frame with the auth card centered, surrounded by floating UI inspector panels (color swatches, radius sliders, logo icon picker, button text field, page background field) positioned at the corners of the canvas like a design-tool workspace.
+Page model is max-width 1200px centered, with full-bleed bands for the announcement bar and alternating section backgrounds. The hero is a centered text stack on pure white with no background image, followed by a 3-column card row. Below the fold, the layout alternates between 2-column split sections (text-left, product-visual-right) and full-width centered text blocks. Section transitions use 80px vertical gaps with no dividers — the rhythm is carried by whitespace alone. Navigation is a single sticky top bar; no sidebar or mega-menu structures. The grid system is 12-column at desktop, collapsing to single-column stacks on mobile.
 
 ## Agent Prompt Guide
 
 Quick Color Reference:
-- canvas: #05060f
-- surface (frosted glass card): rgba(186,214,247,0.03)
-- surface (elevated modal): rgba(5,6,15,0.97)
-- text (headline): #d8ecf8
-- text (body): #d1e4fa
-- text (muted): #c7d3ea
-- text (helper): #9da7ba
-- border (hairline): rgba(186,215,247,0.12)
-- accent / primary action: #663af3 (filled action)
+- text: #080808
+- background: #ffffff
+- border: #d8d8d8
+- accent: #146ef5
+- muted text: #5a5a5a
+- primary action: no distinct CTA color
 
 Example Component Prompts:
 
-1. Create a Primary Action Button: #663af3 background, #ffffff text, 9999px radius, compact pill padding. Use this filled treatment for the main CTA.
+1. Create a hero section: white (#ffffff) background, centered max-width 1200px. Headline 'Build your website' at 56px WF Visual Sans Variable weight 600, #080808, line-height 1.04, letter-spacing -0.56px. Subtext at 20px weight 400, #5a5a5a, max-width 560px. Below: 3-column card row with 16px gap, each card 8px radius, 1px #d8d8d8 border, 24px padding.
 
-2. Section eyebrow + heading stack: eyebrow is 15px dotDigital weight 400 letter-spacing 0.10em #c7d3ea, centered, flanked by fading horizontal lines (gradient from transparent to rgba(186,215,247,0.12) to transparent). Below, heading is 44px aeonikPro weight 500 in #d8ecf8, centered. Body below is 16px Untitled Sans 400 in #c7d3ea, max-width 640px centered.
+2. Create a navigation bar: white background, 56px height, flex row. Left: logo wordmark in #146ef5. Center: nav links in #080808 14px weight 400 with 16px gap. Right: 'Log in' ghost link, 'Start free' filled button (#146ef5 background, white text, 4px radius, 12px 16px padding). Sticky to top.
 
-3. Feature icon tile row: six circular tiles (9999px radius, 56px), background rgba(186,214,247,0.06), outlined line-art icon centered in #d1e4fa, label below in 14px Untitled Sans #c7d3ea. Tiles connected by 1px horizontal line at rgba(186,215,247,0.12).
+3. Create a feature card: white background, 1px #d8d8d8 border, 8px radius, 24px padding. Title at 16px weight 600 #080808. Description at 14px weight 400 #5a5a5a. Top-right: thumbnail image at 8px radius. No shadow at rest.
 
-4. Ghost pill button: 999px radius, padding 8px 16px, background rgba(186,214,247,0.06), 1px inset border rgba(186,215,247,0.12), text #ffffff, 14px Untitled Sans weight 500.
+4. Create a split feature section: max-width 1200px, two columns 50/50 with 48px gap. Left column: eyebrow label (13px uppercase +0.1em tracking #5a5a5a), heading (32px weight 600 #080808), bullet list with right-arrow icons in #5a5a5a. Right column: browser-frame mockup with soft multi-layer shadow, 8px radius.
 
-5. Background canvas with grid: #05060f base, 1px grid lines at rgba(186,215,247,0.06) at 80px intervals, full-bleed, masked to fade at edges. Conic-gradient spotlight at top center: conic-gradient(at 50% -5%, transparent 45%, rgba(124,145,182,0.3) 49%, rgba(124,145,182,0.5) 50%, rgba(124,145,182,0.3) 51%, transparent 55%).
-
-## Gradient System
-
-The system uses three gradient layers stacked vertically: (1) Skywash linear gradient (#d8ecf8 → #98c0ef, 0deg) fills the display wordmark and largest headings; (2) Fading hairline gradients (transparent → rgba(186,215,247,0.12) → transparent) create the section divider lines flanking every eyebrow label; (3) Conic-gradient spotlight halos (transparent → rgba(124,145,182,0.5) → transparent) sit at the top of full-bleed sections as ambient illumination. All gradients are cool-tinted; never introduce warm gradients — the palette stays in the blue-violet spectrum.
+5. Create a browser-frame mockup: outer container 8px radius, multi-layer soft shadow. Top bar 28px tall #f0f0f0 background with three colored dots (red/yellow/green circles 8px each) and a centered URL field at 12px WF Visual Sans Mono. Content area fills remaining height with the product UI screenshot.
 
 ## Similar Brands
 
-- **Linear** — Same near-black canvas, monochromatic blue-white text, single vivid violet as the only chromatic accent, and floating glass-morphism product cards
-- **Vercel** — Dark-first marketing surfaces with gradient-filled display type, frosted glass UI mockups, and minimal hairline borders at low opacity
-- **Clerk** — Devtools auth-product landing with dark canvas, glass-card auth-form mockups as the hero visual, and monochrome-with-one-accent palette
-- **Radix** — Companion brand — shares the WorkOS/Radix visual lineage with blueprint-grid backgrounds, frosted surfaces, and dot-tracked all-caps eyebrow labels
-- **Stripe** — Gradient-filled display headings on dark backgrounds, translucent glass cards as product showcases, and restrained palette with one signature accent
+- **Linear** — Same near-monochrome palette with a single vivid accent, monumental display headlines with tight tracking, and borderless cards that trust whitespace and hairline borders for structure
+- **Vercel** — Shared commitment to pure white canvases, display-weight geometric sans headings, and the use of realistic product/browser mockups as the primary visual device instead of stock photography
+- **Framer** — Same designer-tool sensibility — flat surfaces, minimal elevation, 8px card radii, and a single blue accent for interactive states
+- **Notion** — Comparable restrained typographic system with generous section gaps, achromatic backgrounds, and color used as functional punctuation rather than decoration
+- **Stripe** — Identical 1200px max-width centered layout model, dramatic display sizes (56–80px), and the philosophy that one saturated accent against a monochrome system creates stronger brand recognition than multi-color palettes
 
 ## Quick Start
 
@@ -289,59 +252,51 @@ The system uses three gradient layers stacked vertically: (1) Skywash linear gra
 ```css
 :root {
   /* Colors */
-  --color-midnight-canvas: #05060f;
-  --color-steel-plate: #2f343e;
-  --color-fog-veil: #9da7ba;
-  --color-moon-mist: #c7d3ea;
-  --color-frost-glow: #d1e4fa;
-  --color-ice-highlight: #d8ecf8;
-  --gradient-ice-highlight: linear-gradient(0deg, #d8ecf8 0%, #98c0ef 100%);
+  --color-webflow-blue: #146ef5;
+  --color-indigo-ink: #1366e2;
+  --color-mercury-tint: #6ca7ff;
+  --color-mint-pulse: #60ed76;
+  --color-apricot-glow: #ffa666;
+  --color-obsidian: #080808;
   --color-pure-white: #ffffff;
-  --color-void-violet: #663af3;
-  --color-blueprint-blue: #b6d9fc;
-  --color-ember-glow: #e46d4c;
-  --color-signal-blue: #027dea;
-  --color-deep-teal: #269684;
-  --color-gridline-blue: #3f4959;
-  --color-glass-edge: #bad7f71f;
-  --color-luminous-fill: #c7d3ea1f;
+  --color-slate: #5a5a5a;
+  --color-ash-border: #d8d8d8;
+  --color-smoke: #bdbdbd;
+  --color-graphite: #222222;
+  --color-onyx: #171717;
+  --color-mist: #f0f0f0;
+  --color-charcoal: #292929;
 
   /* Typography — Font Families */
-  --font-untitled-sans: 'Untitled Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-aeonikpro: 'aeonikPro', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-dotdigital: 'dotDigital', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-wf-visual-sans-variable: 'WF Visual Sans Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-wf-visual-sans-mono: 'WF Visual Sans Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Typography — Scale */
-  --text-caption: 12px;
-  --leading-caption: 1.33;
-  --tracking-caption: 0px;
-  --text-body-sm: 14px;
-  --leading-body-sm: 1.43;
-  --tracking-body-sm: 0px;
-  --text-body: 16px;
-  --leading-body: 1.5;
-  --tracking-body: -0.16px;
-  --text-subheading: 18px;
-  --leading-subheading: 1.33;
-  --tracking-subheading: 0px;
+  --text-caption: 10px;
+  --leading-caption: 1.4;
+  --text-body-lg: 16px;
+  --leading-body-lg: 1.6;
+  --text-subheading: 20px;
+  --leading-subheading: 1.3;
   --text-heading-sm: 24px;
-  --leading-heading-sm: 1.17;
-  --tracking-heading-sm: -0.24px;
-  --text-heading: 28px;
-  --leading-heading: 1.14;
-  --tracking-heading: 0px;
-  --text-heading-lg: 44px;
-  --leading-heading-lg: 1.16;
-  --tracking-heading-lg: 0px;
-  --text-display: 48px;
-  --leading-display: 1.17;
-  --tracking-display: 0px;
+  --leading-heading-sm: 1.3;
+  --text-heading: 32px;
+  --leading-heading: 1.2;
+  --text-heading-lg: 40px;
+  --leading-heading-lg: 1.04;
+  --tracking-heading-lg: -0.4px;
+  --text-display: 56px;
+  --leading-display: 1.04;
+  --tracking-display: -0.56px;
+  --text-display-xl: 80px;
+  --leading-display-xl: 1;
+  --tracking-display-xl: -0.8px;
 
   /* Typography — Weights */
   --font-weight-regular: 400;
   --font-weight-medium: 500;
+  --font-weight-w550: 550;
   --font-weight-semibold: 600;
-  --font-weight-bold: 700;
 
   /* Spacing */
   --spacing-unit: 4px;
@@ -349,61 +304,43 @@ The system uses three gradient layers stacked vertically: (1) Skywash linear gra
   --spacing-8: 8px;
   --spacing-12: 12px;
   --spacing-16: 16px;
-  --spacing-20: 20px;
   --spacing-24: 24px;
   --spacing-32: 32px;
   --spacing-36: 36px;
   --spacing-40: 40px;
   --spacing-48: 48px;
-  --spacing-56: 56px;
-  --spacing-100: 100px;
-  --spacing-120: 120px;
-  --spacing-200: 200px;
+  --spacing-72: 72px;
+  --spacing-80: 80px;
+  --spacing-88: 88px;
 
   /* Layout */
   --page-max-width: 1200px;
-  --section-gap: 120px;
+  --section-gap: 80px;
   --card-padding: 24px;
   --element-gap: 16px;
 
   /* Border Radius */
-  --radius-sm: 2px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-2xl: 16px;
-  --radius-3xl: 24px;
-  --radius-3xl-2: 28px;
-  --radius-3xl-3: 44px;
-  --radius-full: 999px;
-  --radius-full-2: 4999.5px;
-  --radius-full-3: 9999px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-full: 1440px;
 
   /* Named Radii */
-  --radius-cards: 16px;
-  --radius-badges: 6px;
-  --radius-inputs: 6px;
-  --radius-modals: 16px;
-  --radius-buttons: 999px;
-  --radius-iconcontainers: 9999px;
+  --radius-tags: 4px;
+  --radius-cards: 8px;
+  --radius-images: 8px;
+  --radius-inputs: 4px;
+  --radius-buttons: 4px;
 
   /* Shadows */
-  --shadow-sm: rgba(186, 207, 247, 0.32) 0px 0px 6px 0px;
-  --shadow-md: rgba(238, 186, 247, 0.24) 0px 0px 12px 0px;
-  --shadow-subtle: rgba(186, 215, 247, 0.12) 0px 0px 0px 1px inset;
-  --shadow-subtle-2: rgba(199, 211, 234, 0.12) -0.5px 0.5px 1px 0px inset, rgba(186, 215, 247, 0.08) 0px 0px 96px 0px inset;
-  --shadow-subtle-3: rgba(186, 214, 247, 0.06) 0px 0px 0px 1px inset;
-  --shadow-subtle-4: rgba(199, 211, 234, 0.12) 0px 1px 1px 0px inset, rgba(199, 211, 234, 0.05) 0px 24px 48px 0px inset, rgba(6, 6, 14, 0.7) 0px 24px 32px 0px;
-  --shadow-subtle-5: rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset;
-  --shadow-subtle-6: rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168, 216, 245, 0.06) 0px 24px 48px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 32px 0px;
-  --shadow-subtle-7: rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168, 216, 245, 0.06) 0px 24px 48px 0px inset;
-  --shadow-subtle-8: rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168, 216, 245, 0.06) 0px 24px 48px 0px inset, rgba(199, 211, 234, 0.08) 0px 0px 0px 1px inset;
-  --shadow-subtle-9: rgba(186, 214, 247, 0.24) 0px 0px 0px 1px inset;
+  --shadow-lg: rgba(0, 0, 0, 0.01) 0px 54px 22px 0px, rgba(0, 0, 0, 0.04) 0px 30px 18px 0px, rgba(0, 0, 0, 0.08) 0px 13px 13px 0px, rgba(0, 0, 0, 0.09) 0px 3px 7px 0px;
+  --shadow-xl: rgba(0, 0, 0, 0.02) 0px 67px 27px 0px, rgba(0, 0, 0, 0.06) 0px 38px 23px 0px, rgba(0, 0, 0, 0.1) 0px 17px 17px 0px, rgba(0, 0, 0, 0.12) 0px 4px 9px 0px;
+  --shadow-xl-2: rgba(0, 0, 0, 0.01) 0px 148px 42px 0px, rgba(0, 0, 0, 0.04) 0px 95px 38px 0px, rgba(0, 0, 0, 0.15) 0px 53px 32px 0px, rgba(0, 0, 0, 0.26) 0px 24px 24px 0px, rgba(0, 0, 0, 0.29) 0px 6px 13px 0px;
 
   /* Surfaces */
-  --surface-midnight-canvas: #05060f;
-  --surface-steel-plate: #2f343;
-  --surface-frosted-glass: #bad6f708;
-  --surface-deep-glass: #05060ff7;
+  --surface-canvas: #ffffff;
+  --surface-tinted: #f0f0f0;
+  --surface-card: #ffffff;
+  --surface-inverted: #080808;
 }
 ```
 
@@ -412,92 +349,68 @@ The system uses three gradient layers stacked vertically: (1) Skywash linear gra
 ```css
 @theme {
   /* Colors */
-  --color-midnight-canvas: #05060f;
-  --color-steel-plate: #2f343e;
-  --color-fog-veil: #9da7ba;
-  --color-moon-mist: #c7d3ea;
-  --color-frost-glow: #d1e4fa;
-  --color-ice-highlight: #d8ecf8;
+  --color-webflow-blue: #146ef5;
+  --color-indigo-ink: #1366e2;
+  --color-mercury-tint: #6ca7ff;
+  --color-mint-pulse: #60ed76;
+  --color-apricot-glow: #ffa666;
+  --color-obsidian: #080808;
   --color-pure-white: #ffffff;
-  --color-void-violet: #663af3;
-  --color-blueprint-blue: #b6d9fc;
-  --color-ember-glow: #e46d4c;
-  --color-signal-blue: #027dea;
-  --color-deep-teal: #269684;
-  --color-gridline-blue: #3f4959;
-  --color-glass-edge: #bad7f71f;
-  --color-luminous-fill: #c7d3ea1f;
+  --color-slate: #5a5a5a;
+  --color-ash-border: #d8d8d8;
+  --color-smoke: #bdbdbd;
+  --color-graphite: #222222;
+  --color-onyx: #171717;
+  --color-mist: #f0f0f0;
+  --color-charcoal: #292929;
 
   /* Typography */
-  --font-untitled-sans: 'Untitled Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-aeonikpro: 'aeonikPro', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-dotdigital: 'dotDigital', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-wf-visual-sans-variable: 'WF Visual Sans Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-wf-visual-sans-mono: 'WF Visual Sans Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Typography — Scale */
-  --text-caption: 12px;
-  --leading-caption: 1.33;
-  --tracking-caption: 0px;
-  --text-body-sm: 14px;
-  --leading-body-sm: 1.43;
-  --tracking-body-sm: 0px;
-  --text-body: 16px;
-  --leading-body: 1.5;
-  --tracking-body: -0.16px;
-  --text-subheading: 18px;
-  --leading-subheading: 1.33;
-  --tracking-subheading: 0px;
+  --text-caption: 10px;
+  --leading-caption: 1.4;
+  --text-body-lg: 16px;
+  --leading-body-lg: 1.6;
+  --text-subheading: 20px;
+  --leading-subheading: 1.3;
   --text-heading-sm: 24px;
-  --leading-heading-sm: 1.17;
-  --tracking-heading-sm: -0.24px;
-  --text-heading: 28px;
-  --leading-heading: 1.14;
-  --tracking-heading: 0px;
-  --text-heading-lg: 44px;
-  --leading-heading-lg: 1.16;
-  --tracking-heading-lg: 0px;
-  --text-display: 48px;
-  --leading-display: 1.17;
-  --tracking-display: 0px;
+  --leading-heading-sm: 1.3;
+  --text-heading: 32px;
+  --leading-heading: 1.2;
+  --text-heading-lg: 40px;
+  --leading-heading-lg: 1.04;
+  --tracking-heading-lg: -0.4px;
+  --text-display: 56px;
+  --leading-display: 1.04;
+  --tracking-display: -0.56px;
+  --text-display-xl: 80px;
+  --leading-display-xl: 1;
+  --tracking-display-xl: -0.8px;
 
   /* Spacing */
   --spacing-4: 4px;
   --spacing-8: 8px;
   --spacing-12: 12px;
   --spacing-16: 16px;
-  --spacing-20: 20px;
   --spacing-24: 24px;
   --spacing-32: 32px;
   --spacing-36: 36px;
   --spacing-40: 40px;
   --spacing-48: 48px;
-  --spacing-56: 56px;
-  --spacing-100: 100px;
-  --spacing-120: 120px;
-  --spacing-200: 200px;
+  --spacing-72: 72px;
+  --spacing-80: 80px;
+  --spacing-88: 88px;
 
   /* Border Radius */
-  --radius-sm: 2px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-2xl: 16px;
-  --radius-3xl: 24px;
-  --radius-3xl-2: 28px;
-  --radius-3xl-3: 44px;
-  --radius-full: 999px;
-  --radius-full-2: 4999.5px;
-  --radius-full-3: 9999px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-full: 1440px;
 
   /* Shadows */
-  --shadow-sm: rgba(186, 207, 247, 0.32) 0px 0px 6px 0px;
-  --shadow-md: rgba(238, 186, 247, 0.24) 0px 0px 12px 0px;
-  --shadow-subtle: rgba(186, 215, 247, 0.12) 0px 0px 0px 1px inset;
-  --shadow-subtle-2: rgba(199, 211, 234, 0.12) -0.5px 0.5px 1px 0px inset, rgba(186, 215, 247, 0.08) 0px 0px 96px 0px inset;
-  --shadow-subtle-3: rgba(186, 214, 247, 0.06) 0px 0px 0px 1px inset;
-  --shadow-subtle-4: rgba(199, 211, 234, 0.12) 0px 1px 1px 0px inset, rgba(199, 211, 234, 0.05) 0px 24px 48px 0px inset, rgba(6, 6, 14, 0.7) 0px 24px 32px 0px;
-  --shadow-subtle-5: rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset;
-  --shadow-subtle-6: rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168, 216, 245, 0.06) 0px 24px 48px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 32px 0px;
-  --shadow-subtle-7: rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168, 216, 245, 0.06) 0px 24px 48px 0px inset;
-  --shadow-subtle-8: rgba(216, 236, 248, 0.2) 0px 1px 1px 0px inset, rgba(168, 216, 245, 0.06) 0px 24px 48px 0px inset, rgba(199, 211, 234, 0.08) 0px 0px 0px 1px inset;
-  --shadow-subtle-9: rgba(186, 214, 247, 0.24) 0px 0px 0px 1px inset;
+  --shadow-lg: rgba(0, 0, 0, 0.01) 0px 54px 22px 0px, rgba(0, 0, 0, 0.04) 0px 30px 18px 0px, rgba(0, 0, 0, 0.08) 0px 13px 13px 0px, rgba(0, 0, 0, 0.09) 0px 3px 7px 0px;
+  --shadow-xl: rgba(0, 0, 0, 0.02) 0px 67px 27px 0px, rgba(0, 0, 0, 0.06) 0px 38px 23px 0px, rgba(0, 0, 0, 0.1) 0px 17px 17px 0px, rgba(0, 0, 0, 0.12) 0px 4px 9px 0px;
+  --shadow-xl-2: rgba(0, 0, 0, 0.01) 0px 148px 42px 0px, rgba(0, 0, 0, 0.04) 0px 95px 38px 0px, rgba(0, 0, 0, 0.15) 0px 53px 32px 0px, rgba(0, 0, 0, 0.26) 0px 24px 24px 0px, rgba(0, 0, 0, 0.29) 0px 6px 13px 0px;
 }
 ```

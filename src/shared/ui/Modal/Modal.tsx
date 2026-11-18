@@ -1,4 +1,5 @@
-import { useEffect, useRef, type FC, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, type FC, type ReactNode } from 'react';
+import './Modal.css';
 
 export interface ModalProps {
   readonly eyebrow?: string | undefined;
@@ -10,7 +11,11 @@ export interface ModalProps {
   readonly footer?: ReactNode | undefined;
 }
 
-/** Modal AuthKit: superficie profunda con foco atrapado en el primer control. */
+/**
+ * Modal Webflow Studio (DESIGN.md):
+ * Tarjeta #ffffff de 8px de radio con borde 1px solid #d8d8d8, sombra multicapa
+ * --shadow-xl, foco inicial accesible y revelado cinético en el título.
+ */
 export const Modal: FC<ModalProps> = ({
   eyebrow,
   title,
@@ -24,7 +29,6 @@ export const Modal: FC<ModalProps> = ({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  // El foco inicial ocurre una sola vez; un onClose inline no debe re-enfocar en cada tecla.
   useEffect(() => {
     const dialog = dialogRef.current;
     const focusable = dialog?.querySelector<HTMLElement>(
@@ -43,31 +47,44 @@ export const Modal: FC<ModalProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const titleId = 'mk-modal-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const titleId = 'wf-modal-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const words = title.split(' ').filter((word) => word.length > 0);
 
   return (
-    <div className="mk-modal-root" role="presentation">
-      <div className="mk-modal-backdrop" aria-hidden="true" onClick={onClose} />
+    <div className="wf-modal-root" role="presentation">
+      <div className="wf-modal-backdrop" aria-hidden="true" onClick={onClose} />
       <section
         ref={dialogRef}
-        className={'mk-modal mk-modal--' + size}
+        className={'wf-modal wf-modal--' + size}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <header className="mk-modal__header">
-          {eyebrow !== undefined && <p className="mk-eyebrow">{eyebrow}</p>}
-          <h2 id={titleId} className="mk-modal__title">
-            {title}
+        <header className="wf-modal__header">
+          {eyebrow !== undefined && eyebrow.length > 0 && (
+            <p className="wf-modal__eyebrow">{eyebrow}</p>
+          )}
+          <h2 id={titleId} className="wf-modal__title">
+            {words.map((word, index) => (
+              <Fragment key={`${title}-${word}-${index}`}>
+                <span
+                  className="wf-modal__title-word"
+                  style={{ animationDelay: `${index * 45}ms` }}
+                >
+                  {word}
+                </span>
+                {index < words.length - 1 ? ' ' : null}
+              </Fragment>
+            ))}
           </h2>
           {description !== undefined && description.length > 0 && (
-            <p className="mk-modal__description">{description}</p>
+            <p className="wf-modal__description">{description}</p>
           )}
         </header>
 
-        <div className="mk-modal__body">{children}</div>
+        <div className="wf-modal__body">{children}</div>
 
-        {footer !== undefined && <footer className="mk-modal__actions">{footer}</footer>}
+        {footer !== undefined && <footer className="wf-modal__actions">{footer}</footer>}
       </section>
     </div>
   );
