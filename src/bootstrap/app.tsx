@@ -182,7 +182,7 @@ export function App() {
     setIsLoadingCatalog(true);
     setCatalogError(null);
 
-    const includeCouriers = currentRole === 'personal' || currentRole === 'repartidor';
+    const includeCouriers = currentRole === 'personal';
 
     const [zonesResult, ordersResult, couriersResult] = await Promise.allSettled([
       useCases.orders.getZones.execute(),
@@ -238,6 +238,26 @@ export function App() {
       occupiedSlots: route.occupiedSlots,
     }));
   }, [useCases.routes]);
+
+  const routeCouriers = useMemo<readonly Courier[]>(() => {
+    if (couriers.length > 0) {
+      return couriers;
+    }
+    if (currentUser?.role === 'repartidor' && currentUser.courierId !== null) {
+      return [
+        {
+          id: currentUser.courierId,
+          displayName: currentUser.displayName ?? currentUser.email,
+          maxOrdersPerTrip: 0,
+          isEnabled: currentUser.isActive,
+          isAvailable: false,
+          createdAt: '',
+          updatedAt: '',
+        },
+      ];
+    }
+    return [];
+  }, [couriers, currentUser?.role, currentUser?.courierId, currentUser?.displayName, currentUser?.email, currentUser?.isActive]);
 
   const deliveryActor = useMemo<DeliveryActor>(
     () => ({
@@ -414,12 +434,14 @@ export function App() {
               useCases={useCases.routes}
               zones={zones}
               pendingOrders={orders}
-              couriers={couriers}
+              couriers={routeCouriers}
               isAdmin={currentUser.role === 'personal'}
               onCatalogChanged={() => {
                 void loadSharedCatalog();
               }}
-              onNavigateToFleet={() => selectTab('dispatch')}
+              onNavigateToFleet={
+                currentUser.role === 'personal' ? () => selectTab('dispatch') : undefined
+              }
             />
           )}
 
@@ -438,6 +460,9 @@ export function App() {
               courierUseCases={useCases.couriers}
               actor={deliveryActor}
               zones={zones}
+              onDeliveryChanged={() => {
+                void loadSharedCatalog();
+              }}
             />
           )}
 

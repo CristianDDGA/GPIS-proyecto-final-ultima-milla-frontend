@@ -295,7 +295,39 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 6px;
+}
+
+.deliveries-stop__stepper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.deliveries-stop__stage {
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: var(--radius-tags, 4px);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
+  background-color: var(--color-mist, #f0f0f0);
+  color: var(--color-slate, #5a5a5a);
+}
+
+.deliveries-stop__stage--current {
+  background-color: #eef4ff;
+  border-color: #b8d3fe;
+  color: var(--color-webflow-blue, #146ef5);
+  font-weight: 600;
+}
+
+.deliveries-stop__stage--done {
+  background-color: #eefbf1;
+  border-color: #b5e8c3;
+  color: #0f6b2f;
 }
 
 .deliveries-stop__done {
@@ -357,21 +389,20 @@
 
 .deliveries-availability {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   padding: 12px 14px;
   border: 1px solid var(--color-ash-border, #d8d8d8);
   border-radius: var(--radius-tags, 4px);
   background-color: var(--color-mist, #f0f0f0);
 }
 
-.deliveries-availability > div {
+.deliveries-availability__status {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .deliveries-availability__label {
@@ -379,6 +410,31 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--color-slate, #5a5a5a);
+}
+
+.deliveries-availability__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deliveries-availability__hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-slate, #5a5a5a);
+}
+
+.deliveries-availability__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.deliveries-status-badge--neutral {
+  background-color: var(--color-pure-white, #ffffff);
+  color: var(--color-slate, #5a5a5a);
+  border-color: var(--color-ash-border, #d8d8d8);
 }
 
 .deliveries-inspector-form {

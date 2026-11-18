@@ -7,6 +7,7 @@ import {
 import { Alert, Button, Card, Select, ShortIdBadge, TextInput } from '../../../../shared/ui/index.js';
 
 const DEFAULT_CAPACITY_LIMIT = '4';
+const MAX_VISIBLE_PENDING_OPTIONS = 50;
 
 export interface LateOrderPlacementCardProps {
   pendingOrders: readonly Order[];
@@ -22,19 +23,37 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
   onInspectRoute,
 }) => {
   const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [capacityLimit, setCapacityLimit] = useState(DEFAULT_CAPACITY_LIMIT);
   const [result, setResult] = useState<LateOrderPlacementResult | null>(null);
   const [showErrors, setShowErrors] = useState(false);
 
+  const allPendingOrders = useMemo(
+    () => pendingOrders.filter((order) => order.status === 'pendiente'),
+    [pendingOrders],
+  );
+
+  const filteredPendingOrders = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (query.length === 0) {
+      return allPendingOrders;
+    }
+    return allPendingOrders.filter(
+      (order) =>
+        order.deliveryAddress.toLowerCase().includes(query) ||
+        order.deliveryDate.toLowerCase().includes(query) ||
+        order.deliveryTime.toLowerCase().includes(query) ||
+        order.id.toLowerCase().includes(query),
+    );
+  }, [allPendingOrders, searchQuery]);
+
   const pendingOrderOptions = useMemo(
     () =>
-      pendingOrders
-        .filter((order) => order.status === 'pendiente')
-        .map((order) => ({
-          value: order.id,
-          label: `${order.deliveryAddress} · ${order.deliveryDate} ${order.deliveryTime}`,
-        })),
-    [pendingOrders],
+      filteredPendingOrders.slice(0, MAX_VISIBLE_PENDING_OPTIONS).map((order) => ({
+        value: order.id,
+        label: `${order.deliveryAddress} · ${order.deliveryDate} ${order.deliveryTime}`,
+      })),
+    [filteredPendingOrders],
   );
 
   const orderId = selectedOrderId.trim();
@@ -79,6 +98,15 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
       </div>
 
       <form className="routes-form" onSubmit={handleSubmit} aria-label="Insertar pedido tardío">
+        {allPendingOrders.length > MAX_VISIBLE_PENDING_OPTIONS && (
+          <TextInput
+            label="Filtrar pedido pendiente"
+            placeholder="Buscar por dirección o fecha..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        )}
+
         {pendingOrderOptions.length > 0 ? (
           <Select
             label="Pedido pendiente"
@@ -86,10 +114,17 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
             value={selectedOrderId}
             onChange={(event) => setSelectedOrderId(event.target.value)}
             error={orderIdError}
+            helperText={
+              filteredPendingOrders.length > MAX_VISIBLE_PENDING_OPTIONS
+                ? `Mostrando ${MAX_VISIBLE_PENDING_OPTIONS} de ${filteredPendingOrders.length} pedidos pendientes. Usa el filtro para acotar.`
+                : undefined
+            }
           />
         ) : (
           <Alert type="info" title="Sin pedidos pendientes">
-            No hay pedidos pendientes disponibles para insertar en rutas activas.
+            {allPendingOrders.length === 0
+              ? 'No hay pedidos pendientes disponibles para insertar en rutas activas.'
+              : 'Ningún pedido pendiente coincide con la búsqueda ingresada.'}
           </Alert>
         )}
 

@@ -35,15 +35,6 @@ export const RouteFiltersForm: FC<RouteFiltersFormProps> = ({
     onChange({ ...filters, zoneId: zoneId.length > 0 ? zoneId : undefined });
   };
 
-  const handleLimit = (rawLimit: string) => {
-    if (rawLimit.trim().length === 0) {
-      onChange({ ...filters, limit: undefined });
-      return;
-    }
-    const parsed = Number(rawLimit);
-    onChange({ ...filters, limit: Number.isFinite(parsed) ? parsed : undefined });
-  };
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onApply();
@@ -63,15 +54,6 @@ export const RouteFiltersForm: FC<RouteFiltersFormProps> = ({
           options={zoneOptions}
           value={filters.zoneId ?? ''}
           onChange={(event) => handleZone(event.target.value)}
-        />
-        <TextInput
-          label="Límite de resultados"
-          type="number"
-          min={1}
-          max={100}
-          value={filters.limit === undefined ? '' : String(filters.limit)}
-          onChange={(event) => handleLimit(event.target.value)}
-          helperText="Entre 1 y 100 rutas; vacío usa el valor del servidor."
         />
       </div>
 
