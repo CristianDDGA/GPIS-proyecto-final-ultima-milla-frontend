@@ -10,14 +10,21 @@ import type {
   ImageType,
 } from '../../domain/courierApplication.js';
 import type { CourierApplicationGateway } from '../../domain/courierApplicationGateway.js';
-import { readApplication, readApplicationDetail, readApplicationPage } from './response.js';
+import {
+  readApplication,
+  readApplicationDetail,
+  readApplicationPage,
+  readOptionalApplication,
+} from './response.js';
 
 export class HttpCourierApplicationGateway implements CourierApplicationGateway {
   constructor(private readonly httpClient: HttpClient) {}
 
   public async getMine(): Promise<CourierApplication | null> {
     try {
-      return readApplication(await this.httpClient.get<unknown>('/courier-applications/me'));
+      return readOptionalApplication(
+        await this.httpClient.get<unknown>('/courier-applications/me'),
+      );
     } catch (error) {
       if (error instanceof HttpError && error.status === 404) {
         return null;

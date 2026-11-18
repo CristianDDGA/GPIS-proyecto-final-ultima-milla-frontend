@@ -102,6 +102,23 @@ function readApplicationShape(value: unknown): CourierApplication | null {
   };
 }
 
+export function readOptionalApplication(value: unknown): CourierApplication | null {
+  if (!isRecord(value) || !('application' in value)) {
+    throw new Error(CONTRACT_ERROR_MESSAGE);
+  }
+
+  if (value['application'] === null) {
+    return null;
+  }
+
+  const application = readApplicationShape(value['application']);
+  if (application === null) {
+    throw new Error(CONTRACT_ERROR_MESSAGE);
+  }
+
+  return application;
+}
+
 export function readApplication(value: unknown): CourierApplication {
   if (!isRecord(value)) {
     throw new Error(CONTRACT_ERROR_MESSAGE);

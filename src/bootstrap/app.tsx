@@ -19,9 +19,10 @@ import { OrderManagementView, type Order } from '../features/orders/index.js';
 import { RouteManagementView } from '../features/routes/index.js';
 import { CourierFleetDispatchView, type Courier } from '../features/couriers/index.js';
 import { DeliveryExecutionView, type DeliveryActor } from '../features/deliveries/index.js';
+import { ClientCourierApplicationView } from '../features/courier-applications/index.js';
 import { composeUseCases } from './compose-use-cases.js';
 
-type AppTab = 'zones' | 'orders' | 'routes' | 'dispatch' | 'deliveries' | 'users';
+type AppTab = 'zones' | 'orders' | 'routes' | 'dispatch' | 'deliveries' | 'users' | 'application';
 
 const TAB_LABELS: Readonly<Record<AppTab, string>> = {
   zones: 'Zonas',
@@ -30,21 +31,13 @@ const TAB_LABELS: Readonly<Record<AppTab, string>> = {
   dispatch: 'Despacho',
   deliveries: 'Entregas',
   users: 'Accesos',
-};
-
-const STEP_BY_TAB: Readonly<Record<AppTab, string>> = {
-  zones: '01',
-  orders: '02',
-  routes: '03',
-  dispatch: '04',
-  deliveries: '05',
-  users: '06',
+  application: 'Ser repartidor',
 };
 
 const TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
   personal: ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'users'],
   repartidor: ['deliveries', 'routes', 'orders', 'zones'],
-  cliente: ['orders', 'zones'],
+  cliente: ['orders', 'zones', 'application'],
 };
 
 const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
@@ -60,6 +53,7 @@ const APP_TABS: readonly AppTab[] = [
   'dispatch',
   'deliveries',
   'users',
+  'application',
 ];
 const ORDER_QUERY_PARAMS = ['orderId', 'deliveryDate', 'zoneId'] as const;
 
@@ -256,8 +250,9 @@ export function App() {
   );
 
   const handleLogout = useCallback(() => {
-    resetSessionViewState();
-    void auth.logout();
+    void auth.logout().finally(() => {
+      resetSessionViewState();
+    });
   }, [auth.logout, resetSessionViewState]);
 
   const handleAuthenticated = useCallback(() => {
@@ -350,9 +345,6 @@ export function App() {
                   className={'wf-app-nav__tab ' + (isSelected ? 'wf-app-nav__tab--active' : '')}
                   onClick={() => selectTab(tab)}
                 >
-                  <span className="wf-app-nav__step" aria-hidden="true">
-                    {STEP_BY_TAB[tab]}
-                  </span>
                   <span>{TAB_LABELS[tab]}</span>
                 </button>
               );
@@ -409,7 +401,11 @@ export function App() {
             <OrderManagementView
               useCases={useCases.orders}
               canCreateOrder={currentUser.role !== 'repartidor'}
-              onNavigateToRoutes={(deliveryDate) => selectTab('routes', { deliveryDate })}
+              onNavigateToRoutes={
+                currentUser.role === 'personal'
+                  ? (deliveryDate) => selectTab('routes', { deliveryDate })
+                  : undefined
+              }
             />
           )}
 
@@ -449,6 +445,13 @@ export function App() {
             <AdminAccessView
               authUseCases={useCases.auth}
               applicationUseCases={useCases.courierApplications}
+            />
+          )}
+
+          {activeTab === 'application' && (
+            <ClientCourierApplicationView
+              useCases={useCases.courierApplications}
+              defaultFullName={currentUser.displayName ?? ''}
             />
           )}
         </div>
