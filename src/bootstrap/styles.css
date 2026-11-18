@@ -665,31 +665,18 @@ h1 {
   min-width: 0;
 }
 /* ============================================================================
-   Escenario inmersivo del Login (Fase 1 · pulido Millast)
-   Fondo base sólido + retícula isométrica SVG estática (cero gradientes).
-   La única fuente luminosa es .auth-lava-stage dentro de AuthView.
+   Login · AuthKit: el escenario completo lo pinta AuthView (.auth-atmosphere).
+   Solo se deja el marco a pantalla completa y el aviso global de sesión.
    ========================================================================== */
 
 .app-frame:has(.app-shell--auth) {
   min-height: 100dvh;
-  background-color: var(--auth-canvas-base);
-  color: var(--auth-text-primary);
+  background-color: var(--auth-canvas, #05060f);
+  color: var(--auth-frost, #d1e4fa);
 }
 
 .app-frame:has(.app-shell--auth) .app-mesh {
   display: none;
-}
-
-.app-frame:has(.app-shell--auth)::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='56' viewBox='0 0 96 56'%3E%3Cg fill='none' stroke='%2394c5ff' stroke-opacity='0.075' stroke-width='1'%3E%3Cpath d='M0 28 L24 14 L48 28 L72 14 L96 28'/%3E%3Cpath d='M0 28 L24 42 L48 28 L72 42 L96 28'/%3E%3Cpath d='M24 0 L24 14 M24 42 L24 56 M48 0 L48 14 M48 42 L48 56 M72 0 L72 14 M72 42 L72 56'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 96px 56px;
-  background-repeat: repeat;
 }
 
 .app-shell--auth {
@@ -703,7 +690,7 @@ h1 {
   gap: 0;
 }
 
-/* Aviso global de sesión (p. ej. expiración): toast oscuro sobre el escenario. */
+/* Aviso global de sesión (p. ej. expiración): tarjeta flotante AuthKit. */
 .app-shell--auth > .ui-alert {
   position: fixed;
   top: 1rem;
@@ -711,14 +698,16 @@ h1 {
   transform: translateX(-50%);
   z-index: 60;
   width: min(100% - 2rem, 40rem);
-  background-color: #131d33;
-  color: var(--auth-error);
-  border-color: var(--auth-error-border);
-  box-shadow: var(--auth-card-shadow);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
+  background-color: var(--auth-error-bg, rgba(228, 109, 76, 0.14));
+  color: var(--auth-error, #f0a58d);
+  border: none;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--auth-error-border, rgba(228, 109, 76, 0.36)),
+    0 16px 32px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
 }
 
 .app-shell--auth > .ui-alert .ui-alert__title {
-  color: var(--auth-text-primary);
+  color: var(--auth-mist, #c7d3ea);
 }

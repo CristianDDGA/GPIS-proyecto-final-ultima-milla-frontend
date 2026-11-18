@@ -18,7 +18,6 @@ import {
 import { setToken } from '../../infrastructure/http/authTokenStorage.js';
 import { HttpError } from '../../../../shared/infrastructure/http/index.js';
 import { Alert, Button, TextInput } from '../../../../shared/ui/index.js';
-import { MillastLogo } from './MillastLogo.js';
 import '../styles/auth.css';
 
 export interface AuthViewProps {
@@ -52,8 +51,6 @@ const STRENGTH_LEVEL: Record<PasswordStrength, number> = { weak: 1, medium: 2, s
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
-const LAVA_BLOBS = [1, 2, 3, 4, 5] as const;
-
 const SECONDARY_TITLES: Record<Exclude<AuthScreen, 'login' | 'register'>, string> = {
   'verify-email': 'Verificar correo',
   'forgot-password': 'Recuperar clave',
@@ -77,10 +74,6 @@ function prefersReducedMotion(): boolean {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
-}
-
-function CtaCube(): ReactNode {
-  return <span className="auth-cta-cube" aria-hidden="true" />;
 }
 
 export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
@@ -497,30 +490,13 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
 
   return (
     <section className="auth-viewport" aria-label="Acceso a Millast">
-      {/* Hermano 1: lava camaleónica (fuera del Backdrop Root de la tarjeta). */}
-      <div className="auth-lava-stage" aria-hidden="true">
-        <svg className="auth-lava-svg-defs" width="0" height="0" focusable="false" aria-hidden="true">
-          <defs>
-            <filter id="auth-lava-goo" x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="lava-blur" />
-              <feColorMatrix
-                in="lava-blur"
-                mode="matrix"
-                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
-                result="lava-metaballs"
-              />
-              <feComposite in="SourceGraphic" in2="lava-metaballs" operator="atop" />
-            </filter>
-          </defs>
-        </svg>
+      {/* Atmósfera AuthKit: canvas midnight + retícula blueprint + spotlight. */}
+      <div className="auth-atmosphere" aria-hidden="true" />
 
-        {LAVA_BLOBS.map((index) => (
-          <span key={index} className={'auth-lava-blob auth-lava-blob--' + index} />
-        ))}
-      </div>
-
-      {/* Marca centrada sobre la tarjeta de acceso. */}
-      <MillastLogo className="auth-brand-logo" />
+      <header className="auth-hero">
+        <p className="auth-eyebrow">Torre de control</p>
+        <h1 className="auth-wordmark">Millast</h1>
+      </header>
 
       {/* Tarjeta de acceso centrada en el viewport. */}
       <div className="auth-card">
@@ -665,7 +641,6 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
                   variant="primary"
                   isLoading={isSubmitting}
                   disabled={isSubmitting}
-                  rightIcon={<CtaCube />}
                 >
                   Entrar al sistema
                 </Button>
@@ -757,7 +732,6 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
                   variant="primary"
                   isLoading={isSubmitting}
                   disabled={isSubmitting}
-                  rightIcon={<CtaCube />}
                 >
                   Crear cuenta
                 </Button>

@@ -170,110 +170,62 @@
   }
 }
 /* ============================================================================
-   Login (Fase 1 · pulido Millast) · Colorimetría sólida OKLCH, tipografías
-   propias y lava camaleónica. Cero gradientes en la capa de Login.
-   Se declaran fallbacks sRGB antes de oklch() para navegadores sin soporte.
+   Login · Sistema AuthKit (DESIGN.md): "Frosted glass cathedral at midnight".
+   Paleta monocromática + un único acento violeta para el CTA. Solo Login.
    ========================================================================== */
 
-@property --auth-light-angle {
-  syntax: '<angle>';
-  initial-value: 135deg;
-  inherits: false;
-}
-
-@property --auth-lava-hue-1 {
-  syntax: '<number>';
-  initial-value: 256;
-  inherits: false;
-}
-
-@property --auth-lava-hue-2 {
-  syntax: '<number>';
-  initial-value: 196;
-  inherits: false;
-}
-
-@property --auth-lava-hue-3 {
-  syntax: '<number>';
-  initial-value: 282;
-  inherits: false;
-}
-
-@property --auth-lava-hue-4 {
-  syntax: '<number>';
-  initial-value: 172;
-  inherits: false;
-}
-
-@property --auth-lava-hue-5 {
-  syntax: '<number>';
-  initial-value: 222;
-  inherits: false;
-}
-
 :root {
-  /* Tipografía de marca (Login) */
-  --font-auth-display: 'Syne', 'Space Grotesk', system-ui, sans-serif;
-  --font-auth-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-auth-display: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --font-auth-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, sans-serif;
+  --font-auth-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Escenario abisal sólido */
-  --auth-canvas-base: #060a17;
-  --auth-canvas-base: oklch(0.13 0.035 256);
-  --auth-grid-line: rgba(148, 197, 255, 0.075);
+  --auth-canvas: #05060f;
+  --auth-steel: #2f343e;
+  --auth-fog: #9da7ba;
+  --auth-mist: #c7d3ea;
+  --auth-frost: #d1e4fa;
+  --auth-ice: #d8ecf8;
+  --auth-white: #ffffff;
+  --auth-violet: #663af3;
+  --auth-violet-hover: #7452f6;
+  --auth-blueprint: #b6d9fc;
+  --auth-ember: #e46d4c;
+  --auth-teal: #269684;
+  --auth-gridline: rgba(186, 215, 247, 0.06);
+  --auth-hairline: rgba(186, 215, 247, 0.12);
+  --auth-hairline-strong: rgba(186, 215, 247, 0.24);
+  --auth-frost-fill: rgba(186, 214, 247, 0.06);
+  --auth-frost-fill-strong: rgba(186, 214, 247, 0.12);
+  --auth-luminous-fill: rgba(199, 211, 234, 0.12);
+  --auth-input-bg: rgba(199, 211, 234, 0.06);
+  --auth-input-placeholder: rgba(199, 211, 234, 0.6);
+  --auth-card-bg: rgba(5, 6, 15, 0.97);
+  --auth-card-shadow: inset 0 1px 1px rgba(216, 236, 248, 0.2),
+    inset 0 24px 48px rgba(168, 216, 245, 0.06), 0 16px 32px rgba(0, 0, 0, 0.3);
+  --auth-feature-shadow: inset 0 1px 1px rgba(199, 211, 234, 0.12),
+    inset 0 24px 48px rgba(199, 211, 234, 0.05), 0 24px 32px rgba(6, 6, 14, 0.7);
+  --auth-radius-card: 16px;
+  --auth-radius-input: 6px;
+  --auth-radius-button: 999px;
 
-  /* Tarjeta y pozos de cristal (colores sólidos translúcidos) */
-  --auth-card-bg: rgba(20, 31, 60, 0.34);
-  --auth-card-bg: oklch(0.24 0.04 256 / 0.34);
-  --auth-card-border: rgba(255, 255, 255, 0.22);
-  --auth-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  --auth-card-shadow: 0 42px 90px -52px rgba(2, 6, 23, 0.92);
-  --auth-input-bg: rgba(9, 15, 30, 0.62);
-  --auth-input-bg: oklch(0.16 0.03 256 / 0.62);
-  --auth-input-border: rgba(148, 197, 255, 0.24);
-  --auth-field-focus: rgba(56, 189, 248, 0.34);
-
-  /* Texto */
-  --auth-text-primary: #f8fafc;
-  --auth-text-label: #cbd5e1;
-  --auth-text-muted: #b6c2d4;
-
-  /* Botón glass-isométrico (sólido + base extruida, sin gradiente) */
-  --auth-cta-bg: rgba(45, 110, 240, 0.84);
-  --auth-cta-bg: oklch(0.56 0.19 254 / 0.84);
-  --auth-cta-bg-hover: rgba(58, 124, 255, 0.92);
-  --auth-cta-bg-hover: oklch(0.6 0.19 254 / 0.92);
-  --auth-cta-base: #1e3a8a;
-  --auth-cta-base: oklch(0.36 0.16 254);
-  --auth-cta-border: rgba(230, 240, 255, 0.38);
-  --auth-cta-shadow: 0 16px 30px -16px rgba(4, 9, 24, 0.75);
-
-  /* Segmentado y cristales satélite */
-  --auth-seg-bg: rgba(255, 255, 255, 0.06);
-  --auth-seg-border: rgba(255, 255, 255, 0.14);
-  --auth-seg-thumb: rgba(255, 255, 255, 0.16);
-  --auth-seg-thumb-border: rgba(255, 255, 255, 0.34);
-  /* Señales */
-  --auth-error: #fca5a5;
-  --auth-error-bg: rgba(185, 28, 28, 0.16);
-  --auth-error-border: rgba(248, 113, 113, 0.36);
-  --auth-success: #6ee7b7;
-  --auth-success-bg: rgba(13, 148, 136, 0.16);
-  --auth-success-border: rgba(45, 212, 191, 0.34);
-  --auth-warning: #fcd34d;
-  --auth-warning-bg: rgba(180, 83, 9, 0.18);
-  --auth-warning-border: rgba(251, 191, 36, 0.34);
-
-  --auth-radius: 1.75rem;
-  --auth-lava-blur: 20px;
+  --auth-success: #7fd8c9;
+  --auth-success-bg: rgba(38, 150, 132, 0.14);
+  --auth-success-border: rgba(38, 150, 132, 0.34);
+  --auth-error: #f0a58d;
+  --auth-error-bg: rgba(228, 109, 76, 0.14);
+  --auth-error-border: rgba(228, 109, 76, 0.36);
+  --auth-warning: #c7d3ea;
+  --auth-warning-bg: rgba(186, 214, 247, 0.08);
+  --auth-warning-border: rgba(186, 215, 247, 0.24);
 }
 
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --auth-card-bg: #0f172a;
-    --auth-input-bg: #0b1224;
-    --auth-cta-bg: #1d4ed8;
-    --auth-cta-bg-hover: #2563eb;
-    --auth-seg-bg: #111c33;
-    --auth-seg-thumb: #334155;
+    --auth-card-bg: #05060f;
+    --auth-input-bg: #0b0f1a;
+    --auth-frost-fill: #1a2030;
+    --auth-frost-fill-strong: #242c3e;
   }
 }
