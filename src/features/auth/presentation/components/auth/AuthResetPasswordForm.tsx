@@ -1,7 +1,7 @@
 import { useState, type FC, type FormEvent } from 'react';
 import type { PasswordStrength } from '../../../domain/index.js';
-import { Button, TextInput } from '../../../../../shared/ui/index.js';
 import { AuthPasswordField } from './AuthPasswordField.js';
+import { AuthTextField } from './AuthTextField.js';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter.js';
 
 export interface AuthResetPasswordFormProps {
@@ -36,13 +36,15 @@ export const AuthResetPasswordForm: FC<AuthResetPasswordFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <form id="auth-panel-reset" className="wf-auth-form" onSubmit={onSubmit} noValidate>
-      <TextInput
+    <form id="auth-panel-reset" className="mlg-form" onSubmit={onSubmit} noValidate>
+      <AuthTextField
         id="auth-reset-email"
         label="Correo electrónico"
         type="email"
+        inputMode="email"
         name="email"
         autoComplete="username"
+        spellCheck={false}
         value={email}
         onChange={(event) => {
           onEmailChange(event.target.value);
@@ -55,9 +57,8 @@ export const AuthResetPasswordForm: FC<AuthResetPasswordFormProps> = ({
         disabled={isSubmitting}
       />
 
-      <TextInput
+      <AuthTextField
         id="auth-reset-code"
-        className="wf-code-field"
         label="Código de recuperación"
         type="text"
         name="code"
@@ -73,6 +74,7 @@ export const AuthResetPasswordForm: FC<AuthResetPasswordFormProps> = ({
         onBlur={() => onMarkTouched('code')}
         error={errorFor('code')}
         isRequired
+        isOtp
         maxLength={6}
         disabled={isSubmitting}
       />
@@ -96,11 +98,10 @@ export const AuthResetPasswordForm: FC<AuthResetPasswordFormProps> = ({
 
       {newPassword.length > 0 && <PasswordStrengthMeter strength={strength} />}
 
-      <div className="wf-form-actions">
-        <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-          Restablecer contraseña
-        </Button>
-      </div>
+      <button type="submit" disabled={isSubmitting} className="mlg-submit-btn">
+        {isSubmitting && <span className="mlg-spinner" aria-hidden="true" />}
+        <span>{isSubmitting ? 'Actualizando...' : 'Restablecer contraseña'}</span>
+      </button>
     </form>
   );
 };

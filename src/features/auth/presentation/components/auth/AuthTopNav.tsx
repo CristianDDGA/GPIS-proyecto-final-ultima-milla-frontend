@@ -1,31 +1,17 @@
-import { useEffect, useState, type FC } from 'react';
-import { MillastMark } from '../MillastMark.js';
+import type { FC } from 'react';
+import { MillastBrandGlyph } from './AuthIcons.js';
 
 /**
- * Barra superior minimalista de estudio: únicamente marca Millast.
- * Gana borde inferior de 1 px #d8d8d8 al desplazarse.
+ * Cabecera superior izquierda minimalista:
+ * cuadrado 28×28 en #1668f3 con el isotipo "Camino en formación" + wordmark Millast.
  */
-export const AuthTopNav: FC = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = (): void => {
-      setIsScrolled(window.scrollY > 4);
-    };
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return (
-    <header className={'wf-topnav ' + (isScrolled ? 'wf-topnav--scrolled' : '')}>
-      <div className="wf-topnav__inner">
-        <div className="wf-topnav__brand">
-          <MillastMark variant="light" className="wf-topnav__mark" />
-          <span className="wf-topnav__wordmark">Millast</span>
-        </div>
+export const AuthTopNav: FC = () => (
+  <header className="mlg-header mlg-enter mlg-delay-1">
+    <div className="mlg-brand">
+      <div className="mlg-brand__badge">
+        <MillastBrandGlyph />
       </div>
-    </header>
-  );
-};
+      <span className="mlg-brand__name">Millast</span>
+    </div>
+  </header>
+);

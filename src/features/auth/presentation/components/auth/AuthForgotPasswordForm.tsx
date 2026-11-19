@@ -1,5 +1,5 @@
 import type { FC, FormEvent } from 'react';
-import { Button, TextInput } from '../../../../../shared/ui/index.js';
+import { AuthTextField } from './AuthTextField.js';
 
 export interface AuthForgotPasswordFormProps {
   readonly email: string;
@@ -20,13 +20,15 @@ export const AuthForgotPasswordForm: FC<AuthForgotPasswordFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => (
-  <form id="auth-panel-forgot" className="wf-auth-form" onSubmit={onSubmit} noValidate>
-    <TextInput
+  <form id="auth-panel-forgot" className="mlg-form" onSubmit={onSubmit} noValidate>
+    <AuthTextField
       id="auth-forgot-email"
       label="Correo electrónico"
       type="email"
+      inputMode="email"
       name="email"
-      autoComplete="username"
+      autoComplete="email"
+      spellCheck={false}
       placeholder="usuario@millast.ec"
       value={email}
       onChange={(event) => {
@@ -40,10 +42,9 @@ export const AuthForgotPasswordForm: FC<AuthForgotPasswordFormProps> = ({
       disabled={isSubmitting}
     />
 
-    <div className="wf-form-actions">
-      <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-        Enviar código
-      </Button>
-    </div>
+    <button type="submit" disabled={isSubmitting} className="mlg-submit-btn">
+      {isSubmitting && <span className="mlg-spinner" aria-hidden="true" />}
+      <span>{isSubmitting ? 'Enviando...' : 'Enviar código'}</span>
+    </button>
   </form>
 );

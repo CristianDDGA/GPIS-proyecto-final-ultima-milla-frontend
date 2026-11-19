@@ -1,7 +1,7 @@
 import { useState, type FC, type FormEvent } from 'react';
 import type { PasswordStrength } from '../../../domain/index.js';
-import { Button, TextInput } from '../../../../../shared/ui/index.js';
 import { AuthPasswordField } from './AuthPasswordField.js';
+import { AuthTextField } from './AuthTextField.js';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter.js';
 
 export interface AuthRegisterFormProps {
@@ -40,17 +40,37 @@ export const AuthRegisterForm: FC<AuthRegisterFormProps> = ({
       id="auth-panel-register"
       role="tabpanel"
       aria-labelledby="auth-tab-register"
-      className="wf-auth-form"
+      className="mlg-form"
       onSubmit={onSubmit}
       noValidate
     >
-      <TextInput
+      <AuthTextField
+        id="auth-register-display-name"
+        label="Nombre completo (opcional)"
+        type="text"
+        name="displayName"
+        autoComplete="name"
+        placeholder="Ej. Mateo Morales"
+        value={displayName}
+        onChange={(event) => {
+          onDisplayNameChange(event.target.value);
+          onClearError();
+        }}
+        onBlur={() => onMarkTouched('displayName')}
+        error={errorFor('displayName')}
+        maxLength={120}
+        disabled={isSubmitting}
+      />
+
+      <AuthTextField
         id="auth-register-email"
         label="Correo electrónico"
         type="email"
+        inputMode="email"
         name="email"
         autoComplete="email"
-        placeholder="cliente@millast.ec"
+        spellCheck={false}
+        placeholder="usuario@millast.ec"
         value={email}
         onChange={(event) => {
           onEmailChange(event.target.value);
@@ -82,29 +102,10 @@ export const AuthRegisterForm: FC<AuthRegisterFormProps> = ({
 
       {password.length > 0 && <PasswordStrengthMeter strength={strength} />}
 
-      <TextInput
-        id="auth-register-display-name"
-        label="Nombre para mostrar (opcional)"
-        type="text"
-        name="displayName"
-        autoComplete="name"
-        placeholder="Ej. Ana Paredes"
-        value={displayName}
-        onChange={(event) => {
-          onDisplayNameChange(event.target.value);
-          onClearError();
-        }}
-        onBlur={() => onMarkTouched('displayName')}
-        error={errorFor('displayName')}
-        maxLength={120}
-        disabled={isSubmitting}
-      />
-
-      <div className="wf-form-actions">
-        <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-          Crear cuenta
-        </Button>
-      </div>
+      <button type="submit" disabled={isSubmitting} className="mlg-submit-btn">
+        {isSubmitting && <span className="mlg-spinner" aria-hidden="true" />}
+        <span>{isSubmitting ? 'Registrando...' : 'Crear cuenta'}</span>
+      </button>
     </form>
   );
 };

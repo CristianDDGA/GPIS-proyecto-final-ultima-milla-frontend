@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 import type { FormEvent } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import {
@@ -41,11 +40,32 @@ function isEmailNotVerified(error: unknown): boolean {
   return error instanceof HttpError && error.code === 'EMAIL_NOT_VERIFIED';
 }
 
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
+function focusFirstInvalid(screen: AuthScreen, errors: ValidationErrors): void {
+  const orderByScreen: Record<AuthScreen, readonly { readonly field: string; readonly id: string }[]> = {
+    login: [
+      { field: 'email', id: 'auth-login-email' },
+      { field: 'password', id: 'auth-login-password' },
+    ],
+    register: [
+      { field: 'displayName', id: 'auth-register-display-name' },
+      { field: 'email', id: 'auth-register-email' },
+      { field: 'password', id: 'auth-register-password' },
+    ],
+    'verify-email': [{ field: 'code', id: 'auth-verify-code' }],
+    'forgot-password': [{ field: 'email', id: 'auth-forgot-email' }],
+    'reset-password': [
+      { field: 'email', id: 'auth-reset-email' },
+      { field: 'code', id: 'auth-reset-code' },
+      { field: 'newPassword', id: 'auth-reset-password' },
+    ],
+  };
+
+  for (const item of orderByScreen[screen]) {
+    if (errors[item.field]) {
+      document.getElementById(item.id)?.focus();
+      return;
+    }
+  }
 }
 
 function computeValidationErrors(
@@ -115,13 +135,17 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
   const [notice, setNotice] = useState<AuthNotice | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [shakeNonce, setShakeNonce] = useState(0);
 
   const mountedRef = useRef(true);
   const screenTitleRef = useRef<HTMLHeadingElement | null>(null);
   const loginTabRef = useRef<HTMLButtonElement | null>(null);
   const registerTabRef = useRef<HTMLButtonElement | null>(null);
   const restoreLoginFocusRef = useRef(false);
-  const activeTransitionRef = useRef<ViewTransition | null>(null);
+
+  const triggerShake = useCallback((): void => {
+    setShakeNonce((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -158,35 +182,18 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
   }, [screen]);
 
   const switchScreen = useCallback((next: AuthScreen): void => {
-    const apply = (): void => {
-      setScreen(next);
-      setTouched({});
-      setRequestError(null);
-    };
-
-    if (!prefersReducedMotion() && typeof document.startViewTransition === 'function') {
-      activeTransitionRef.current?.skipTransition();
-      const transition = document.startViewTransition(() => {
-        flushSync(apply);
-      });
-      activeTransitionRef.current = transition;
-      void transition.finished.finally(() => {
-        if (activeTransitionRef.current === transition) {
-          activeTransitionRef.current = null;
-        }
-      });
-      return;
-    }
-
-    apply();
+    setScreen(next);
+    setTouched({});
+    setRequestError(null);
   }, []);
 
   const selectPrimaryTab = useCallback(
     (tab: AuthTab): void => {
+      if (isSubmitting) return;
       setNotice(null);
       switchScreen(tab);
     },
-    [switchScreen],
+    [isSubmitting, switchScreen],
   );
 
   const goToLogin = useCallback((): void => {
@@ -196,10 +203,11 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
   }, [switchScreen]);
 
   const openForgotPassword = useCallback((): void => {
+    if (isSubmitting) return;
     setForgotEmail(loginEmail);
     setNotice(null);
     switchScreen('forgot-password');
-  }, [loginEmail, switchScreen]);
+  }, [isSubmitting, loginEmail, switchScreen]);
 
   const clearError = useCallback((): void => setRequestError(null), []);
   const clearNotice = useCallback((): void => setNotice(null), []);
@@ -235,11 +243,14 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
 
   const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    if (isSubmitting) return;
     setRequestError(null);
     setTouched({ email: true, password: true });
 
     if (Object.keys(validation).length > 0) {
       setRequestError(firstValidationError(validation) ?? 'Revisa los datos de acceso.');
+      triggerShake();
+      focusFirstInvalid('login', validation);
       return;
     }
 
@@ -272,6 +283,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
         setRequestError(
           toErrorMessage(error_, 'No se pudo iniciar sesión. Verifica tu correo y contraseña.'),
         );
+        triggerShake();
       }
     } finally {
       if (mountedRef.current) {
@@ -282,11 +294,14 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
 
   const handleRegisterSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    if (isSubmitting) return;
     setRequestError(null);
     setTouched({ email: true, password: true, displayName: true });
 
     if (Object.keys(validation).length > 0) {
       setRequestError(firstValidationError(validation) ?? 'Revisa los datos de registro.');
+      triggerShake();
+      focusFirstInvalid('register', validation);
       return;
     }
 
@@ -328,6 +343,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     } catch (error_) {
       if (mountedRef.current) {
         setRequestError(toErrorMessage(error_, 'No se pudo completar el registro de la cuenta.'));
+        triggerShake();
       }
     } finally {
       if (mountedRef.current) {
@@ -338,11 +354,14 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
 
   const handleVerifySubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    if (isSubmitting) return;
     setRequestError(null);
     setTouched({ code: true, email: true });
 
     if (Object.keys(validation).length > 0) {
       setRequestError(firstValidationError(validation) ?? 'Revisa el código ingresado.');
+      triggerShake();
+      focusFirstInvalid('verify-email', validation);
       return;
     }
 
@@ -362,6 +381,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     } catch (error_) {
       if (mountedRef.current) {
         setRequestError(toErrorMessage(error_, 'El código no es válido o ha caducado.'));
+        triggerShake();
       }
     } finally {
       if (mountedRef.current) {
@@ -390,17 +410,21 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     } catch (error_) {
       if (mountedRef.current) {
         setRequestError(toErrorMessage(error_, 'No se pudo reenviar el código.'));
+        triggerShake();
       }
     }
   };
 
   const handleForgotSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    if (isSubmitting) return;
     setRequestError(null);
     setTouched({ email: true });
 
     if (Object.keys(validation).length > 0) {
       setRequestError(firstValidationError(validation) ?? 'Ingresa un correo electrónico válido.');
+      triggerShake();
+      focusFirstInvalid('forgot-password', validation);
       return;
     }
 
@@ -423,6 +447,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     } catch (error_) {
       if (mountedRef.current) {
         setRequestError(toErrorMessage(error_, 'No se pudo solicitar el código de recuperación.'));
+        triggerShake();
       }
     } finally {
       if (mountedRef.current) {
@@ -433,6 +458,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
 
   const handleResetSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    if (isSubmitting) return;
     setRequestError(null);
     setTouched({ email: true, code: true, newPassword: true });
 
@@ -440,6 +466,8 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
       setRequestError(
         firstValidationError(validation) ?? 'Revisa el código y la nueva contraseña.',
       );
+      triggerShake();
+      focusFirstInvalid('reset-password', validation);
       return;
     }
 
@@ -468,6 +496,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     } catch (error_) {
       if (mountedRef.current) {
         setRequestError(toErrorMessage(error_, 'No se pudo restablecer la contraseña.'));
+        triggerShake();
       }
     } finally {
       if (mountedRef.current) {
@@ -505,6 +534,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     notice,
     isSubmitting,
     resendCooldown,
+    shakeNonce,
     registerStrength,
     resetStrength,
     screenTitleRef,

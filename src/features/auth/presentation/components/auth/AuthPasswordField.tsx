@@ -1,4 +1,11 @@
-import type { ChangeEventHandler, FC, FocusEventHandler } from 'react';
+import {
+  useState,
+  type ChangeEventHandler,
+  type FC,
+  type FocusEventHandler,
+  type KeyboardEvent,
+} from 'react';
+import { AlertCircleIcon } from './AuthIcons.js';
 
 export interface AuthPasswordFieldProps {
   readonly id: string;
@@ -17,8 +24,8 @@ export interface AuthPasswordFieldProps {
 }
 
 /**
- * Campo de contraseña accesible con botón de visibilidad integrado en el
- * contenedor de entrada para evitar desalineaciones con etiquetas o errores.
+ * Campo de contraseña accesible Liquid Glass con indicador de Bloq Mayús
+ * y botón integrado Mostrar / Ocultar.
  */
 export const AuthPasswordField: FC<AuthPasswordFieldProps> = ({
   id,
@@ -35,21 +42,36 @@ export const AuthPasswordField: FC<AuthPasswordFieldProps> = ({
   disabled = false,
   isRequired = true,
 }) => {
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const errorId = `${id}-error`;
 
+  const handleKeyState = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (typeof event.getModifierState === 'function') {
+      setCapsLockOn(event.getModifierState('CapsLock'));
+    }
+  };
+
   return (
-    <div className={`ui-input-field wf-password-field ${error ? 'ui-input-field--error' : ''}`}>
-      <label htmlFor={id} className="ui-input-label">
-        {label}
-        {isRequired && (
-          <span className="ui-input-required-mark" aria-hidden="true">
-            {' '}
-            *
+    <div className="mlg-field">
+      <div className="mlg-label-row">
+        <label htmlFor={id} className="mlg-label">
+          <span>{label}</span>
+          {isRequired && (
+            <span className="mlg-required" aria-hidden="true">
+              {' '}
+              *
+            </span>
+          )}
+        </label>
+
+        {capsLockOn && (
+          <span aria-live="polite" className="mlg-capslock-badge">
+            Bloq Mayús
           </span>
         )}
-      </label>
+      </div>
 
-      <div className="wf-input-wrap">
+      <div className="mlg-input-wrap">
         <input
           id={id}
           name={name}
@@ -58,17 +80,25 @@ export const AuthPasswordField: FC<AuthPasswordFieldProps> = ({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          onBlur={onBlur}
+          onKeyDown={handleKeyState}
+          onKeyUp={handleKeyState}
+          onBlur={(event) => {
+            setCapsLockOn(false);
+            onBlur(event);
+          }}
+          minLength={8}
           maxLength={128}
           disabled={disabled}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : undefined}
-          className="ui-input-control wf-input-wrap__control"
+          className={
+            'mlg-input mlg-input--password' + (error ? ' mlg-input--error' : '')
+          }
         />
 
         <button
           type="button"
-          className="wf-password-toggle"
+          className="mlg-password-toggle"
           onClick={onToggleVisible}
           aria-pressed={visible}
           aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
@@ -79,8 +109,9 @@ export const AuthPasswordField: FC<AuthPasswordFieldProps> = ({
       </div>
 
       {error && (
-        <p id={errorId} className="ui-input-message ui-input-message--error" role="alert">
-          {error}
+        <p id={errorId} role="alert" className="mlg-field-error">
+          <AlertCircleIcon className="mlg-field-error__icon" />
+          <span>{error}</span>
         </p>
       )}
     </div>
