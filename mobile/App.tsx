@@ -1,3 +1,3 @@
-import {AssignedRouteApp} from './src/bootstrap/AssignedRouteApp';
+import {MillastMobileApp} from './src/bootstrap/MillastMobileApp';
 
-export default AssignedRouteApp;
+export default MillastMobileApp;
