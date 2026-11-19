@@ -1,24 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
-import type { CSSProperties, FC, FormEvent, KeyboardEvent, ReactNode } from 'react';
+import { useCallback, type CSSProperties, type FC, type KeyboardEvent } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
-import {
-  evaluatePasswordStrength,
-  firstValidationError,
-  validateForgotPasswordInput,
-  validateLoginInput,
-  validateRegisterCustomerInput,
-  validateResetPasswordInput,
-  validateVerifyEmailInput,
-  type AuthUser,
-  type PasswordStrength,
-  type RegisterCustomerInput,
-  type ValidationErrors,
-} from '../../domain/index.js';
-import { setToken } from '../../infrastructure/http/authTokenStorage.js';
-import { HttpError } from '../../../../shared/infrastructure/http/index.js';
-import { Alert, Button, TextInput } from '../../../../shared/ui/index.js';
-import { MillastMark } from './MillastMark.js';
+import type { AuthUser } from '../../domain/index.js';
+import { Alert } from '../../../../shared/ui/index.js';
+import { useAuthFlows, type AuthScreen, type AuthTab } from '../hooks/useAuthFlows.js';
+import { AuthForgotPasswordForm } from './auth/AuthForgotPasswordForm.js';
+import { AuthLoginForm } from './auth/AuthLoginForm.js';
+import { AuthRegisterForm } from './auth/AuthRegisterForm.js';
+import { AuthResetPasswordForm } from './auth/AuthResetPasswordForm.js';
+import { AuthStudioShowcase } from './auth/AuthStudioShowcase.js';
+import { AuthTopNav } from './auth/AuthTopNav.js';
+import { AuthVerifyEmailForm } from './auth/AuthVerifyEmailForm.js';
+import { KineticText } from './auth/KineticText.js';
 import '../styles/auth.css';
 
 export interface AuthViewProps {
@@ -27,183 +19,36 @@ export interface AuthViewProps {
   onAuthenticated?: ((user: AuthUser) => void) | undefined;
 }
 
-type AuthScreen = 'login' | 'register' | 'verify-email' | 'forgot-password' | 'reset-password';
-
-type AuthTab = 'login' | 'register';
-
-interface Notice {
-  readonly type: 'success' | 'info';
-  readonly title: string;
-  readonly message: string;
-}
-
 const AUTH_TABS: readonly { readonly value: AuthTab; readonly label: string }[] = [
   { value: 'login', label: 'Iniciar sesión' },
   { value: 'register', label: 'Crear cuenta' },
 ];
 
-const STRENGTH_LABELS: Record<PasswordStrength, string> = {
-  weak: 'Débil',
-  medium: 'Media',
-  strong: 'Fuerte',
-};
-
-const STRENGTH_LEVEL: Record<PasswordStrength, number> = { weak: 1, medium: 2, strong: 3 };
-
-const RESEND_COOLDOWN_SECONDS = 60;
-
 const SECONDARY_TITLES: Record<Exclude<AuthScreen, 'login' | 'register'>, string> = {
   'verify-email': 'Verificar correo',
-  'forgot-password': 'Recuperar clave',
+  'forgot-password': 'Recuperar contraseña',
   'reset-password': 'Nueva contraseña',
 };
 
-function toErrorMessage(error: unknown, fallbackMessage: string): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message;
+function getSecondaryInstruction(
+  screen: Exclude<AuthScreen, 'login' | 'register'>,
+  verifyEmail: string,
+  resetEmail: string,
+): string {
+  switch (screen) {
+    case 'verify-email':
+      return verifyEmail.length > 0
+        ? `Código de 6 dígitos enviado a ${verifyEmail}.`
+        : 'Código de 6 dígitos enviado a tu correo.';
+    case 'forgot-password':
+      return 'Enviaremos un código de verificación de 6 dígitos a tu correo.';
+    case 'reset-password':
+      return `Código enviado a ${resetEmail.length > 0 ? resetEmail : 'tu correo'}.`;
   }
-
-  return fallbackMessage;
-}
-
-function isEmailNotVerified(error: unknown): boolean {
-  return error instanceof HttpError && error.code === 'EMAIL_NOT_VERIFIED';
-}
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
 }
 
 export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
-  const [screen, setScreen] = useState<AuthScreen>('login');
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
-  const [registerDisplayName, setRegisterDisplayName] = useState('');
-  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
-  const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
-  const [verifyCode, setVerifyCode] = useState('');
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetCode, setResetCode] = useState('');
-  const [resetPassword, setResetPassword] = useState('');
-  const [showResetPassword, setShowResetPassword] = useState(false);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<Notice | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  const mountedRef = useRef(true);
-  const screenTitleRef = useRef<HTMLHeadingElement | null>(null);
-  const loginTabRef = useRef<HTMLButtonElement | null>(null);
-  const registerTabRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  // Enfriamiento del botón "Reenviar código".
-  useEffect(() => {
-    if (resendCooldown <= 0) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setResendCooldown((seconds) => Math.max(0, seconds - 1));
-    }, 1000);
-
-    return () => window.clearTimeout(timer);
-  }, [resendCooldown]);
-
-  // Foco al título breve de las sub-vistas (accesibilidad de SPA).
-  useEffect(() => {
-    if (screen === 'login' || screen === 'register') {
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(() => screenTitleRef.current?.focus());
-    return () => window.cancelAnimationFrame(frame);
-  }, [screen]);
-
-  const switchScreen = useCallback((next: AuthScreen): void => {
-    const apply = (): void => {
-      setScreen(next);
-      setTouched({});
-      setRequestError(null);
-    };
-
-    if (!prefersReducedMotion() && typeof document.startViewTransition === 'function') {
-      document.startViewTransition(() => {
-        flushSync(apply);
-      });
-      return;
-    }
-
-    apply();
-  }, []);
-
-  const goToLogin = useCallback((): void => {
-    setLoginPassword('');
-    switchScreen('login');
-  }, [switchScreen]);
-
-  const clearError = useCallback((): void => setRequestError(null), []);
-  const clearNotice = useCallback((): void => setNotice(null), []);
-
-  const markTouched = useCallback((field: string): void => {
-    setTouched((previous) => ({ ...previous, [field]: true }));
-  }, []);
-
-  const validation: ValidationErrors = (() => {
-    switch (screen) {
-      case 'register': {
-        return validateRegisterCustomerInput({
-          email: registerEmail,
-          password: registerPassword,
-          displayName: registerDisplayName,
-        }).errors;
-      }
-      case 'verify-email': {
-        return validateVerifyEmailInput({ email: verifyEmailAddress, code: verifyCode }).errors;
-      }
-      case 'forgot-password': {
-        return validateForgotPasswordInput({ email: forgotEmail }).errors;
-      }
-      case 'reset-password': {
-        return validateResetPasswordInput({
-          email: resetEmail,
-          code: resetCode,
-          newPassword: resetPassword,
-        }).errors;
-      }
-      default: {
-        return validateLoginInput({ email: loginEmail, password: loginPassword }).errors;
-      }
-    }
-  })();
-
-  const errorFor = useCallback(
-    (field: string): string | undefined => (touched[field] ? validation[field] : undefined),
-    [touched, validation],
-  );
-
-  const registerStrength = evaluatePasswordStrength(registerPassword, registerEmail);
-  const resetStrength = evaluatePasswordStrength(resetPassword, resetEmail);
-
-  const activeTab: AuthTab = screen === 'register' ? 'register' : 'login';
-  const segmentedStyle = {
-    '--seg-index': activeTab === 'login' ? 0 : 1,
-    '--seg-count': AUTH_TABS.length,
-  } as CSSProperties;
+  const flows = useAuthFlows({ useCases, onAuthenticated });
 
   const handleTabKeyDown = useCallback(
     (event: KeyboardEvent<HTMLButtonElement>): void => {
@@ -212,705 +57,225 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
       }
 
       event.preventDefault();
-      const nextTab: AuthTab = activeTab === 'login' ? 'register' : 'login';
-      switchScreen(nextTab);
+      const nextTab: AuthTab = flows.activeTab === 'login' ? 'register' : 'login';
+      flows.selectPrimaryTab(nextTab);
 
       if (nextTab === 'login') {
-        loginTabRef.current?.focus();
+        flows.loginTabRef.current?.focus();
       } else {
-        registerTabRef.current?.focus();
+        flows.registerTabRef.current?.focus();
       }
     },
-    [activeTab, switchScreen],
+    [flows.activeTab, flows.loginTabRef, flows.registerTabRef, flows.selectPrimaryTab],
   );
 
-  const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setRequestError(null);
-    setTouched({ email: true, password: true });
+  const secondaryScreen = flows.isSecondary
+    ? (flows.screen as Exclude<AuthScreen, 'login' | 'register'>)
+    : null;
 
-    if (Object.keys(validation).length > 0) {
-      setRequestError(firstValidationError(validation) ?? 'Revisa los datos de acceso.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const session = await useCases.login.execute({ email: loginEmail, password: loginPassword });
-      setToken(session.token);
-
-      if (mountedRef.current) {
-        setLoginPassword('');
-        onAuthenticated?.(session.user);
-      }
-    } catch (error_) {
-      if (!mountedRef.current) {
-        return;
-      }
-
-      if (isEmailNotVerified(error_)) {
-        setVerifyEmailAddress(loginEmail);
-        setVerifyCode('');
-        setNotice({
-          type: 'info',
-          title: 'Verifica tu correo',
-          message: 'Ingresa el código de 6 dígitos que enviamos a tu bandeja.',
-        });
-        setResendCooldown(RESEND_COOLDOWN_SECONDS);
-        switchScreen('verify-email');
-      } else {
-        setRequestError(
-          toErrorMessage(error_, 'No se pudo iniciar sesión. Verifica tu correo y contraseña.'),
-        );
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  const handleRegisterSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setRequestError(null);
-    setTouched({ email: true, password: true, displayName: true });
-
-    if (Object.keys(validation).length > 0) {
-      setRequestError(firstValidationError(validation) ?? 'Revisa los datos de registro.');
-      return;
-    }
-
-    const trimmedDisplayName = registerDisplayName.trim();
-    const registerInput: RegisterCustomerInput = {
-      email: registerEmail,
-      password: registerPassword,
-    };
-
-    if (trimmedDisplayName.length > 0) {
-      registerInput.displayName = trimmedDisplayName;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const outcome = await useCases.registerCustomer.execute(registerInput);
-
-      if (!mountedRef.current) {
-        return;
-      }
-
-      if (outcome.kind === 'session') {
-        setToken(outcome.session.token);
-        setRegisterPassword('');
-        onAuthenticated?.(outcome.session.user);
-        return;
-      }
-
-      setVerifyEmailAddress(registerEmail);
-      setVerifyCode('');
-      setNotice({
-        type: 'info',
-        title: 'Verifica tu correo',
-        message: 'Enviamos un código de 6 dígitos para activar tu cuenta.',
-      });
-      setResendCooldown(RESEND_COOLDOWN_SECONDS);
-      switchScreen('verify-email');
-    } catch (error_) {
-      if (mountedRef.current) {
-        setRequestError(toErrorMessage(error_, 'No se pudo completar el registro de la cuenta.'));
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  const handleVerifySubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setRequestError(null);
-    setTouched({ code: true, email: true });
-
-    if (Object.keys(validation).length > 0) {
-      setRequestError(firstValidationError(validation) ?? 'Revisa el código ingresado.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const session = await useCases.verifyEmail.execute({
-        email: verifyEmailAddress,
-        code: verifyCode,
-      });
-      setToken(session.token);
-
-      if (mountedRef.current) {
-        setVerifyCode('');
-        onAuthenticated?.(session.user);
-      }
-    } catch (error_) {
-      if (mountedRef.current) {
-        setRequestError(toErrorMessage(error_, 'El código no es válido o ha caducado.'));
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  const handleResendVerification = async (): Promise<void> => {
-    if (resendCooldown > 0) {
-      return;
-    }
-
-    setRequestError(null);
-
-    try {
-      await useCases.resendVerification.execute(verifyEmailAddress);
-      if (mountedRef.current) {
-        setNotice({
-          type: 'success',
-          title: 'Código reenviado',
-          message: 'Si el correo está pendiente, enviamos un nuevo código.',
-        });
-        setResendCooldown(RESEND_COOLDOWN_SECONDS);
-      }
-    } catch (error_) {
-      if (mountedRef.current) {
-        setRequestError(toErrorMessage(error_, 'No se pudo reenviar el código.'));
-      }
-    }
-  };
-
-  const handleForgotSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setRequestError(null);
-    setTouched({ email: true });
-
-    if (Object.keys(validation).length > 0) {
-      setRequestError(firstValidationError(validation) ?? 'Ingresa un correo electrónico válido.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await useCases.forgotPassword.execute({ email: forgotEmail });
-
-      if (mountedRef.current) {
-        setResetEmail(forgotEmail);
-        setResetCode('');
-        setResetPassword('');
-        setNotice({
-          type: 'success',
-          title: 'Código enviado',
-          message: 'Si la cuenta existe, enviamos un código de 6 dígitos a tu correo.',
-        });
-        switchScreen('reset-password');
-      }
-    } catch (error_) {
-      if (mountedRef.current) {
-        setRequestError(toErrorMessage(error_, 'No se pudo solicitar el código de recuperación.'));
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  const handleResetSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setRequestError(null);
-    setTouched({ email: true, code: true, newPassword: true });
-
-    if (Object.keys(validation).length > 0) {
-      setRequestError(firstValidationError(validation) ?? 'Revisa el código y la nueva contraseña.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await useCases.resetPassword.execute({
-        email: resetEmail,
-        code: resetCode,
-        newPassword: resetPassword,
-      });
-
-      if (mountedRef.current) {
-        setLoginEmail(resetEmail);
-        setLoginPassword('');
-        setResetCode('');
-        setResetPassword('');
-        setNotice({
-          type: 'success',
-          title: 'Contraseña actualizada',
-          message: 'Ya puedes iniciar sesión con tu nueva contraseña.',
-        });
-        switchScreen('login');
-      }
-    } catch (error_) {
-      if (mountedRef.current) {
-        setRequestError(toErrorMessage(error_, 'No se pudo restablecer la contraseña.'));
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  const isSecondary = screen !== 'login' && screen !== 'register';
-
-  const secondaryInstruction =
-    screen === 'verify-email'
-      ? verifyEmailAddress.length > 0
-        ? 'Código de 6 dígitos enviado a ' + verifyEmailAddress + '.'
-        : 'Código de 6 dígitos enviado a tu correo.'
-      : screen === 'forgot-password'
-        ? 'Enviaremos un código de 6 dígitos a tu correo.'
-        : 'Código enviado a ' + (resetEmail.length > 0 ? resetEmail : 'tu correo') + '.';
-
-  const renderStrength = (strength: PasswordStrength): ReactNode => (
-    <div className="auth-strength" data-strength={strength} aria-live="polite">
-      <span className="auth-strength__pills" aria-hidden="true">
-        {[1, 2, 3].map((level) => (
-          <span
-            key={level}
-            className={'auth-strength__pill ' + (level <= STRENGTH_LEVEL[strength] ? 'auth-strength__pill--on' : '')}
-          />
-        ))}
-      </span>
-      <span className="auth-strength__label">Seguridad: {STRENGTH_LABELS[strength]}</span>
-    </div>
-  );
+  const primaryTitle = flows.activeTab === 'login' ? 'Accede a tu consola' : 'Crea tu cuenta';
+  const segmentedStyle = {
+    '--wf-seg-index': flows.activeTab === 'login' ? 0 : 1,
+  } as CSSProperties;
 
   return (
-    <section className="auth-viewport" aria-label="Acceso a Millast">
-      {/* Atmósfera AuthKit: canvas midnight + retícula blueprint + spotlight. */}
-      <div className="auth-atmosphere" aria-hidden="true" />
+    <div className="wf-auth-studio">
+      <AuthTopNav />
 
-      {/* Tarjeta de acceso centrada: la marca vive dentro de la tarjeta. */}
-      <div className="auth-card">
-        <div className="auth-card__body">
-          <header className="auth-brand">
-            <MillastMark className="auth-brand__mark" />
-            <div className="auth-brand__lockup">
-              <h1 className="auth-brand__title">Millast</h1>
-              <p className="auth-brand__tagline">Rutas óptimas para tu última milla</p>
-            </div>
-          </header>
+      <main className="wf-auth-main" aria-label="Acceso a Millast">
+        <AuthStudioShowcase />
 
-          {!isSecondary ? (
-            <div className="auth-segmented segmented" role="tablist" aria-label="Modo de acceso" style={segmentedStyle}>
-              <span className="segmented__thumb" aria-hidden="true" />
-              <button
-                ref={loginTabRef}
-                type="button"
-                role="tab"
-                id="auth-tab-login"
-                aria-selected={activeTab === 'login'}
-                aria-controls="auth-panel-login"
-                tabIndex={activeTab === 'login' ? 0 : -1}
-                className={'auth-tab ' + (activeTab === 'login' ? 'auth-tab--active' : '')}
-                onClick={() => {
-                  setNotice(null);
-                  switchScreen('login');
-                }}
-                onKeyDown={handleTabKeyDown}
-              >
-                Iniciar sesión
-              </button>
-              <button
-                ref={registerTabRef}
-                type="button"
-                role="tab"
-                id="auth-tab-register"
-                aria-selected={activeTab === 'register'}
-                aria-controls="auth-panel-register"
-                tabIndex={activeTab === 'register' ? 0 : -1}
-                className={'auth-tab ' + (activeTab === 'register' ? 'auth-tab--active' : '')}
-                onClick={() => {
-                  setNotice(null);
-                  switchScreen('register');
-                }}
-                onKeyDown={handleTabKeyDown}
-              >
-                Crear cuenta
-              </button>
-            </div>
-          ) : (
-            <button type="button" className="auth-back" onClick={goToLogin}>
-              ← Volver
-            </button>
-          )}
-
-          {isSecondary && (
-            <header className="auth-card__head">
-              <h2 ref={screenTitleRef} tabIndex={-1} className="auth-card__title">
-                {SECONDARY_TITLES[screen as Exclude<AuthScreen, 'login' | 'register'>]}
-              </h2>
-              <p className="auth-card__instruction">{secondaryInstruction}</p>
-            </header>
-          )}
-
-          {requestError !== null && (
-            <Alert type="error" title="Atención" onClose={clearError}>
-              {requestError}
-            </Alert>
-          )}
-
-          {notice !== null && (
-            <Alert type={notice.type} title={notice.title} onClose={clearNotice}>
-              {notice.message}
-            </Alert>
-          )}
-
-          {screen === 'login' && (
-            <form
-              id="auth-panel-login"
-              role="tabpanel"
-              aria-labelledby="auth-tab-login"
-              className="auth-form"
-              onSubmit={handleLoginSubmit}
-              noValidate
-            >
-              <TextInput
-                id="auth-login-email"
-                label="Correo electrónico"
-                type="email"
-                name="email"
-                autoComplete="username"
-                placeholder="usuario@millast.ec"
-                value={loginEmail}
-                onChange={(event) => {
-                  setLoginEmail(event.target.value);
-                  setRequestError(null);
-                }}
-                onBlur={() => markTouched('email')}
-                error={errorFor('email')}
-                isRequired
-                maxLength={254}
-                disabled={isSubmitting}
-              />
-
-              <div className="auth-password-field">
-                <TextInput
-                  id="auth-login-password"
-                  label="Contraseña"
-                  type={showLoginPassword ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="current-password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={loginPassword}
-                  onChange={(event) => {
-                    setLoginPassword(event.target.value);
-                    setRequestError(null);
-                  }}
-                  onBlur={() => markTouched('password')}
-                  error={errorFor('password')}
-                  isRequired
-                  maxLength={128}
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  className="auth-password-toggle"
-                  onClick={() => setShowLoginPassword((previous) => !previous)}
-                  aria-pressed={showLoginPassword}
-                  aria-label={showLoginPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        <section className="wf-auth-card" aria-label="Formulario de autenticación">
+          <div className="wf-auth-card__body">
+            {!flows.isSecondary ? (
+              <>
+                <div
+                  className="wf-segmented"
+                  role="tablist"
+                  aria-label="Modo de acceso"
+                  style={segmentedStyle}
                 >
-                  {showLoginPassword ? 'Ocultar' : 'Mostrar'}
+                  <span className="wf-segmented__thumb" aria-hidden="true" />
+                  {AUTH_TABS.map((tab) => {
+                    const isSelected = flows.activeTab === tab.value;
+                    return (
+                      <button
+                        key={tab.value}
+                        ref={tab.value === 'login' ? flows.loginTabRef : flows.registerTabRef}
+                        type="button"
+                        role="tab"
+                        id={`auth-tab-${tab.value}`}
+                        aria-selected={isSelected}
+                        aria-controls={`auth-panel-${tab.value}`}
+                        tabIndex={isSelected ? 0 : -1}
+                        className={'wf-tab ' + (isSelected ? 'wf-tab--active' : '')}
+                        onClick={() => flows.selectPrimaryTab(tab.value)}
+                        onKeyDown={handleTabKeyDown}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <header className="wf-auth-card__head">
+                  <KineticText
+                    key={primaryTitle}
+                    as="h2"
+                    text={primaryTitle}
+                    className="wf-auth-card__title"
+                    staggerMs={45}
+                  />
+                  <p className="wf-auth-card__instruction">
+                    {flows.activeTab === 'login'
+                      ? 'Ingresa con tu cuenta de administrador, repartidor o cliente.'
+                      : 'Regístrate para solicitar y seguir entregas en tu zona.'}
+                  </p>
+                </header>
+              </>
+            ) : (
+              <>
+                <button type="button" className="wf-back-link" onClick={flows.goToLogin}>
+                  ← Volver a iniciar sesión
                 </button>
-                <button
-                  type="button"
-                  className="auth-forgot-link"
-                  onClick={() => {
-                    setForgotEmail(loginEmail);
-                    setNotice(null);
-                    switchScreen('forgot-password');
-                  }}
-                >
-                  ¿Olvidaste tu contraseña?
-                </button>
-              </div>
 
-              <div className="auth-form__actions">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={isSubmitting}
-                  disabled={isSubmitting}
-                >
-                  Entrar al sistema
-                </Button>
-              </div>
-            </form>
-          )}
+                {secondaryScreen !== null && (
+                  <header className="wf-auth-card__head">
+                    <KineticText
+                      key={SECONDARY_TITLES[secondaryScreen]}
+                      as="h2"
+                      elementRef={flows.screenTitleRef}
+                      tabIndex={-1}
+                      text={SECONDARY_TITLES[secondaryScreen]}
+                      className="wf-auth-card__title"
+                      staggerMs={45}
+                    />
+                    <p className="wf-auth-card__instruction">
+                      {getSecondaryInstruction(
+                        secondaryScreen,
+                        flows.verifyEmailAddress,
+                        flows.resetEmail,
+                      )}
+                    </p>
+                  </header>
+                )}
+              </>
+            )}
 
-          {screen === 'register' && (
-            <form
-              id="auth-panel-register"
-              role="tabpanel"
-              aria-labelledby="auth-tab-register"
-              className="auth-form"
-              onSubmit={handleRegisterSubmit}
-              noValidate
-            >
-              <TextInput
-                id="auth-register-email"
-                label="Correo electrónico"
-                type="email"
-                name="email"
-                autoComplete="email"
-                placeholder="cliente@millast.ec"
-                value={registerEmail}
-                onChange={(event) => {
-                  setRegisterEmail(event.target.value);
-                  setRequestError(null);
+            {flows.requestError !== null && (
+              <Alert type="error" title="Atención" onClose={flows.clearError}>
+                {flows.requestError}
+              </Alert>
+            )}
+
+            {flows.notice !== null && (
+              <Alert type={flows.notice.type} title={flows.notice.title} onClose={flows.clearNotice}>
+                {flows.notice.message}
+              </Alert>
+            )}
+
+            {flows.screen === 'login' && (
+              <AuthLoginForm
+                email={flows.loginEmail}
+                password={flows.loginPassword}
+                onEmailChange={flows.setLoginEmail}
+                onPasswordChange={flows.setLoginPassword}
+                onClearError={flows.clearError}
+                onMarkTouched={flows.markTouched}
+                errorFor={flows.errorFor}
+                onOpenForgotPassword={flows.openForgotPassword}
+                onSubmit={flows.handleLoginSubmit}
+                isSubmitting={flows.isSubmitting}
+              />
+            )}
+
+            {flows.screen === 'register' && (
+              <AuthRegisterForm
+                email={flows.registerEmail}
+                password={flows.registerPassword}
+                displayName={flows.registerDisplayName}
+                strength={flows.registerStrength}
+                onEmailChange={flows.setRegisterEmail}
+                onPasswordChange={flows.setRegisterPassword}
+                onDisplayNameChange={flows.setRegisterDisplayName}
+                onClearError={flows.clearError}
+                onMarkTouched={flows.markTouched}
+                errorFor={flows.errorFor}
+                onSubmit={flows.handleRegisterSubmit}
+                isSubmitting={flows.isSubmitting}
+              />
+            )}
+
+            {flows.screen === 'verify-email' && (
+              <AuthVerifyEmailForm
+                code={flows.verifyCode}
+                onCodeChange={flows.setVerifyCode}
+                onClearError={flows.clearError}
+                onMarkTouched={flows.markTouched}
+                errorFor={flows.errorFor}
+                resendCooldown={flows.resendCooldown}
+                onResend={() => {
+                  void flows.handleResendVerification();
                 }}
-                onBlur={() => markTouched('email')}
-                error={errorFor('email')}
-                isRequired
-                maxLength={254}
-                disabled={isSubmitting}
+                onSubmit={flows.handleVerifySubmit}
+                isSubmitting={flows.isSubmitting}
               />
+            )}
 
-              <div className="auth-password-field">
-                <TextInput
-                  id="auth-register-password"
-                  label="Contraseña"
-                  type={showRegisterPassword ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="new-password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={registerPassword}
-                  onChange={(event) => {
-                    setRegisterPassword(event.target.value);
-                    setRequestError(null);
-                  }}
-                  onBlur={() => markTouched('password')}
-                  error={errorFor('password')}
-                  isRequired
-                  maxLength={128}
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  className="auth-password-toggle"
-                  onClick={() => setShowRegisterPassword((previous) => !previous)}
-                  aria-pressed={showRegisterPassword}
-                  aria-label={showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                >
-                  {showRegisterPassword ? 'Ocultar' : 'Mostrar'}
-                </button>
-              </div>
-
-              {registerPassword.length > 0 && renderStrength(registerStrength)}
-
-              <TextInput
-                id="auth-register-display-name"
-                label="Nombre para mostrar (opcional)"
-                type="text"
-                name="displayName"
-                autoComplete="name"
-                placeholder="Ej. Ana Paredes"
-                value={registerDisplayName}
-                onChange={(event) => {
-                  setRegisterDisplayName(event.target.value);
-                  setRequestError(null);
-                }}
-                onBlur={() => markTouched('displayName')}
-                error={errorFor('displayName')}
-                maxLength={120}
-                disabled={isSubmitting}
+            {flows.screen === 'forgot-password' && (
+              <AuthForgotPasswordForm
+                email={flows.forgotEmail}
+                onEmailChange={flows.setForgotEmail}
+                onClearError={flows.clearError}
+                onMarkTouched={flows.markTouched}
+                errorFor={flows.errorFor}
+                onSubmit={flows.handleForgotSubmit}
+                isSubmitting={flows.isSubmitting}
               />
+            )}
 
-              <div className="auth-form__actions">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={isSubmitting}
-                  disabled={isSubmitting}
-                >
-                  Crear cuenta
-                </Button>
-              </div>
-            </form>
-          )}
-
-          {screen === 'verify-email' && (
-            <form id="auth-panel-verify" className="auth-form" onSubmit={handleVerifySubmit} noValidate>
-              <TextInput
-                id="auth-verify-code"
-                className="auth-code-field"
-                label="Código de verificación"
-                type="text"
-                name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                placeholder="000000"
-                value={verifyCode}
-                onChange={(event) => {
-                  setVerifyCode(event.target.value.replace(/\D/gu, '').slice(0, 6));
-                  setRequestError(null);
-                }}
-                onBlur={() => markTouched('code')}
-                error={errorFor('code')}
-                isRequired
-                maxLength={6}
-                disabled={isSubmitting}
+            {flows.screen === 'reset-password' && (
+              <AuthResetPasswordForm
+                email={flows.resetEmail}
+                code={flows.resetCode}
+                newPassword={flows.resetPassword}
+                strength={flows.resetStrength}
+                onEmailChange={flows.setResetEmail}
+                onCodeChange={flows.setResetCode}
+                onPasswordChange={flows.setResetPassword}
+                onClearError={flows.clearError}
+                onMarkTouched={flows.markTouched}
+                errorFor={flows.errorFor}
+                onSubmit={flows.handleResetSubmit}
+                isSubmitting={flows.isSubmitting}
               />
+            )}
 
-              <div className="auth-form__actions">
-                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                  Confirmar código
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    void handleResendVerification();
-                  }}
-                  disabled={resendCooldown > 0 || isSubmitting}
-                >
-                  {resendCooldown > 0 ? 'Reenviar en ' + resendCooldown + ' s' : 'Reenviar código'}
-                </Button>
-              </div>
-            </form>
-          )}
-
-          {screen === 'forgot-password' && (
-            <form id="auth-panel-forgot" className="auth-form" onSubmit={handleForgotSubmit} noValidate>
-              <TextInput
-                id="auth-forgot-email"
-                label="Correo electrónico"
-                type="email"
-                name="email"
-                autoComplete="username"
-                placeholder="usuario@millast.ec"
-                value={forgotEmail}
-                onChange={(event) => {
-                  setForgotEmail(event.target.value);
-                  setRequestError(null);
-                }}
-                onBlur={() => markTouched('email')}
-                error={errorFor('email')}
-                isRequired
-                maxLength={254}
-                disabled={isSubmitting}
-              />
-
-              <div className="auth-form__actions">
-                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                  Enviar código
-                </Button>
-              </div>
-            </form>
-          )}
-
-          {screen === 'reset-password' && (
-            <form id="auth-panel-reset" className="auth-form" onSubmit={handleResetSubmit} noValidate>
-              <TextInput
-                id="auth-reset-email"
-                label="Correo electrónico"
-                type="email"
-                name="email"
-                autoComplete="username"
-                value={resetEmail}
-                onChange={(event) => {
-                  setResetEmail(event.target.value);
-                  setRequestError(null);
-                }}
-                onBlur={() => markTouched('email')}
-                error={errorFor('email')}
-                isRequired
-                maxLength={254}
-                disabled={isSubmitting}
-              />
-
-              <TextInput
-                id="auth-reset-code"
-                className="auth-code-field"
-                label="Código de recuperación"
-                type="text"
-                name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                placeholder="000000"
-                value={resetCode}
-                onChange={(event) => {
-                  setResetCode(event.target.value.replace(/\D/gu, '').slice(0, 6));
-                  setRequestError(null);
-                }}
-                onBlur={() => markTouched('code')}
-                error={errorFor('code')}
-                isRequired
-                maxLength={6}
-                disabled={isSubmitting}
-              />
-
-              <div className="auth-password-field">
-                <TextInput
-                  id="auth-reset-password"
-                  label="Nueva contraseña"
-                  type={showResetPassword ? 'text' : 'password'}
-                  name="newPassword"
-                  autoComplete="new-password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={resetPassword}
-                  onChange={(event) => {
-                    setResetPassword(event.target.value);
-                    setRequestError(null);
-                  }}
-                  onBlur={() => markTouched('newPassword')}
-                  error={errorFor('newPassword')}
-                  isRequired
-                  maxLength={128}
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  className="auth-password-toggle"
-                  onClick={() => setShowResetPassword((previous) => !previous)}
-                  aria-pressed={showResetPassword}
-                  aria-label={showResetPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                >
-                  {showResetPassword ? 'Ocultar' : 'Mostrar'}
-                </button>
-              </div>
-
-              {resetPassword.length > 0 && renderStrength(resetStrength)}
-
-              <div className="auth-form__actions">
-                <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-                  Restablecer contraseña
-                </Button>
-              </div>
-            </form>
-          )}
-
-          <p className="auth-card__footer">
-            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <path
-                d="M8 1.6 13.2 3.6v4.1c0 3.1-2.1 5.7-5.2 6.9-3.1-1.2-5.2-3.8-5.2-6.9V3.6L8 1.6Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinejoin="round"
-              />
-              <path d="m5.8 8 1.5 1.5L10.4 6.4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Acceso seguro · cifrado en tránsito
-          </p>
-        </div>
-      </div>
-    </section>
+            <footer className="wf-auth-card__footer">
+              <span className="wf-auth-card__trust">
+                <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <path
+                    d="M8 1.6 13.2 3.6v4.1c0 3.1-2.1 5.7-5.2 6.9-3.1-1.2-5.2-3.8-5.2-6.9V3.6L8 1.6Z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="m5.8 8 1.5 1.5L10.4 6.4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Sesión cifrada en tránsito
+              </span>
+            </footer>
+          </div>
+        </section>
+      </main>
+    </div>
   );
 };

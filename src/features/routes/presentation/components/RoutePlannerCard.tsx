@@ -18,6 +18,16 @@ export interface RoutePlannerCardProps {
 
 const DEFAULT_CAPACITY_LIMIT = '4';
 
+function readInitialServiceDate(): string {
+  if (typeof window !== 'undefined') {
+    const param = new URLSearchParams(window.location.search).get('deliveryDate');
+    if (param && /^\d{4}-\d{2}-\d{2}$/.test(param)) {
+      return param;
+    }
+  }
+  return getTodayIsoDate();
+}
+
 export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
   isPlanning,
   planError,
@@ -26,7 +36,7 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
   onPlan,
   onClearFeedback,
 }) => {
-  const [serviceDate, setServiceDate] = useState(getTodayIsoDate);
+  const [serviceDate, setServiceDate] = useState(readInitialServiceDate);
   const [capacityLimit, setCapacityLimit] = useState(DEFAULT_CAPACITY_LIMIT);
 
   const validation = validatePlanRoutesInput({ serviceDate, capacityLimit: Number(capacityLimit) });
@@ -43,11 +53,7 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
     <Card variant="elevated" className="routes-operation-card">
       <div className="routes-operation-card__header">
         <h3 className="routes-operation-card__title">Generar plan de rutas</h3>
-        <span className="routes-operation-card__tag">Etapa 3a</span>
       </div>
-      <p className="routes-operation-card__hint">
-        Agrupa los pedidos pendientes por zona y hora de entrega en rutas con capacidad limitada.
-      </p>
 
       <form className="routes-form" onSubmit={handleSubmit} aria-label="Generar plan de rutas">
         <div className="routes-form__row">
@@ -67,7 +73,6 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
             value={capacityLimit}
             onChange={(event) => setCapacityLimit(event.target.value)}
             error={validation.errors['capacityLimit']}
-            helperText="Pedidos que puede transportar cada ruta."
             isRequired
           />
         </div>

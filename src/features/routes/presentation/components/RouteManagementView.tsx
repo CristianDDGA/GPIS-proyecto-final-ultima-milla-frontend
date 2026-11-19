@@ -70,9 +70,7 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
       <KineticHeader
         id="routes-view-title"
         level="h2"
-        eyebrow="Etapa 3 · Planificación"
         title="Planificación y operaciones de ruta"
-        description="Agrupa los pedidos pendientes en rutas con capacidad controlada, ajusta el orden de las paradas y opera cada ruta antes del despacho."
         actions={
           <Button
             type="button"
@@ -99,7 +97,7 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
         </Alert>
       )}
 
-      {isAdmin ? (
+      {isAdmin && (
         <div className="routes-operations-grid">
           <RoutePlannerCard
             isPlanning={routes.isPlanning}
@@ -116,11 +114,6 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
             onInspectRoute={(routeId) => void routes.inspectRoute(routeId)}
           />
         </div>
-      ) : (
-        <Alert type="info" title="Modo consulta">
-          Sólo el personal administrativo puede generar planificaciones, reordenar paradas,
-          cancelar rutas o reubicar pedidos. Puedes consultar el listado y el detalle de cada ruta.
-        </Alert>
       )}
 
       <Card variant="elevated" className="routes-list-card">

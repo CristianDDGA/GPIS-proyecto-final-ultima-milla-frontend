@@ -1,25 +1,29 @@
+/* ============================================================================
+   IsometricCapacityCube · Paleta Webflow Studio (DESIGN.md)
+   Usa exclusivamente #ffffff, #f0f0f0, #d8d8d8, #146ef5, #6ca7ff, #60ed76 y #ffa666.
+   ========================================================================== */
+
 .iso-cube {
-  --slot-top-from: #e2eafc;
-  --slot-top-to: #cad8f8;
-  --slot-left: #9fb6e6;
-  --slot-right: #7d97cf;
-  --pad-top: #eef2fa;
-  --pad-left: #dfe6f3;
-  --pad-right: #cdd7e9;
+  --slot-top-from: var(--color-mercury-tint, #6ca7ff);
+  --slot-left: #3b88fa;
+  --slot-right: var(--color-webflow-blue, #146ef5);
+  --pad-top: var(--color-pure-white, #ffffff);
+  --pad-left: var(--color-mist, #f0f0f0);
+  --pad-right: #e2e2e2;
 
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.125rem;
-  padding: 0.25rem 0.375rem;
-  border-radius: var(--radius-md, 0.625rem);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(244, 246, 251, 0.7));
-  border: 1px solid var(--color-border, #dde4f0);
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: var(--radius-tags, 4px);
+  background-color: var(--color-pure-white, #ffffff);
+  border: 1px solid var(--color-ash-border, #d8d8d8);
 }
 
 .iso-cube__svg {
   display: block;
-  width: 4.5rem;
+  width: 68px;
   max-width: 100%;
   height: auto;
   overflow: visible;
@@ -27,38 +31,37 @@
 
 .iso-cube__face {
   stroke-linejoin: round;
-  stroke-width: 0.02;
-  stroke: rgba(10, 16, 32, 0.1);
+  stroke-width: 1px;
+  stroke: var(--color-ash-border, #d8d8d8);
+  vector-effect: non-scaling-stroke;
 }
 
 .iso-cube__slot .iso-cube__face--top {
-  fill: #cfd9e8;
-  opacity: 0.85;
+  fill: var(--color-pure-white, #ffffff);
 }
 
 .iso-cube__slot .iso-cube__face--left {
-  fill: #bfcbdd;
-  opacity: 0.8;
+  fill: var(--color-mist, #f0f0f0);
 }
 
 .iso-cube__slot .iso-cube__face--right {
-  fill: #adbacd;
-  opacity: 0.8;
+  fill: #e5e5e5;
+}
+
+.iso-cube__slot--filled .iso-cube__face {
+  stroke: rgba(8, 8, 8, 0.16);
 }
 
 .iso-cube__slot--filled .iso-cube__face--top {
   fill: var(--slot-top-from);
-  opacity: 1;
 }
 
 .iso-cube__slot--filled .iso-cube__face--left {
   fill: var(--slot-left);
-  opacity: 1;
 }
 
 .iso-cube__slot--filled .iso-cube__face--right {
   fill: var(--slot-right);
-  opacity: 1;
 }
 
 .iso-cube__pad.iso-cube__face--top {
@@ -76,58 +79,53 @@
 .iso-cube__caption {
   display: flex;
   align-items: baseline;
-  gap: 0.25rem;
+  gap: 4px;
   margin: 0;
 }
 
 .iso-cube__count {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text-primary, #0b1120);
+  color: var(--color-obsidian, #080808);
 }
 
 .iso-cube__separator {
-  color: var(--text-tertiary, #64748b);
-  padding: 0 0.0625rem;
+  color: var(--color-slate, #5a5a5a);
+  padding: 0 1px;
 }
 
 .iso-cube__unit {
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-tertiary, #64748b);
+  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-slate, #5a5a5a);
 }
 
-/* Paletas por estado operativo de la ruta. */
+/* Estados operativos con la paleta de microilustración de DESIGN.md */
 .iso-cube--planificada {
-  --slot-top-from: #bcd0fb;
-  --slot-top-to: #93b0f7;
-  --slot-left: #5b83e4;
-  --slot-right: #3c63c9;
+  --slot-top-from: var(--color-mercury-tint, #6ca7ff);
+  --slot-left: var(--color-webflow-blue, #146ef5);
+  --slot-right: var(--color-indigo-ink, #1366e2);
 }
 
 .iso-cube--asignada,
 .iso-cube--en_curso {
-  --slot-top-from: #bae6fd;
-  --slot-top-to: #7dd3fc;
-  --slot-left: #38bdf8;
-  --slot-right: #0e8fc4;
+  --slot-top-from: var(--color-apricot-glow, #ffa666);
+  --slot-left: #f08842;
+  --slot-right: #d46d28;
 }
 
 .iso-cube--completada,
 .iso-cube--entregado {
-  --slot-top-from: #b6f4e8;
-  --slot-top-to: #6ee7d3;
-  --slot-left: #2dd4bf;
-  --slot-right: #0d9488;
+  --slot-top-from: var(--color-mint-pulse, #60ed76);
+  --slot-left: #38d252;
+  --slot-right: #1fb03a;
 }
 
 .iso-cube--cancelada {
-  --slot-top-from: #e2e8f0;
-  --slot-top-to: #cbd5e1;
-  --slot-left: #94a3b8;
-  --slot-right: #64748b;
+  --slot-top-from: var(--color-mist, #f0f0f0);
+  --slot-left: #dcdcdc;
+  --slot-right: var(--color-smoke, #bdbdbd);
 }

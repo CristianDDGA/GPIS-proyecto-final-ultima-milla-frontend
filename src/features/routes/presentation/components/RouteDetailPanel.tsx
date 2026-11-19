@@ -232,7 +232,11 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
         </h4>
 
         {orderedStops.length === 0 ? (
-          <p className="routes-stops__empty">Esta ruta todavía no tiene paradas asignadas.</p>
+          <p className="routes-stops__empty">
+            {route.status === 'completada'
+              ? 'Ruta completada: las paradas fueron archivadas al confirmar el cierre.'
+              : 'Esta ruta todavía no tiene paradas asignadas.'}
+          </p>
         ) : (
           <div className="routes-table-wrapper">
             <table className="routes-table" aria-label="Paradas de la ruta seleccionada">
