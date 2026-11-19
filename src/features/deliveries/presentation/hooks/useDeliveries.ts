@@ -13,6 +13,10 @@ import {
 import type { DeliveryActor } from '../components/DeliveryExecutionView.js';
 import { HttpError } from '../../../../shared/infrastructure/http/index.js';
 
+export interface UseDeliveriesOptions {
+  readonly onDeliveryChanged?: (() => void) | undefined;
+}
+
 export interface UseDeliveriesResult {
   selectedCourierId: string;
   setSelectedCourierId: (courierId: string) => void;
@@ -27,6 +31,7 @@ export interface UseDeliveriesResult {
   loadActiveRoute: () => Promise<void>;
   courierAvailability: boolean | null;
   isUpdatingAvailability: boolean;
+  setAvailability: (available: boolean) => Promise<void>;
   toggleAvailability: () => Promise<void>;
   deliveryRecords: Record<string, DeliveryOrder>;
   isLoadingDeliveryRecords: boolean;
@@ -70,7 +75,9 @@ export function useDeliveries(
   useCases: DeliveryUseCases,
   courierUseCases: CourierUseCases,
   actor: DeliveryActor,
+  options?: UseDeliveriesOptions,
 ): UseDeliveriesResult {
+  const onDeliveryChanged = options?.onDeliveryChanged;
   const [selectedCourierId, setSelectedCourierIdState] = useState(
     actor.role === 'repartidor' ? actor.courierId ?? '' : '',
   );
@@ -116,6 +123,9 @@ export function useDeliveries(
   const setSelectedCourierId = useCallback((courierId: string): void => {
     setSelectedCourierIdState(courierId);
     setDeliveryRecords({});
+    setInspectedOrder(null);
+    setInspectorOrderIdState('');
+    setInspectorError(null);
     setError(null);
     setSuccessMessage(null);
   }, []);
@@ -157,9 +167,36 @@ export function useDeliveries(
   }, [refreshCouriers]);
 
   useEffect(() => {
+    if (actor.role !== 'personal') return;
     const match = couriers.find((courier) => courier.id === effectiveCourierId);
-    if (match) setCourierAvailability(match.isAvailable);
-  }, [couriers, effectiveCourierId]);
+    setCourierAvailability(match ? match.isAvailable : null);
+  }, [actor.role, couriers, effectiveCourierId]);
+
+  const preloadRouteRecords = useCallback(
+    async (stops: readonly ActiveCourierRoute['stops'][number][], expectedRouteRequest: number): Promise<void> => {
+      if (stops.length === 0) return;
+
+      const settled = await Promise.allSettled(
+        stops.map((stop) => useCases.getDeliveryOrder.execute(stop.orderId)),
+      );
+
+      if (!mounted.current || routeRequest.current !== expectedRouteRequest) {
+        return;
+      }
+
+      const nextRecords: Record<string, DeliveryOrder> = {};
+      for (const result of settled) {
+        if (result.status === 'fulfilled') {
+          nextRecords[result.value.orderId] = result.value;
+        }
+      }
+
+      if (Object.keys(nextRecords).length > 0) {
+        setDeliveryRecords((previous) => ({ ...previous, ...nextRecords }));
+      }
+    },
+    [useCases.getDeliveryOrder],
+  );
 
   const loadActiveRoute = useCallback(async (): Promise<void> => {
     const courierId = effectiveCourierId;
@@ -179,6 +216,9 @@ export function useDeliveries(
       const route = await courierUseCases.getActiveRoute.execute(courierId);
       if (mounted.current && request === routeRequest.current) {
         setActiveRoute(route);
+        if (route !== null && route.stops.length > 0) {
+          void preloadRouteRecords(route.stops, request);
+        }
       }
     } catch (error_) {
       if (mounted.current && request === routeRequest.current) {
@@ -189,7 +229,7 @@ export function useDeliveries(
         setIsLoadingRoute(false);
       }
     }
-  }, [effectiveCourierId, courierUseCases.getActiveRoute]);
+  }, [effectiveCourierId, courierUseCases.getActiveRoute, preloadRouteRecords]);
 
   useEffect(() => {
     if (effectiveCourierId.length === 0) {
@@ -199,40 +239,44 @@ export function useDeliveries(
     void loadActiveRoute();
   }, [effectiveCourierId, loadActiveRoute]);
 
-  const toggleAvailability = useCallback(async (): Promise<void> => {
-    const courierId = effectiveCourierId;
-    if (courierId.length === 0) {
-      setError('Selecciona un repartidor para actualizar su disponibilidad.');
-      return;
-    }
-
-    setIsUpdatingAvailability(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const updated = await courierUseCases.updateAvailability.execute(
-        courierId,
-        !(courierAvailability ?? false),
-      );
-
-      if (mounted.current) {
-        setCourierAvailability(updated.isAvailable);
-        setCouriers((previous) =>
-          previous.map((courier) => (courier.id === updated.id ? updated : courier)),
-        );
-        setSuccessMessage(
-          `Disponibilidad actualizada: ${
-            updated.isAvailable ? 'Disponible' : 'No disponible'
-          }.`,
-        );
+  const setAvailability = useCallback(
+    async (targetAvailable: boolean): Promise<void> => {
+      const courierId = effectiveCourierId;
+      if (courierId.length === 0) {
+        setError('Selecciona un repartidor para actualizar su disponibilidad.');
+        return;
       }
-    } catch (error_) {
-      setError(toMessage(error_, 'No se pudo actualizar la disponibilidad del repartidor.'));
-    } finally {
-      if (mounted.current) setIsUpdatingAvailability(false);
-    }
-  }, [effectiveCourierId, courierAvailability, courierUseCases.updateAvailability]);
+
+      setIsUpdatingAvailability(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      try {
+        const updated = await courierUseCases.updateAvailability.execute(courierId, targetAvailable);
+
+        if (mounted.current) {
+          setCourierAvailability(updated.isAvailable);
+          setCouriers((previous) =>
+            previous.map((courier) => (courier.id === updated.id ? updated : courier)),
+          );
+          setSuccessMessage(
+            `Disponibilidad actualizada: ${
+              updated.isAvailable ? 'Disponible' : 'No disponible'
+            }.`,
+          );
+        }
+      } catch (error_) {
+        setError(toMessage(error_, 'No se pudo actualizar la disponibilidad del repartidor.'));
+      } finally {
+        if (mounted.current) setIsUpdatingAvailability(false);
+      }
+    },
+    [effectiveCourierId, courierUseCases.updateAvailability],
+  );
+
+  const toggleAvailability = useCallback(async (): Promise<void> => {
+    await setAvailability(!(courierAvailability ?? false));
+  }, [courierAvailability, setAvailability]);
 
   const ensureDeliveryRecord = useCallback(
     async (orderId: string): Promise<DeliveryOrder | null> => {
@@ -246,6 +290,7 @@ export function useDeliveries(
         const record = await useCases.getDeliveryOrder.execute(orderId);
         if (mounted.current && recordRequests.current.get(orderId) === request) {
           setDeliveryRecords((previous) => ({ ...previous, [record.orderId]: record }));
+          setInspectedOrder((previous) => (previous?.orderId === record.orderId ? record : previous));
         }
         return record;
       } catch (error_) {
@@ -303,27 +348,36 @@ export function useDeliveries(
           expectedVersion: record.version,
         });
 
+        const updatedRecord: DeliveryOrder = {
+          ...record,
+          status: result.status,
+          version: result.version,
+          deliveredAt:
+            result.status === 'entregado' ? new Date().toISOString() : record.deliveredAt,
+          updatedAt: new Date().toISOString(),
+        };
+
         setDeliveryRecords((previous) => ({
           ...previous,
-          [orderId]: {
-            ...record,
-            status: result.status,
-            version: result.version,
-            deliveredAt:
-              result.status === 'entregado' ? new Date().toISOString() : record.deliveredAt,
-          },
+          [orderId]: updatedRecord,
         }));
+        setInspectedOrder((previous) =>
+          previous?.orderId === orderId ? updatedRecord : previous,
+        );
         setSuccessMessage(
           `Pedido #PED-${shortCode(orderId)}: estado actualizado a "${orderStatusLabel(result.status)}".`,
         );
 
         if (effectiveCourierId.length > 0) {
           const route = await courierUseCases.getActiveRoute.execute(effectiveCourierId);
-          if (mounted.current) setActiveRoute(route);
-          if (route) {
-            await Promise.all(route.stops.map((stop) => ensureDeliveryRecord(stop.orderId)));
+          if (mounted.current) {
+            setActiveRoute(route);
+            if (route) {
+              await Promise.all(route.stops.map((stop) => ensureDeliveryRecord(stop.orderId)));
+            }
           }
         }
+        onDeliveryChanged?.();
       } catch (error_) {
         const message = toMessage(error_, 'No se pudo cambiar el estado del pedido.');
         setError(
@@ -341,6 +395,7 @@ export function useDeliveries(
       useCases.changeStatus,
       courierUseCases.getActiveRoute,
       effectiveCourierId,
+      onDeliveryChanged,
     ],
   );
 
@@ -357,23 +412,26 @@ export function useDeliveries(
     try {
       const result = await useCases.completeRoute.execute(activeRoute.routeId);
       setSuccessMessage(`Ruta #RUT-${shortCode(result.routeId)} completada correctamente.`);
+      setInspectedOrder(null);
+      setInspectorOrderIdState('');
+      setDeliveryRecords({});
       await loadActiveRoute();
+      onDeliveryChanged?.();
     } catch (error_) {
       setError(toMessage(error_, 'No se pudo completar la hoja de ruta activa.'));
     } finally {
       if (mounted.current) setIsCompletingRoute(false);
     }
-  }, [activeRoute, useCases.completeRoute, loadActiveRoute]);
+  }, [activeRoute, useCases.completeRoute, loadActiveRoute, onDeliveryChanged]);
 
   const inspectOrder = useCallback(
     async (orderId: string): Promise<void> => {
       const trimmed = orderId.trim();
       setInspectorOrderIdState(trimmed);
       setInspectorError(null);
-      setInspectedOrder(null);
 
       if (trimmed.length === 0) {
-        setInspectorError('Selecciona una parada de la hoja de ruta o escribe el código del pedido.');
+        setInspectedOrder(null);
         return;
       }
 
@@ -415,6 +473,7 @@ export function useDeliveries(
     loadActiveRoute,
     courierAvailability,
     isUpdatingAvailability,
+    setAvailability,
     toggleAvailability,
     deliveryRecords,
     isLoadingDeliveryRecords: syncingOrderIds.length > 0,

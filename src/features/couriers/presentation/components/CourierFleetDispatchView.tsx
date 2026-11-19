@@ -13,7 +13,6 @@ import {
   Button,
   Card,
   EmptyState,
-  IsometricCapacityCube,
   KineticHeader,
   Select,
   ShortIdBadge,
@@ -167,8 +166,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     [planifiedRoutes, selectedRouteId],
   );
 
-  // The backend only assigns a courier when it is enabled, available and able to
-  // carry every stop of the route, so the selector mirrors those preconditions.
   const availableCouriers = useMemo(
     () =>
       assignableCouriers.filter(
@@ -246,9 +243,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     }
   };
 
-  const activeStopCount = activeRoute?.stops.length ?? 0;
-  const activeRouteCapacity = selectedCourier?.maxOrdersPerTrip ?? Math.max(activeStopCount, 1);
-
   const segmentedStyle = {
     '--seg-index': AVAILABILITY_FILTERS.findIndex((filter) => filter.value === availabilityFilter),
     '--seg-count': AVAILABILITY_FILTERS.length,
@@ -259,9 +253,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
       <KineticHeader
         id="couriers-view-title"
         level="h2"
-        eyebrow="Etapa 4 · Despacho"
         title="Flota y despacho"
-        description="Registra repartidores, administra su disponibilidad y asigna las rutas planificadas que saldrán a la calle."
         actions={
           <Button
             type="button"
@@ -300,7 +292,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 error={fieldErrors['displayName']}
-                helperText="Nombre visible del repartidor en la operación."
                 isRequired
                 maxLength={120}
                 disabled={isCreatingCourier}
@@ -314,7 +305,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                 value={capacity}
                 onChange={(event) => setCapacity(event.target.value)}
                 error={fieldErrors['maxOrdersPerTrip']}
-                helperText="Capacidad operativa del repartidor por ruta."
                 isRequired
                 min={1}
                 step={1}
@@ -359,12 +349,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
 
             {selectedPlanifiedRoute !== null && (
               <div className="couriers-assignment-preview">
-                <IsometricCapacityCube
-                  occupied={selectedPlanifiedRoute.occupiedSlots}
-                  capacity={selectedPlanifiedRoute.capacityLimit}
-                  status={selectedPlanifiedRoute.status}
-                  showCaption={false}
-                />
                 <div>
                   <p className="couriers-assignment-preview__title">
                     {resolveZoneName(selectedPlanifiedRoute.zoneId)}
@@ -374,6 +358,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                     {selectedPlanifiedRoute.capacityLimit} cupos
                   </p>
                 </div>
+                <ShortIdBadge id={selectedPlanifiedRoute.id} prefix="RUT" copyable={false} />
               </div>
             )}
 
@@ -395,7 +380,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                   options={routeOptions}
                   value={selectedRouteId}
                   onChange={(event) => setSelectedRouteId(event.target.value)}
-                  helperText="Solo se muestran rutas en estado planificada."
                   isRequired
                   disabled={planifiedRoutes.length === 0 || isAssigning}
                 />
@@ -413,7 +397,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                   options={availableCourierOptions}
                   value={selectedAssignCourierId}
                   onChange={(event) => setSelectedAssignCourierId(event.target.value)}
-                  helperText="Solo se muestran repartidores habilitados, disponibles y con capacidad suficiente para la ruta elegida."
                   isRequired
                   disabled={availableCouriers.length === 0 || isAssigning}
                 />
@@ -488,7 +471,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                 description={
                   availabilityFilter === 'all'
                     ? 'Registra el primer repartidor para poder asignarle rutas planificadas.'
-                    : 'Ningún repartidor coincide con el filtro de disponibilidad elegido. Cambia el filtro o actualiza el catálogo.'
+                    : 'Ningún repartidor coincide con el filtro de disponibilidad elegido.'
                 }
                 action={
                   <Button
@@ -580,111 +563,106 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
             )}
           </Card>
 
-          <Card variant="elevated" className="couriers-route-card">
-            <div className="couriers-card__header">
-              <h3 className="couriers-card__title">Hoja de ruta activa</h3>
-              {onNavigateToDeliveries !== undefined && (
-                <Button type="button" variant="ghost" size="sm" onClick={onNavigateToDeliveries}>
-                  Ejecutar en Entregas →
-                </Button>
-              )}
-            </div>
-
-            {selectedCourierId.length === 0 ? (
-              <p className="couriers-hint">
-                Selecciona un repartidor en el catálogo con la acción &quot;Ver hoja de ruta&quot;
-                para consultar su ruta.
-              </p>
-            ) : (
-              <p className="couriers-hint">
-                Repartidor:{' '}
-                <strong>{selectedCourier?.displayName ?? 'Sin nombre en el catálogo'}</strong>
-              </p>
-            )}
-
-            {isLoadingActiveRoute && (
-              <div className="couriers-inline-loading" role="status">
-                <Spinner size="sm" label="Consultando hoja de ruta activa..." />
-                <span>Consultando hoja de ruta activa...</span>
+          {(selectedCourierId.length > 0 ||
+            isLoadingActiveRoute ||
+            activeRoute !== null ||
+            activeRouteError !== null) && (
+            <Card variant="elevated" className="couriers-route-card">
+              <div className="couriers-card__header">
+                <h3 className="couriers-card__title">Hoja de ruta activa</h3>
+                {onNavigateToDeliveries !== undefined && (
+                  <Button type="button" variant="ghost" size="sm" onClick={onNavigateToDeliveries}>
+                    Ejecutar en Entregas →
+                  </Button>
+                )}
               </div>
-            )}
 
-            {!isLoadingActiveRoute && activeRouteError && (
-              <Alert type="error" title="Hoja de ruta no disponible">
-                {activeRouteError}
-              </Alert>
-            )}
-
-            {!isLoadingActiveRoute &&
-              activeRouteError === null &&
-              selectedCourierId.length > 0 &&
-              activeRoute === null && (
-                <p className="couriers-empty-inline">
-                  El repartidor no tiene una ruta activa asignada.
+              {selectedCourierId.length > 0 && (
+                <p className="couriers-hint">
+                  Repartidor:{' '}
+                  <strong>{selectedCourier?.displayName ?? 'Sin nombre en el catálogo'}</strong>
                 </p>
               )}
 
-            {activeRoute && (
-              <div className="couriers-active-route">
-                <div className="couriers-active-route__overview">
-                  <IsometricCapacityCube
-                    occupied={activeStopCount}
-                    capacity={activeRouteCapacity}
-                    status={activeRoute.status}
-                  />
-                  <dl className="couriers-route-meta">
-                    <div className="couriers-route-meta__item">
-                      <dt>Zona</dt>
-                      <dd>{resolveZoneName(activeRoute.zoneId)}</dd>
-                    </div>
-                    <div className="couriers-route-meta__item">
-                      <dt>Fecha de servicio</dt>
-                      <dd>{activeRoute.serviceDate}</dd>
-                    </div>
-                    <div className="couriers-route-meta__item">
-                      <dt>Estado</dt>
-                      <dd>
-                        <span
-                          className={`couriers-status-badge couriers-status-badge--${activeRoute.status}`}
-                        >
-                          {ROUTE_STATUS_LABELS[activeRoute.status] ?? activeRoute.status}
-                        </span>
-                      </dd>
-                    </div>
-                    <div className="couriers-route-meta__item">
-                      <dt>Código de ruta</dt>
-                      <dd>
-                        <ShortIdBadge id={activeRoute.routeId} prefix="RUT" copyable={false} />
-                      </dd>
-                    </div>
-                  </dl>
+              {isLoadingActiveRoute && (
+                <div className="couriers-inline-loading" role="status">
+                  <Spinner size="sm" label="Consultando hoja de ruta activa..." />
+                  <span>Consultando hoja de ruta activa...</span>
                 </div>
+              )}
 
-                <ol className="couriers-stops" aria-label="Paradas de la ruta activa">
-                  {activeRoute.stops.map((stop) => (
-                    <li key={stop.orderId} className="couriers-stop">
-                      <div className="couriers-stop__position">
-                        <span className="couriers-stop__position-value">{stop.position}</span>
-                        <span className="couriers-stop__position-label">Parada</span>
+              {!isLoadingActiveRoute && activeRouteError && (
+                <Alert type="error" title="Hoja de ruta no disponible">
+                  {activeRouteError}
+                </Alert>
+              )}
+
+              {!isLoadingActiveRoute &&
+                activeRouteError === null &&
+                selectedCourierId.length > 0 &&
+                activeRoute === null && (
+                  <p className="couriers-empty-inline">
+                    El repartidor no tiene una ruta activa asignada.
+                  </p>
+                )}
+
+              {activeRoute && (
+                <div className="couriers-active-route">
+                  <div className="couriers-active-route__overview">
+                    <dl className="couriers-route-meta">
+                      <div className="couriers-route-meta__item">
+                        <dt>Zona</dt>
+                        <dd>{resolveZoneName(activeRoute.zoneId)}</dd>
                       </div>
-                      <div className="couriers-stop__body">
-                        <span className="couriers-stop__address">{stop.deliveryAddress}</span>
-                        <span className="couriers-stop__meta">
-                          Hora de entrega: {stop.deliveryTime}
+                      <div className="couriers-route-meta__item">
+                        <dt>Fecha de servicio</dt>
+                        <dd>{activeRoute.serviceDate}</dd>
+                      </div>
+                      <div className="couriers-route-meta__item">
+                        <dt>Estado</dt>
+                        <dd>
+                          <span
+                            className={`couriers-status-badge couriers-status-badge--${activeRoute.status}`}
+                          >
+                            {ROUTE_STATUS_LABELS[activeRoute.status] ?? activeRoute.status}
+                          </span>
+                        </dd>
+                      </div>
+                      <div className="couriers-route-meta__item">
+                        <dt>Código de ruta</dt>
+                        <dd>
+                          <ShortIdBadge id={activeRoute.routeId} prefix="RUT" copyable={false} />
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  <ol className="couriers-stops" aria-label="Paradas de la ruta activa">
+                    {activeRoute.stops.map((stop) => (
+                      <li key={stop.orderId} className="couriers-stop">
+                        <div className="couriers-stop__position">
+                          <span className="couriers-stop__position-value">{stop.position}</span>
+                          <span className="couriers-stop__position-label">Parada</span>
+                        </div>
+                        <div className="couriers-stop__body">
+                          <span className="couriers-stop__address">{stop.deliveryAddress}</span>
+                          <span className="couriers-stop__meta">
+                            Hora de entrega: {stop.deliveryTime}
+                          </span>
+                          <ShortIdBadge id={stop.orderId} prefix="PED" copyable={false} />
+                        </div>
+                        <span
+                          className={`couriers-status-badge couriers-status-badge--${stop.status}`}
+                        >
+                          {STOP_STATUS_LABELS[stop.status]}
                         </span>
-                        <ShortIdBadge id={stop.orderId} prefix="PED" copyable={false} />
-                      </div>
-                      <span
-                        className={`couriers-status-badge couriers-status-badge--${stop.status}`}
-                      >
-                        {STOP_STATUS_LABELS[stop.status]}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </Card>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
       </div>
     </section>

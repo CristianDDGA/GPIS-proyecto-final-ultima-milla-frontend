@@ -9,7 +9,6 @@ import {
   Alert,
   Button,
   Card,
-  IsometricCapacityCube,
   KineticHeader,
   ShortIdBadge,
   Spinner,
@@ -60,12 +59,6 @@ const ZoneDetailPanel: FC<ZoneDetailPanelProps> = ({
     </div>
 
     <div className="zones-detail-card__hero">
-      <IsometricCapacityCube
-        occupied={orderCount}
-        capacity={Math.max(orderCount, 4)}
-        status="planificada"
-        showCaption={false}
-      />
       <div className="zones-detail-card__hero-text">
         <p className="zones-detail-card__kicker">Área de cobertura</p>
         <p className="zones-detail-card__name">{zone.name}</p>
@@ -157,9 +150,7 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
       <KineticHeader
         id="zones-view-title"
         level="h2"
-        eyebrow="Etapa 1 · Cobertura"
         title="Zonas de cobertura"
-        description="Define las áreas geográficas que atiende la operación. Cada zona agrupa la demanda que después se convierte en rutas de reparto."
         actions={
           <Button
             type="button"
@@ -186,49 +177,8 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
         </Alert>
       )}
 
-      {!canCreateZone && (
-        <Alert type="info" title="Modo consulta">
-          Tu rol permite consultar la cobertura de zonas, pero no crear nuevas zonas.
-        </Alert>
-      )}
-
-      <div className="master-detail zones-master-detail">
-        <div className="zones-master">
-          {canCreateZone && (
-            <Card variant="elevated" className="zones-form-card">
-              <h3 className="zones-form-card__title">Registrar nueva zona</h3>
-              <ZoneForm onSubmit={createZone} isSubmitting={isCreating} />
-            </Card>
-          )}
-
-          <Card variant="elevated" className="zones-list-card">
-            <div className="zones-list-card__header">
-              <h3 className="zones-list-card__title">Zonas operativas</h3>
-              <span className="zones-badge-count">
-                {zones.length} {zones.length === 1 ? 'zona' : 'zonas'}
-              </span>
-            </div>
-
-            <ZoneList
-              zones={zones}
-              isLoading={isLoading}
-              orderCountByZone={orderCountByZone}
-              onSelectZone={inspectZone}
-            />
-          </Card>
-        </div>
-
-        <div className="master-detail__detail zones-detail-region" aria-live="polite">
-          {!isDetailVisible && (
-            <div className="zones-detail-empty">
-              <p className="zones-detail-empty__title">Selecciona una zona</p>
-              <p className="zones-detail-empty__description">
-                Inspecciona el detalle de cobertura, su código corto y los pedidos que
-                pertenecen a esa zona.
-              </p>
-            </div>
-          )}
-
+      {isDetailVisible && (
+        <div className="zones-detail-region" aria-live="polite">
           {isLoadingDetail && (
             <Card variant="outlined" className="zones-detail-card">
               <div className="zones-loading-container" role="status">
@@ -253,6 +203,31 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
             />
           )}
         </div>
+      )}
+
+      <div className={`zones-grid${canCreateZone ? '' : ' zones-grid--single'}`}>
+        {canCreateZone && (
+          <Card variant="elevated" className="zones-form-card">
+            <h3 className="zones-form-card__title">Registrar nueva zona</h3>
+            <ZoneForm onSubmit={createZone} isSubmitting={isCreating} />
+          </Card>
+        )}
+
+        <Card variant="elevated" className="zones-list-card">
+          <div className="zones-list-card__header">
+            <h3 className="zones-list-card__title">Zonas operativas</h3>
+            <span className="zones-badge-count">
+              {zones.length} {zones.length === 1 ? 'zona' : 'zonas'}
+            </span>
+          </div>
+
+          <ZoneList
+            zones={zones}
+            isLoading={isLoading}
+            orderCountByZone={orderCountByZone}
+            onSelectZone={inspectZone}
+          />
+        </Card>
       </div>
     </section>
   );

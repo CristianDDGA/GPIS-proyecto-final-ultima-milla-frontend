@@ -53,6 +53,15 @@ export interface HttpClient {
   put<T>(endpoint: string, body?: unknown, options?: RequestOptions): Promise<T>;
   patch<T>(endpoint: string, body?: unknown, options?: RequestOptions): Promise<T>;
   delete<T>(endpoint: string, options?: RequestOptions): Promise<T>;
+  /** Subida binaria autenticada (express.raw) con Content-Type explícito. */
+  putBinary<T>(
+    endpoint: string,
+    body: Blob | ArrayBuffer,
+    contentType: string,
+    options?: RequestOptions,
+  ): Promise<T>;
+  /** Descarga autenticada de un recurso binario (imágenes privadas). */
+  getBlob(endpoint: string, options?: RequestOptions): Promise<Blob>;
 }
 
 export interface HttpClientAuthConfig {
@@ -63,6 +72,10 @@ export interface HttpClientAuthConfig {
 const UNAUTHENTICATED_ENDPOINTS: ReadonlySet<string> = new Set([
   '/auth/login',
   '/auth/register',
+  '/auth/verify-email',
+  '/auth/resend-verification',
+  '/auth/forgot-password',
+  '/auth/reset-password',
   '/auth/logout',
   '/health',
 ]);
@@ -214,6 +227,80 @@ export class FetchHttpClient implements HttpClient {
 
   public delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+  }
+  private async rawRequest(
+    endpoint: string,
+    init: RequestOptions,
+    accept: string,
+  ): Promise<Response> {
+    const headers: Record<string, string> = {
+      Accept: accept,
+      ...(init.headers ?? {}),
+    };
+    this.applyAuthorizationHeader(headers);
+
+    const { headers: _ignoredHeaders, ...restInit } = init;
+    let response: Response;
+    try {
+      response = await fetch(this.buildUrl(endpoint), { ...restInit, headers });
+    } catch (networkError) {
+      const message = networkError instanceof Error ? networkError.message : 'Error de red';
+      throw new HttpError(0, 'NetworkError', {
+        message: 'No se pudo conectar con el servidor: ' + message,
+      });
+    }
+
+    if (!response.ok) {
+      let errorDetails: unknown;
+      try {
+        errorDetails = await response.json();
+      } catch {
+        errorDetails = await response.text();
+      }
+
+      if (response.status === 401 && !UNAUTHENTICATED_ENDPOINTS.has(normalizeEndpoint(endpoint))) {
+        this.onUnauthorized?.();
+      }
+
+      throw new HttpError(response.status, response.statusText, errorDetails);
+    }
+
+    return response;
+  }
+
+  public async putBinary<T>(
+    endpoint: string,
+    body: Blob | ArrayBuffer,
+    contentType: string,
+    options?: RequestOptions,
+  ): Promise<T> {
+    const response = await this.rawRequest(
+      endpoint,
+      {
+        ...options,
+        method: 'PUT',
+        body: body as BodyInit,
+        headers: { ...(options?.headers ?? {}), 'Content-Type': contentType },
+      },
+      'application/json',
+    );
+
+    const responseType = response.headers.get('content-type');
+    if (responseType && responseType.includes('application/json')) {
+      return (await response.json()) as T;
+    }
+
+    return (await response.text()) as unknown as T;
+  }
+
+  public async getBlob(endpoint: string, options?: RequestOptions): Promise<Blob> {
+    const response = await this.rawRequest(
+      endpoint,
+      { ...options, method: 'GET' },
+      '*/*',
+    );
+
+    return response.blob();
   }
 }
 

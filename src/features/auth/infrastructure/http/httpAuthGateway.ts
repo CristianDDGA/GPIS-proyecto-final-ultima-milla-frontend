@@ -4,12 +4,31 @@ import type {
   AuthSession,
   AuthUser,
   CreateManagedUserInput,
+  ForgotPasswordInput,
   HealthStatus,
   LoginInput,
   RegisterCustomerInput,
+  RegisterCustomerOutcome,
+  ResetPasswordInput,
+  VerifyEmailInput,
 } from '../../domain/authUser.js';
+import type {
+  ChangePasswordInput,
+  ManagedUser,
+  ManagedUserFilters,
+  ManagedUserPage,
+  ResetManagedUserPasswordInput,
+  SetManagedUserActiveInput,
+} from '../../domain/managedUser.js';
 import { clearToken, setToken } from './authTokenStorage.js';
-import { isHealthOnline, readAuthSession, readAuthUser } from './response.js';
+import {
+  isHealthOnline,
+  readAuthSession,
+  readAuthUser,
+  readManagedUser,
+  readManagedUserPage,
+  readRegisterOutcome,
+} from './response.js';
 
 interface RegisterRequest {
   email: string;
@@ -52,7 +71,7 @@ export class HttpAuthGateway implements AuthGateway {
     return session;
   }
 
-  public async registerCustomer(input: RegisterCustomerInput): Promise<AuthSession> {
+  public async registerCustomer(input: RegisterCustomerInput): Promise<RegisterCustomerOutcome> {
     const request: RegisterRequest = {
       email: input.email,
       password: input.password,
@@ -62,12 +81,44 @@ export class HttpAuthGateway implements AuthGateway {
       request.displayName = input.displayName;
     }
 
-    const session = readAuthSession(
+    const outcome = readRegisterOutcome(
       await this.httpClient.post<unknown>('/auth/register', request),
+    );
+
+    // En modo verificación no hay token todavía: la sesión se abre al confirmar el código.
+    if (outcome.kind === 'session') {
+      setToken(outcome.session.token);
+    }
+
+    return outcome;
+  }
+
+  public async verifyEmail(input: VerifyEmailInput): Promise<AuthSession> {
+    const session = readAuthSession(
+      await this.httpClient.post<unknown>('/auth/verify-email', {
+        email: input.email,
+        code: input.code,
+      }),
     );
 
     setToken(session.token);
     return session;
+  }
+
+  public async resendVerification(email: string): Promise<void> {
+    await this.httpClient.post<unknown>('/auth/resend-verification', { email });
+  }
+
+  public async forgotPassword(input: ForgotPasswordInput): Promise<void> {
+    await this.httpClient.post<unknown>('/auth/forgot-password', { email: input.email });
+  }
+
+  public async resetPassword(input: ResetPasswordInput): Promise<void> {
+    await this.httpClient.post<unknown>('/auth/reset-password', {
+      email: input.email,
+      code: input.code,
+      newPassword: input.newPassword,
+    });
   }
 
   public async getCurrentUser(): Promise<AuthUser> {
@@ -95,5 +146,64 @@ export class HttpAuthGateway implements AuthGateway {
     }
 
     return readAuthUser(await this.httpClient.post<unknown>('/auth/users', request));
+  }
+  public async changePassword(input: ChangePasswordInput): Promise<AuthSession> {
+    const session = readAuthSession(
+      await this.httpClient.post<unknown>('/auth/change-password', {
+        currentPassword: input.currentPassword,
+        newPassword: input.newPassword,
+      }),
+    );
+
+    setToken(session.token);
+    return session;
+  }
+
+  public async listManagedUsers(filters: ManagedUserFilters = {}): Promise<ManagedUserPage> {
+    const params = new URLSearchParams();
+
+    if (filters.role !== undefined && filters.role !== 'all') {
+      params.set('role', filters.role);
+    }
+    if (filters.isActive !== undefined && filters.isActive !== 'all') {
+      params.set('isActive', String(filters.isActive));
+    }
+
+    const query = filters.q?.trim() ?? '';
+    if (query.length > 0) {
+      params.set('q', query);
+    }
+    if (filters.limit !== undefined) {
+      params.set('limit', String(filters.limit));
+    }
+    if (filters.offset !== undefined) {
+      params.set('offset', String(filters.offset));
+    }
+
+    const suffix = params.toString();
+    return readManagedUserPage(
+      await this.httpClient.get<unknown>('/auth/users' + (suffix.length > 0 ? '?' + suffix : '')),
+    );
+  }
+
+  public async getManagedUser(userId: string): Promise<ManagedUser> {
+    return readManagedUser(
+      await this.httpClient.get<unknown>('/auth/users/' + encodeURIComponent(userId)),
+    );
+  }
+
+  public async setManagedUserActive(input: SetManagedUserActiveInput): Promise<ManagedUser> {
+    return readManagedUser(
+      await this.httpClient.patch<unknown>('/auth/users/' + encodeURIComponent(input.userId), {
+        isActive: input.isActive,
+      }),
+    );
+  }
+
+  public async resetManagedUserPassword(input: ResetManagedUserPasswordInput): Promise<void> {
+    await this.httpClient.post<unknown>(
+      '/auth/users/' + encodeURIComponent(input.userId) + '/reset-password',
+      { newPassword: input.newPassword },
+    );
   }
 }

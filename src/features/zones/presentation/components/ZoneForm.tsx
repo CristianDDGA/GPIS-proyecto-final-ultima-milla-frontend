@@ -53,10 +53,9 @@ export const ZoneForm: FC<ZoneFormProps> = ({ onSubmit, isSubmitting = false }) 
           setValidationError(validation.isValid ? undefined : validation.error);
         }}
         error={validationError}
-        helperText="Ingresa un nombre representativo para el área de distribución."
         isRequired
         disabled={isSubmitting}
-        maxLength={50}
+        maxLength={80}
         autoComplete="off"
       />
 

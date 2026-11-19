@@ -13,6 +13,16 @@ export const DEFAULT_ROUTE_LIMIT = 25;
 
 export const DEFAULT_ROUTE_FILTERS: RouteFilters = { limit: DEFAULT_ROUTE_LIMIT };
 
+function readInitialRouteFilters(): RouteFilters {
+  if (typeof window !== 'undefined') {
+    const param = new URLSearchParams(window.location.search).get('deliveryDate');
+    if (param && /^\d{4}-\d{2}-\d{2}$/.test(param)) {
+      return { ...DEFAULT_ROUTE_FILTERS, serviceDate: param };
+    }
+  }
+  return { ...DEFAULT_ROUTE_FILTERS };
+}
+
 const ADMIN_REQUIRED_MESSAGE = 'Solo el personal administrativo puede ejecutar esta operación.';
 
 function describeError(error: unknown, fallback: string): string {
@@ -74,7 +84,7 @@ export function useRoutes(
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
   const [routesError, setRoutesError] = useState<string | null>(null);
 
-  const [filters, setFiltersState] = useState<RouteFilters>({ ...DEFAULT_ROUTE_FILTERS });
+  const [filters, setFiltersState] = useState<RouteFilters>(readInitialRouteFilters);
 
   const [selectedRoute, setSelectedRoute] = useState<RouteDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
@@ -93,7 +103,7 @@ export function useRoutes(
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const filtersRef = useRef<RouteFilters>({ ...DEFAULT_ROUTE_FILTERS });
+  const filtersRef = useRef<RouteFilters>(readInitialRouteFilters());
   const selectedRouteRef = useRef<RouteDetail | null>(null);
   const routesVersion = useRef(0);
   const detailVersion = useRef(0);

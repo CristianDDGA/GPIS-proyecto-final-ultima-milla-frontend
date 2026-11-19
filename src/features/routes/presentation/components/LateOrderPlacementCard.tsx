@@ -6,9 +6,8 @@ import {
 } from '../../domain/index.js';
 import { Alert, Button, Card, Select, ShortIdBadge, TextInput } from '../../../../shared/ui/index.js';
 
-type OrderInputMode = 'list' | 'manual';
-
 const DEFAULT_CAPACITY_LIMIT = '4';
+const MAX_VISIBLE_PENDING_OPTIONS = 50;
 
 export interface LateOrderPlacementCardProps {
   pendingOrders: readonly Order[];
@@ -23,38 +22,48 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
   onPlaceLateOrder,
   onInspectRoute,
 }) => {
-  const [mode, setMode] = useState<OrderInputMode>('list');
   const [selectedOrderId, setSelectedOrderId] = useState('');
-  const [manualOrderId, setManualOrderId] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [capacityLimit, setCapacityLimit] = useState(DEFAULT_CAPACITY_LIMIT);
   const [result, setResult] = useState<LateOrderPlacementResult | null>(null);
   const [showErrors, setShowErrors] = useState(false);
 
-  const pendingOrderOptions = useMemo(
-    () =>
-      pendingOrders
-        .filter((order) => order.status === 'pendiente')
-        .map((order) => ({
-          value: order.id,
-          label: `${order.deliveryAddress} · ${order.deliveryDate} ${order.deliveryTime}`,
-        })),
+  const allPendingOrders = useMemo(
+    () => pendingOrders.filter((order) => order.status === 'pendiente'),
     [pendingOrders],
   );
 
-  const orderId = (mode === 'manual' ? manualOrderId : selectedOrderId).trim();
+  const filteredPendingOrders = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (query.length === 0) {
+      return allPendingOrders;
+    }
+    return allPendingOrders.filter(
+      (order) =>
+        order.deliveryAddress.toLowerCase().includes(query) ||
+        order.deliveryDate.toLowerCase().includes(query) ||
+        order.deliveryTime.toLowerCase().includes(query) ||
+        order.id.toLowerCase().includes(query),
+    );
+  }, [allPendingOrders, searchQuery]);
+
+  const pendingOrderOptions = useMemo(
+    () =>
+      filteredPendingOrders.slice(0, MAX_VISIBLE_PENDING_OPTIONS).map((order) => ({
+        value: order.id,
+        label: `${order.deliveryAddress} · ${order.deliveryDate} ${order.deliveryTime}`,
+      })),
+    [filteredPendingOrders],
+  );
+
+  const orderId = selectedOrderId.trim();
   const validation = validateLateOrderPlacementInput({ orderId, capacityLimit: Number(capacityLimit) });
   const orderIdError = showErrors ? validation.errors['orderId'] : undefined;
   const capacityLimitError = showErrors ? validation.errors['capacityLimit'] : undefined;
   const assignedRouteId = result && result.status === 'asignado_a_ruta' ? result.routeId : null;
   const isPendingPlacement = result?.status === 'pendiente';
 
-  // The native select always shows its first option, so the state must mirror it:
-  // otherwise submitting would validate an empty orderId until the user changes it.
   useEffect(() => {
-    if (mode !== 'list') {
-      return;
-    }
-
     const firstOption = pendingOrderOptions[0];
     if (!firstOption) {
       return;
@@ -64,7 +73,7 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
     if (selectedOrderId.trim().length === 0 || !stillPending) {
       setSelectedOrderId(firstOption.value);
     }
-  }, [mode, pendingOrderOptions, selectedOrderId]);
+  }, [pendingOrderOptions, selectedOrderId]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -78,7 +87,6 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
         setResult(next);
         setShowErrors(false);
         setSelectedOrderId('');
-        setManualOrderId('');
       }
     });
   };
@@ -87,13 +95,18 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
     <Card variant="elevated" className="routes-operation-card">
       <div className="routes-operation-card__header">
         <h3 className="routes-operation-card__title">Insertar pedido tardío</h3>
-        <span className="routes-operation-card__tag">Etapa 3b</span>
       </div>
-      <p className="routes-operation-card__hint">
-        Incorpora un pedido pendiente a una ruta con cupo disponible del mismo día.
-      </p>
 
       <form className="routes-form" onSubmit={handleSubmit} aria-label="Insertar pedido tardío">
+        {allPendingOrders.length > MAX_VISIBLE_PENDING_OPTIONS && (
+          <TextInput
+            label="Filtrar pedido pendiente"
+            placeholder="Buscar por dirección o fecha..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        )}
+
         {pendingOrderOptions.length > 0 ? (
           <Select
             label="Pedido pendiente"
@@ -101,12 +114,17 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
             value={selectedOrderId}
             onChange={(event) => setSelectedOrderId(event.target.value)}
             error={orderIdError}
-            helperText="Selecciona la dirección que quieres incorporar a la operación."
+            helperText={
+              filteredPendingOrders.length > MAX_VISIBLE_PENDING_OPTIONS
+                ? `Mostrando ${MAX_VISIBLE_PENDING_OPTIONS} de ${filteredPendingOrders.length} pedidos pendientes. Usa el filtro para acotar.`
+                : undefined
+            }
           />
         ) : (
           <Alert type="info" title="Sin pedidos pendientes">
-            No hay pedidos pendientes para hoy. Puedes buscar un pedido por su código en la
-            opción avanzada.
+            {allPendingOrders.length === 0
+              ? 'No hay pedidos pendientes disponibles para insertar en rutas activas.'
+              : 'Ningún pedido pendiente coincide con la búsqueda ingresada.'}
           </Alert>
         )}
 
@@ -126,41 +144,11 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
             type="submit"
             variant="primary"
             isLoading={isPlacingLate}
-            disabled={mode === 'list' && pendingOrderOptions.length === 0}
+            disabled={pendingOrderOptions.length === 0}
           >
             Insertar pedido tardío
           </Button>
         </div>
-
-        <details className="routes-advanced">
-          <summary className="routes-advanced__summary">Opción avanzada · buscar por código</summary>
-          <div className="routes-advanced__body">
-            <Select
-              label="Método de búsqueda"
-              options={[
-                { value: 'list', label: 'Elegir de la lista' },
-                { value: 'manual', label: 'Escribir código de pedido' },
-              ]}
-              value={mode}
-              onChange={(event) => {
-                setMode(event.target.value === 'manual' ? 'manual' : 'list');
-                setShowErrors(false);
-                setResult(null);
-              }}
-            />
-            {mode === 'manual' && (
-              <TextInput
-                label="Código del pedido"
-                type="text"
-                value={manualOrderId}
-                onChange={(event) => setManualOrderId(event.target.value)}
-                error={orderIdError}
-                placeholder="00000000-0000-4000-8000-000000000000"
-                helperText="Identificador completo del pedido pendiente."
-              />
-            )}
-          </div>
-        </details>
       </form>
 
       {assignedRouteId && (

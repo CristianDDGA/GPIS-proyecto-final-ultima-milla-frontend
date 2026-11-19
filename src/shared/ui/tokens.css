@@ -1,80 +1,184 @@
 /* ============================================================================
-   Design tokens · Torre de Control de Última Milla
-   Apple HIG + Liquid Glass + Kinetic Type + Isometric UI
-   --------------------------------------------------------------------------
-   Este archivo es la única fuente de verdad de color, tipografía, radios,
-   elevación, materiales y curvas de movimiento. Las variables con prefijo
-   "color-*" se conservan como alias de compatibilidad para los estilos de
-   feature que ya existían.
+   Design Tokens · Sistema Webflow Studio (DESIGN.md)
+   "white studio, black ink, one blue mark — a designer's drafting table
+   rendered as a web page."
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
-  /* --- Semántica de superficies ------------------------------------------- */
-  --surface-canvas: #f4f6fb;
-  --surface-canvas-deep: #e8eef9;
-  --surface-card: #ffffff;
-  --surface-card-muted: #f8fafc;
-  --surface-card-raised: #ffffff;
-  --surface-ink: #0a1020;
-  --surface-ink-soft: #121a2e;
+  /* --- Paleta oficial de DESIGN.md (Webflow — Style Reference) ------------- */
+  --color-webflow-blue: #146ef5;
+  --color-indigo-ink: #1366e2;
+  --color-mercury-tint: #6ca7ff;
+  --color-mint-pulse: #60ed76;
+  --color-apricot-glow: #ffa666;
+  --color-obsidian: #080808;
+  --color-pure-white: #ffffff;
+  --color-slate: #5a5a5a;
+  --color-ash-border: #d8d8d8;
+  --color-smoke: #bdbdbd;
+  --color-graphite: #222222;
+  --color-onyx: #171717;
+  --color-mist: #f0f0f0;
+  --color-charcoal: #292929;
 
-  /* --- Semántica de texto -------------------------------------------------- */
-  --text-primary: #0b1120;
-  --text-secondary: #475569;
-  --text-tertiary: #64748b;
-  --text-on-ink: #f8fafc;
-  --text-on-ink-muted: #a9b6cd;
+  /* --- Tipografía (DESIGN.md: Inter como única fuente de interfaz) ------- */
+  --font-wf-visual-sans-variable: 'Inter', ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-wf-visual-sans-mono: var(--font-wf-visual-sans-variable);
 
-  /* --- Acento y señales operativas ---------------------------------------- */
-  --accent-primary: #0051d5;
-  --accent-primary-hover: #0041ac;
-  --accent-primary-soft: #e8f0fe;
-  --accent-primary-border: #bfd3fa;
-  --accent-primary-ring: rgba(0, 81, 213, 0.22);
-  --accent-secondary: #0d9488;
+  --font-sans: var(--font-wf-visual-sans-variable);
+  --font-mono: var(--font-wf-visual-sans-variable);
 
-  --signal-transit: #0284c7;
-  --signal-transit-bg: #e0f2fe;
-  --signal-transit-border: #bae6fd;
-  --signal-delivered: #0d9488;
-  --signal-delivered-bg: #ecfdf5;
-  --signal-delivered-border: #99f6e4;
-  --signal-pending: #b45309;
-  --signal-pending-bg: #fffbeb;
-  --signal-pending-border: #fde68a;
-  --signal-danger: #b91c1c;
+  /* Escala tipográfica de DESIGN.md */
+  --text-caption: 10px;
+  --leading-caption: 1.4;
+  --text-body-lg: 16px;
+  --leading-body-lg: 1.6;
+  --text-subheading: 20px;
+  --leading-subheading: 1.3;
+  --text-heading-sm: 24px;
+  --leading-heading-sm: 1.3;
+  --text-heading: 32px;
+  --leading-heading: 1.2;
+  --text-heading-lg: 40px;
+  --leading-heading-lg: 1.04;
+  --tracking-heading-lg: -0.4px;
+  --text-display: 56px;
+  --leading-display: 1.04;
+  --tracking-display: -0.56px;
+  --text-display-xl: 80px;
+  --leading-display-xl: 1;
+  --tracking-display-xl: -0.8px;
+
+  /* Pesos tipográficos de DESIGN.md */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-w550: 550;
+  --font-weight-semibold: 600;
+
+  /* Alias de escala para vistas operativas */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+
+  --leading-tight: 1.04;
+  --leading-snug: 1.3;
+  --leading-base: 1.5;
+
+  --tracking-title: -0.01em;
+  --tracking-eyebrow: 0.1em;
+
+  /* --- Espaciado (Unidad base: 4px) ---------------------------------------- */
+  --spacing-unit: 4px;
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-36: 36px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-72: 72px;
+  --spacing-80: 80px;
+  --spacing-88: 88px;
+
+  /* --- Layout (DESIGN.md) -------------------------------------------------- */
+  --page-max-width: 1200px;
+  --layout-max: 1200px;
+  --section-gap: 80px;
+  --card-padding: 24px;
+  --element-gap: 16px;
+  --dock-height: 56px;
+
+  /* --- Radios estrictos (DESIGN.md: 4px controles/tags, 8px cards) --------- */
+  --radius-tags: 4px;
+  --radius-inputs: 4px;
+  --radius-buttons: 4px;
+  --radius-cards: 8px;
+  --radius-images: 8px;
+
+  --radius-xs: 4px;
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-full: 4px;
+
+  /* --- Sombras multicapa (DESIGN.md: solo en hover / mockups / modales) ---- */
+  --shadow-sm: none;
+  --shadow-md: rgba(0, 0, 0, 0.01) 0px 54px 22px 0px, rgba(0, 0, 0, 0.04) 0px 30px 18px 0px,
+    rgba(0, 0, 0, 0.08) 0px 13px 13px 0px, rgba(0, 0, 0, 0.09) 0px 3px 7px 0px;
+  --shadow-lg: rgba(0, 0, 0, 0.01) 0px 54px 22px 0px, rgba(0, 0, 0, 0.04) 0px 30px 18px 0px,
+    rgba(0, 0, 0, 0.08) 0px 13px 13px 0px, rgba(0, 0, 0, 0.09) 0px 3px 7px 0px;
+  --shadow-xl: rgba(0, 0, 0, 0.02) 0px 67px 27px 0px, rgba(0, 0, 0, 0.06) 0px 38px 23px 0px,
+    rgba(0, 0, 0, 0.1) 0px 17px 17px 0px, rgba(0, 0, 0, 0.12) 0px 4px 9px 0px;
+  --shadow-xl-2: rgba(0, 0, 0, 0.01) 0px 148px 42px 0px, rgba(0, 0, 0, 0.04) 0px 95px 38px 0px,
+    rgba(0, 0, 0, 0.15) 0px 53px 32px 0px, rgba(0, 0, 0, 0.26) 0px 24px 24px 0px,
+    rgba(0, 0, 0, 0.29) 0px 6px 13px 0px;
+  --shadow-focus: 0 0 0 3px rgba(20, 110, 245, 0.18);
+
+  /* --- Superficies semánticas (DESIGN.md: 0 Canvas, 1 Tinted, 2 Card, 3 Inverted) */
+  --surface-canvas: var(--color-pure-white);
+  --surface-canvas-deep: var(--color-mist);
+  --surface-tinted: var(--color-mist);
+  --surface-card: var(--color-pure-white);
+  --surface-card-muted: var(--color-mist);
+  --surface-card-raised: var(--color-pure-white);
+  --surface-inverted: var(--color-obsidian);
+  --surface-ink: var(--color-obsidian);
+  --surface-ink-soft: var(--color-graphite);
+
+  /* --- Texto semántico ----------------------------------------------------- */
+  --text-primary: var(--color-obsidian);
+  --text-secondary: var(--color-slate);
+  --text-tertiary: var(--color-slate);
+  --text-on-ink: var(--color-pure-white);
+  --text-on-ink-muted: var(--color-smoke);
+
+  /* --- Acento y estados operativos ----------------------------------------- */
+  --accent-primary: var(--color-webflow-blue);
+  --accent-primary-hover: var(--color-indigo-ink);
+  --accent-primary-soft: #eef4ff;
+  --accent-primary-border: #b8d3fe;
+  --accent-primary-ring: rgba(20, 110, 245, 0.18);
+  --accent-secondary: var(--color-obsidian);
+
+  --signal-transit: var(--color-webflow-blue);
+  --signal-transit-bg: #eef4ff;
+  --signal-transit-border: #b8d3fe;
+  --signal-delivered: #0f6b2f;
+  --signal-delivered-bg: #eefbf1;
+  --signal-delivered-border: #b5e8c3;
+  --signal-pending: #8a4b08;
+  --signal-pending-bg: #fff6ed;
+  --signal-pending-border: #ffd6ae;
+  --signal-danger: #b42318;
   --signal-danger-bg: #fef2f2;
-  --signal-danger-border: #fecaca;
+  --signal-danger-border: #f5b8b4;
 
-  /* --- Material Liquid Glass (solo capa funcional flotante) ---------------- */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-bg-strong: rgba(255, 255, 255, 0.86);
-  --glass-bg-ink: rgba(10, 16, 32, 0.62);
-  --glass-border: rgba(255, 255, 255, 0.65);
-  --glass-border-ink: rgba(148, 163, 184, 0.24);
-  --glass-blur: blur(24px) saturate(145%);
-  --glass-blur-soft: blur(14px) saturate(135%);
-  --glass-shadow: 0 18px 44px -22px rgba(10, 16, 32, 0.42), 0 2px 10px -4px rgba(10, 16, 32, 0.18);
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  /* --- Alias para hojas de estilo de features ------------------------------ */
+  --color-primary: var(--color-webflow-blue);
+  --color-primary-hover: var(--color-indigo-ink);
+  --color-primary-light: #eef4ff;
+  --color-primary-ring: rgba(20, 110, 245, 0.18);
+  --color-primary-border: #b8d3fe;
 
-  /* --- Compatibilidad: tokens heredados de las features ------------------- */
-  --color-primary: var(--accent-primary);
-  --color-primary-hover: var(--accent-primary-hover);
-  --color-primary-light: var(--accent-primary-soft);
-  --color-primary-ring: var(--accent-primary-ring);
-  --color-primary-border: var(--accent-primary-border);
+  --color-bg-app: var(--color-pure-white);
+  --color-surface: var(--color-pure-white);
+  --color-surface-subtle: var(--color-mist);
+  --color-border: var(--color-ash-border);
+  --color-border-hover: var(--color-smoke);
 
-  --color-bg-app: var(--surface-canvas);
-  --color-surface: var(--surface-card);
-  --color-surface-subtle: #f1f5f9;
-  --color-border: #dde4f0;
-  --color-border-hover: #c4cfdf;
-
-  --color-text-main: var(--text-primary);
-  --color-text-muted: var(--text-secondary);
-  --color-text-inverse: #ffffff;
+  --color-text-main: var(--color-obsidian);
+  --color-text-muted: var(--color-slate);
+  --color-text-inverse: var(--color-pure-white);
 
   --color-success: var(--signal-delivered);
   --color-success-bg: var(--signal-delivered-bg);
@@ -88,76 +192,21 @@
   --color-warning-bg: var(--signal-pending-bg);
   --color-warning-border: var(--signal-pending-border);
 
-  /* --- Tipografía ---------------------------------------------------------- */
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
-    'Segoe UI Variable Text', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace;
-
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-md: 1.0625rem;
-  --text-lg: 1.375rem;
-  --text-xl: clamp(1.75rem, 2.4vw, 2.125rem);
-  --text-display: clamp(1.875rem, 3.2vw, 2.75rem);
-
-  --leading-tight: 1.08;
-  --leading-snug: 1.3;
-  --leading-base: 1.6;
-
-  --tracking-display: -0.045em;
-  --tracking-title: -0.03em;
-  --tracking-eyebrow: 0.16em;
-
-  /* --- Radios, elevación y layout ----------------------------------------- */
-  --radius-xs: 0.25rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.25rem;
-  --radius-2xl: 1.75rem;
-  --radius-full: 9999px;
-
-  --shadow-sm: 0 1px 2px 0 rgb(10 16 32 / 0.06);
-  --shadow-md: 0 8px 20px -12px rgb(10 16 32 / 0.28), 0 2px 6px -3px rgb(10 16 32 / 0.12);
-  --shadow-lg: 0 24px 48px -28px rgb(10 16 32 / 0.38), 0 6px 16px -8px rgb(10 16 32 / 0.16);
-  --shadow-focus: 0 0 0 4px var(--accent-primary-ring);
-
-  --layout-max: 82rem;
-  --dock-height: 3.5rem;
-
-  /* --- Movimiento ---------------------------------------------------------- */
+  /* --- Movimiento y curvas ------------------------------------------------- */
   --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --spring-morph: 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  --spring-morph: 320ms cubic-bezier(0.22, 1, 0.36, 1);
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 420ms cubic-bezier(0.22, 1, 0.36, 1);
-
-  /* --- Retícula isométrica ------------------------------------------------- */
-  --iso-angle: 30deg;
-  --iso-skew: -30deg;
-  --iso-grid-line: rgba(0, 81, 213, 0.08);
-}
-
-/* Preferencias de accesibilidad: transparencia y contraste. */
-@media (prefers-reduced-transparency: reduce) {
-  :root {
-    --glass-bg: #ffffff;
-    --glass-bg-strong: #ffffff;
-    --glass-bg-ink: #0a1020;
-    --glass-blur: none;
-    --glass-blur-soft: none;
-    --glass-shadow: 0 2px 10px -4px rgba(10, 16, 32, 0.28);
-  }
+  --transition-normal: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-contrast: more) {
   :root {
-    --color-border: #94a3b8;
-    --text-secondary: #334155;
-    --accent-primary: #003fb0;
-    --glass-bg: rgba(255, 255, 255, 0.96);
+    --color-ash-border: #080808;
+    --color-border: #080808;
+    --color-slate: #222222;
+    --text-secondary: #222222;
   }
 }
 

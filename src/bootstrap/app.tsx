@@ -1,32 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { FetchHttpClient } from '../shared/infrastructure/http/index.js';
-import {
-  Alert,
-  Card,
-  KineticCounter,
-  KineticHeader,
-  Spinner,
-} from '../shared/ui/index.js';
+import { Alert, Spinner } from '../shared/ui/index.js';
 
 import {
+  AdminAccessView,
   AuthView,
+  ChangePasswordModal,
   HttpAuthGateway,
+  MillastMark,
   SessionBar,
-  AdminUserManagementView,
   clearToken,
   getToken,
   useAuth,
   type AuthRole,
 } from '../features/auth/index.js';
-import { HttpZoneRepository, ZoneManagementView, type Zone } from '../features/zones/index.js';
+import { ZoneManagementView, type Zone } from '../features/zones/index.js';
 import { OrderManagementView, type Order } from '../features/orders/index.js';
 import { RouteManagementView } from '../features/routes/index.js';
 import { CourierFleetDispatchView, type Courier } from '../features/couriers/index.js';
 import { DeliveryExecutionView, type DeliveryActor } from '../features/deliveries/index.js';
-import { DispatchManagementView } from '../features/dispatch/index.js';
+import { ClientCourierApplicationView } from '../features/courier-applications/index.js';
 import { composeUseCases } from './compose-use-cases.js';
 
-type AppTab = 'zones' | 'orders' | 'routes' | 'dispatch' | 'deliveries' | 'users';
+type AppTab = 'zones' | 'orders' | 'routes' | 'dispatch' | 'deliveries' | 'users' | 'application';
 
 const TAB_LABELS: Readonly<Record<AppTab, string>> = {
   zones: 'Zonas',
@@ -35,12 +31,13 @@ const TAB_LABELS: Readonly<Record<AppTab, string>> = {
   dispatch: 'Despacho',
   deliveries: 'Entregas',
   users: 'Accesos',
+  application: 'Ser repartidor',
 };
 
 const TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
   personal: ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'users'],
   repartidor: ['deliveries', 'routes', 'orders', 'zones'],
-  cliente: ['orders', 'zones'],
+  cliente: ['orders', 'zones', 'application'],
 };
 
 const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
@@ -49,26 +46,15 @@ const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
   cliente: 'orders',
 };
 
-const APP_TABS: readonly AppTab[] = ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'users'];
-
-const STEP_BY_TAB: Readonly<Record<AppTab, number>> = {
-  zones: 1,
-  orders: 2,
-  routes: 3,
-  dispatch: 4,
-  deliveries: 5,
-  users: 6,
-};
-
-/** Las cinco etapas del pipeline operativo, en orden de negocio. */
-const PIPELINE_STAGES: readonly { readonly tab: AppTab; readonly label: string }[] = [
-  { tab: 'zones', label: 'Cobertura' },
-  { tab: 'orders', label: 'Demanda' },
-  { tab: 'routes', label: 'Planificación' },
-  { tab: 'dispatch', label: 'Despacho' },
-  { tab: 'deliveries', label: 'Última milla' },
+const APP_TABS: readonly AppTab[] = [
+  'zones',
+  'orders',
+  'routes',
+  'dispatch',
+  'deliveries',
+  'users',
+  'application',
 ];
-
 const ORDER_QUERY_PARAMS = ['orderId', 'deliveryDate', 'zoneId'] as const;
 
 function isAppTab(value: string): value is AppTab {
@@ -81,8 +67,6 @@ function readRequestedTab(): string | null {
 
 function resolveTab(requested: string | null, role: AuthRole | null): AppTab {
   const fallback: AppTab = role === null ? 'zones' : DEFAULT_TAB_BY_ROLE[role];
-
-  // Compatibilidad: el antiguo identificador de la pestaña de despacho era "fleet".
   const normalized = requested === 'fleet' ? 'dispatch' : requested;
 
   if (normalized === null || role === null || !isAppTab(normalized)) {
@@ -92,19 +76,9 @@ function resolveTab(requested: string | null, role: AuthRole | null): AppTab {
   return TABS_BY_ROLE[role].includes(normalized) ? normalized : fallback;
 }
 
-function pipelineStatusLabel(activeTab: AppTab): string {
-  if (activeTab === 'users') {
-    return 'Administración';
-  }
-
-  const index = PIPELINE_STAGES.findIndex((stage) => stage.tab === activeTab);
-  return index < 0 ? '' : `Paso ${index + 1} de ${PIPELINE_STAGES.length}`;
-}
-
 export function App() {
   const unauthorizedHandlerRef = useRef<() => void>(() => undefined);
 
-  // A single HTTP client shares the JWT provider and the global 401 handler with every feature.
   const [httpClient] = useState(
     () =>
       new FetchHttpClient(undefined, {
@@ -114,16 +88,15 @@ export function App() {
   );
   const [authGateway] = useState(() => new HttpAuthGateway(httpClient));
   const useCases = useMemo(() => composeUseCases(httpClient), [httpClient]);
-  const zoneRepository = useMemo(() => new HttpZoneRepository(httpClient), [httpClient]);
   const auth = useAuth(authGateway);
 
   const resetSessionViewState = useCallback(() => {
-    setVerificationMessage(null);
     setZones([]);
     setOrders([]);
     setCouriers([]);
     setCatalogError(null);
     setRequestedTab(null);
+    setPasswordModalOpen(false);
 
     const url = new URL(window.location.href);
     url.searchParams.delete('tab');
@@ -147,6 +120,8 @@ export function App() {
   const currentUser = auth.user;
   const [requestedTab, setRequestedTab] = useState<string | null>(readRequestedTab);
   const activeTab = resolveTab(requestedTab, currentRole);
+  const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const restoreTab = () => setRequestedTab(readRequestedTab());
@@ -154,13 +129,19 @@ export function App() {
     return () => window.removeEventListener('popstate', restoreTab);
   }, []);
 
+  useEffect(() => {
+    const handleScroll = (): void => {
+      setIsScrolled(window.scrollY > 4);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const allowedTabs: readonly AppTab[] =
     currentRole === null ? APP_TABS : TABS_BY_ROLE[currentRole];
-
-  // El dock respeta el orden real del pipeline operativo, independientemente
-  // del orden en que cada rol tenga habilitadas sus pestañas.
   const navTabs = useMemo(
-    () => [...allowedTabs].sort((left, right) => STEP_BY_TAB[left] - STEP_BY_TAB[right]),
+    () => APP_TABS.filter((tab) => allowedTabs.includes(tab)),
     [allowedTabs],
   );
 
@@ -168,7 +149,7 @@ export function App() {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
 
-    if (tab !== 'orders') {
+    if (tab !== 'orders' && tab !== 'routes') {
       for (const key of ORDER_QUERY_PARAMS) {
         url.searchParams.delete(key);
       }
@@ -201,7 +182,7 @@ export function App() {
     setIsLoadingCatalog(true);
     setCatalogError(null);
 
-    const includeCouriers = currentRole === 'personal' || currentRole === 'repartidor';
+    const includeCouriers = currentRole === 'personal';
 
     const [zonesResult, ordersResult, couriersResult] = await Promise.allSettled([
       useCases.orders.getZones.execute(),
@@ -258,6 +239,26 @@ export function App() {
     }));
   }, [useCases.routes]);
 
+  const routeCouriers = useMemo<readonly Courier[]>(() => {
+    if (couriers.length > 0) {
+      return couriers;
+    }
+    if (currentUser?.role === 'repartidor' && currentUser.courierId !== null) {
+      return [
+        {
+          id: currentUser.courierId,
+          displayName: currentUser.displayName ?? currentUser.email,
+          maxOrdersPerTrip: 0,
+          isEnabled: currentUser.isActive,
+          isAvailable: false,
+          createdAt: '',
+          updatedAt: '',
+        },
+      ];
+    }
+    return [];
+  }, [couriers, currentUser?.role, currentUser?.courierId, currentUser?.displayName, currentUser?.email, currentUser?.isActive]);
+
   const deliveryActor = useMemo<DeliveryActor>(
     () => ({
       id: currentUser?.id ?? '',
@@ -268,21 +269,10 @@ export function App() {
     [currentUser?.id, currentUser?.role, currentUser?.courierId, currentUser?.displayName],
   );
 
-  const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
-
-  const handleVerifyProfile = useCallback(async () => {
-    setVerificationMessage(null);
-    const verifiedUser = await auth.refreshMe();
-    if (verifiedUser !== null) {
-      setVerificationMessage(
-        `Perfil verificado: ${verifiedUser.displayName ?? verifiedUser.email} · rol ${verifiedUser.publicRole}.`,
-      );
-    }
-  }, [auth.refreshMe]);
-
   const handleLogout = useCallback(() => {
-    resetSessionViewState();
-    void auth.logout();
+    void auth.logout().finally(() => {
+      resetSessionViewState();
+    });
   }, [auth.logout, resetSessionViewState]);
 
   const handleAuthenticated = useCallback(() => {
@@ -292,12 +282,11 @@ export function App() {
   if (auth.status === 'loading') {
     return (
       <div className="app-frame">
-        <div className="app-mesh" aria-hidden="true" />
         <main className="app-shell app-shell--centered">
-          <Card variant="outlined" className="app-loading-card">
+          <div className="wf-loading-card">
             <Spinner size="lg" label="Restaurando la sesión activa" />
             <p role="status">Restaurando la sesión activa...</p>
-          </Card>
+          </div>
         </main>
       </div>
     );
@@ -306,7 +295,6 @@ export function App() {
   if (auth.status !== 'authenticated' || currentUser === null) {
     return (
       <div className="app-frame">
-        <div className="app-mesh" aria-hidden="true" />
         <main className="app-shell app-shell--auth">
           {auth.error !== null && (
             <Alert type="error" title="Atención" onClose={auth.clearError}>
@@ -319,19 +307,6 @@ export function App() {
     );
   }
 
-  const activeTabIndex = navTabs.indexOf(activeTab);
-  const navStyle = {
-    '--tab-index': activeTabIndex < 0 ? 0 : activeTabIndex,
-    '--tab-count': navTabs.length,
-  } as CSSProperties;
-
-  const pendingOrderCount = orders.filter((order) => order.status === 'pendiente').length;
-  const availableCourierCount = couriers.filter(
-    (courier) => courier.isEnabled && courier.isAvailable,
-  ).length;
-  const activePipelineIndex = PIPELINE_STAGES.findIndex((stage) => stage.tab === activeTab);
-
-  // ARIA tabs pattern: roving tabIndex plus Left/Right/Home/End navigation, as in AuthView.
   const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     const currentIndex = navTabs.indexOf(activeTab);
     if (currentIndex < 0) {
@@ -358,118 +333,54 @@ export function App() {
 
     event.preventDefault();
     selectTab(nextTab);
-    window.requestAnimationFrame(() => document.getElementById(`app-tab-${nextTab}`)?.focus());
+    window.requestAnimationFrame(() => document.getElementById('app-tab-' + nextTab)?.focus());
   };
 
   return (
-    <div className="app-frame">
-      <div className="app-mesh" aria-hidden="true" />
-
-      <header className="app-topbar">
-        <div className="app-topbar__inner">
-          <div className="app-brand">
-            <span className="app-brand__mark" aria-hidden="true">
-              ⬢
-            </span>
-            <span className="app-brand__name">Última Milla</span>
-            <span className="app-brand__tag">Torre de control</span>
+    <div className="app-frame wf-app">
+      <header className={'wf-app-topbar ' + (isScrolled ? 'wf-app-topbar--scrolled' : '')}>
+        <div className="wf-app-topbar__inner">
+          <div className="wf-app-brand">
+            <MillastMark className="wf-app-brand__mark" />
+            <span className="wf-app-brand__name">Millast</span>
           </div>
+
+          <nav
+            className="wf-app-nav"
+            role="tablist"
+            aria-label="Navegación principal del sistema"
+            onKeyDown={handleTabKeyDown}
+          >
+            {navTabs.map((tab) => {
+              const isSelected = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  id={'app-tab-' + tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  aria-controls={'app-panel-' + tab}
+                  tabIndex={isSelected ? 0 : -1}
+                  className={'wf-app-nav__tab ' + (isSelected ? 'wf-app-nav__tab--active' : '')}
+                  onClick={() => selectTab(tab)}
+                >
+                  <span>{TAB_LABELS[tab]}</span>
+                </button>
+              );
+            })}
+          </nav>
 
           <SessionBar
             user={currentUser}
-            healthStatus={auth.healthStatus}
             isLoading={auth.isSubmitting}
-            verificationMessage={verificationMessage}
+            onOpenPassword={() => setPasswordModalOpen(true)}
             onLogout={handleLogout}
-            onVerifyProfile={() => {
-              void handleVerifyProfile();
-            }}
           />
         </div>
-
-        <nav
-          className="app-nav"
-          role="tablist"
-          aria-label="Navegación principal del sistema"
-          onKeyDown={handleTabKeyDown}
-          style={navStyle}
-        >
-          {navTabs.map((tab) => (
-            <button
-              key={tab}
-              id={`app-tab-${tab}`}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab}
-              aria-controls={`app-panel-${tab}`}
-              tabIndex={activeTab === tab ? 0 : -1}
-              className={`app-nav__tab ${activeTab === tab ? 'app-nav__tab--active' : ''}`}
-              onClick={() => selectTab(tab)}
-            >
-              <span className="app-nav__step" aria-hidden="true">
-                {STEP_BY_TAB[tab]}
-              </span>
-              {TAB_LABELS[tab]}
-            </button>
-          ))}
-        </nav>
       </header>
 
-      <main className="app-main">
-        <div className="app-hero">
-          <KineticHeader
-            level="h1"
-            eyebrow="Gestión de logística"
-            stepLabel={pipelineStatusLabel(activeTab)}
-            title="Torre de control de última milla"
-            description="Cobertura, demanda, planificación, despacho y entregas confirmadas en una secuencia guiada sobre la API real del backend."
-            className="app-hero__header"
-          />
-
-          <div className="app-hero__kpis" aria-label="Indicadores operativos">
-            <KineticCounter label="Zonas" value={zones.length} tone="accent" />
-            <KineticCounter label="Pedidos pendientes" value={pendingOrderCount} tone="transit" />
-            {currentUser.role === 'personal' && (
-              <KineticCounter
-                label="Repartidores disponibles"
-                value={availableCourierCount}
-                tone="delivered"
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="app-pipeline" aria-label="Flujo operativo de última milla">
-          {PIPELINE_STAGES.map((stage, index) => {
-            const isActive = stage.tab === activeTab;
-            const isDone = activePipelineIndex >= 0 && index < activePipelineIndex;
-            const isAllowed = allowedTabs.includes(stage.tab);
-            return (
-              <span key={stage.tab} className="app-pipeline__item">
-                {index > 0 && (
-                  <span className="app-pipeline__arrow" aria-hidden="true">
-                    →
-                  </span>
-                )}
-                <button
-                  type="button"
-                  className={`app-pipeline__stage ${
-                    isActive ? 'app-pipeline__stage--active' : ''
-                  } ${isDone ? 'app-pipeline__stage--done' : ''}`.trim()}
-                  disabled={!isAllowed}
-                  onClick={() => selectTab(stage.tab)}
-                  aria-current={isActive ? 'step' : undefined}
-                >
-                  <span className="app-pipeline__stage-number" aria-hidden="true">
-                    {index + 1}
-                  </span>
-                  {stage.label}
-                </button>
-              </span>
-            );
-          })}
-        </div>
-
+      <main className="wf-app-main">
         {auth.error !== null && (
           <Alert type="error" title="Atención" onClose={auth.clearError}>
             {auth.error}
@@ -483,17 +394,18 @@ export function App() {
         )}
 
         {isLoadingCatalog && zones.length === 0 && (
-          <Card variant="outlined" className="app-loading-card">
+          <div className="wf-loading-card wf-loading-card--inline">
             <Spinner size="md" label="Cargando zonas y pedidos" />
             <p role="status">Sincronizando catálogo operativo...</p>
-          </Card>
+          </div>
         )}
 
         <div
-          className="app-panel"
+          key={activeTab}
+          className="wf-app-panel app-panel"
           role="tabpanel"
-          id={`app-panel-${activeTab}`}
-          aria-labelledby={`app-tab-${activeTab}`}
+          id={'app-panel-' + activeTab}
+          aria-labelledby={'app-tab-' + activeTab}
           tabIndex={-1}
         >
           {activeTab === 'zones' && (
@@ -509,7 +421,11 @@ export function App() {
             <OrderManagementView
               useCases={useCases.orders}
               canCreateOrder={currentUser.role !== 'repartidor'}
-              onNavigateToRoutes={(deliveryDate) => selectTab('routes', { deliveryDate })}
+              onNavigateToRoutes={
+                currentUser.role === 'personal'
+                  ? (deliveryDate) => selectTab('routes', { deliveryDate })
+                  : undefined
+              }
             />
           )}
 
@@ -518,31 +434,24 @@ export function App() {
               useCases={useCases.routes}
               zones={zones}
               pendingOrders={orders}
-              couriers={couriers}
+              couriers={routeCouriers}
               isAdmin={currentUser.role === 'personal'}
               onCatalogChanged={() => {
                 void loadSharedCatalog();
               }}
-              onNavigateToFleet={() => selectTab('dispatch')}
+              onNavigateToFleet={
+                currentUser.role === 'personal' ? () => selectTab('dispatch') : undefined
+              }
             />
           )}
 
           {activeTab === 'dispatch' && (
-            <>
-              <CourierFleetDispatchView
-                useCases={useCases.couriers}
-                listPlanifiedRoutes={listPlanifiedRoutes}
-                zones={zones}
-                onNavigateToDeliveries={() => selectTab('deliveries')}
-              />
-
-              <div className="app-dispatch-module">
-                <DispatchManagementView
-                  useCases={useCases.dispatch}
-                  zoneCatalog={zoneRepository}
-                />
-              </div>
-            </>
+            <CourierFleetDispatchView
+              useCases={useCases.couriers}
+              listPlanifiedRoutes={listPlanifiedRoutes}
+              zones={zones}
+              onNavigateToDeliveries={() => selectTab('deliveries')}
+            />
           )}
 
           {activeTab === 'deliveries' && (
@@ -551,12 +460,38 @@ export function App() {
               courierUseCases={useCases.couriers}
               actor={deliveryActor}
               zones={zones}
+              onDeliveryChanged={() => {
+                void loadSharedCatalog();
+              }}
             />
           )}
 
-          {activeTab === 'users' && <AdminUserManagementView useCases={useCases.auth} />}
+          {activeTab === 'users' && (
+            <AdminAccessView
+              authUseCases={useCases.auth}
+              applicationUseCases={useCases.courierApplications}
+            />
+          )}
+
+          {activeTab === 'application' && (
+            <ClientCourierApplicationView
+              useCases={useCases.courierApplications}
+              defaultFullName={currentUser.displayName ?? ''}
+            />
+          )}
         </div>
       </main>
+
+      {isPasswordModalOpen && (
+        <ChangePasswordModal
+          useCases={useCases.auth}
+          onClose={() => setPasswordModalOpen(false)}
+          onChanged={() => {
+            setPasswordModalOpen(false);
+            void auth.refreshMe();
+          }}
+        />
+      )}
     </div>
   );
 }

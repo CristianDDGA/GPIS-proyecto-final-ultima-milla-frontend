@@ -55,7 +55,10 @@ export function validateOrder(input: CreateOrderInput): OrderValidationResult {
   const trimmedAddress = input.deliveryAddress ? input.deliveryAddress.trim() : '';
   if (!trimmedAddress) {
     errors.deliveryAddress = 'La dirección de entrega no puede estar vacía.';
-
+  } else if (trimmedAddress.length < 5) {
+    errors.deliveryAddress = 'La dirección de entrega debe tener al menos 5 caracteres.';
+  } else if (trimmedAddress.length > 200) {
+    errors.deliveryAddress = 'La dirección de entrega no puede exceder 200 caracteres.';
   }
 
   const datePattern = /^\d{4}-\d{2}-\d{2}$/;

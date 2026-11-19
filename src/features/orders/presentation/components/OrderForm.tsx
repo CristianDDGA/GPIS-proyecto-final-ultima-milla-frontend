@@ -102,7 +102,6 @@ export const OrderForm: FC<OrderFormProps> = ({
         onChange={(e) => handleChange('zoneId', e.target.value)}
         onBlur={() => handleBlur('zoneId')}
         error={touched.zoneId ? errors.zoneId : undefined}
-        helperText="Selecciona la zona correspondiente a la ruta de entrega."
         isRequired
         disabled={isSubmitting || isLoadingZones || hasNoZones}
       />
@@ -115,10 +114,9 @@ export const OrderForm: FC<OrderFormProps> = ({
         onChange={(e) => handleChange('deliveryAddress', e.target.value)}
         onBlur={() => handleBlur('deliveryAddress')}
         error={touched.deliveryAddress ? errors.deliveryAddress : undefined}
-        helperText="Ingresa la dirección detallada de destino."
         isRequired
         disabled={isSubmitting || hasNoZones}
-        maxLength={150}
+        maxLength={200}
         autoComplete="street-address"
       />
 
