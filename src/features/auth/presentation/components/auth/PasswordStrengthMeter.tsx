@@ -17,22 +17,20 @@ export interface PasswordStrengthMeterProps {
   readonly strength: PasswordStrength;
 }
 
-/**
- * Medidor de fortaleza en 3 segmentos rectangulares (4 px) sobre tinta
- * acromática y azul #146ef5 para el nivel fuerte.
- */
+/** Medidor de fortaleza compacto en 3 segmentos alineado con la paleta Liquid Glass. */
 export const PasswordStrengthMeter: FC<PasswordStrengthMeterProps> = ({ strength }) => (
-  <div className="wf-strength" data-strength={strength} aria-live="polite">
-    <span className="wf-strength__bars" aria-hidden="true">
+  <div className="mlg-strength" data-strength={strength} aria-live="polite">
+    <span className="mlg-strength__bars" aria-hidden="true">
       {[1, 2, 3].map((level) => (
         <span
           key={level}
           className={
-            'wf-strength__bar ' + (level <= STRENGTH_LEVEL[strength] ? 'wf-strength__bar--on' : '')
+            'mlg-strength__bar' +
+            (level <= STRENGTH_LEVEL[strength] ? ' mlg-strength__bar--on' : '')
           }
         />
       ))}
     </span>
-    <span className="wf-strength__label">Seguridad: {STRENGTH_LABELS[strength]}</span>
+    <span className="mlg-strength__label">Seguridad: {STRENGTH_LABELS[strength]}</span>
   </div>
 );

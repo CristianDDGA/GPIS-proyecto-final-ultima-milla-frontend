@@ -1,6 +1,6 @@
 import { useState, type FC, type FormEvent } from 'react';
-import { Button, TextInput } from '../../../../../shared/ui/index.js';
 import { AuthPasswordField } from './AuthPasswordField.js';
+import { AuthTextField } from './AuthTextField.js';
 
 export interface AuthLoginFormProps {
   readonly email: string;
@@ -34,16 +34,18 @@ export const AuthLoginForm: FC<AuthLoginFormProps> = ({
       id="auth-panel-login"
       role="tabpanel"
       aria-labelledby="auth-tab-login"
-      className="wf-auth-form"
+      className="mlg-form"
       onSubmit={onSubmit}
       noValidate
     >
-      <TextInput
+      <AuthTextField
         id="auth-login-email"
         label="Correo electrónico"
         type="email"
+        inputMode="email"
         name="email"
         autoComplete="username"
+        spellCheck={false}
         placeholder="usuario@millast.ec"
         value={email}
         onChange={(event) => {
@@ -57,27 +59,27 @@ export const AuthLoginForm: FC<AuthLoginFormProps> = ({
         disabled={isSubmitting}
       />
 
-      <div className="wf-password-group">
-        <AuthPasswordField
-          id="auth-login-password"
-          name="password"
-          label="Contraseña"
-          value={password}
-          autoComplete="current-password"
-          visible={showPassword}
-          onToggleVisible={() => setShowPassword((previous) => !previous)}
-          onChange={(event) => {
-            onPasswordChange(event.target.value);
-            onClearError();
-          }}
-          onBlur={() => onMarkTouched('password')}
-          error={errorFor('password')}
-          disabled={isSubmitting}
-        />
+      <AuthPasswordField
+        id="auth-login-password"
+        name="password"
+        label="Contraseña"
+        value={password}
+        autoComplete="current-password"
+        visible={showPassword}
+        onToggleVisible={() => setShowPassword((previous) => !previous)}
+        onChange={(event) => {
+          onPasswordChange(event.target.value);
+          onClearError();
+        }}
+        onBlur={() => onMarkTouched('password')}
+        error={errorFor('password')}
+        disabled={isSubmitting}
+      />
 
+      <div className="mlg-forgot-row">
         <button
           type="button"
-          className="wf-forgot-link"
+          className="mlg-forgot-link"
           onClick={onOpenForgotPassword}
           disabled={isSubmitting}
         >
@@ -85,11 +87,10 @@ export const AuthLoginForm: FC<AuthLoginFormProps> = ({
         </button>
       </div>
 
-      <div className="wf-form-actions">
-        <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-          Entrar al sistema
-        </Button>
-      </div>
+      <button type="submit" disabled={isSubmitting} className="mlg-submit-btn">
+        {isSubmitting && <span className="mlg-spinner" aria-hidden="true" />}
+        <span>{isSubmitting ? 'Verificando...' : 'Entrar al sistema'}</span>
+      </button>
     </form>
   );
 };

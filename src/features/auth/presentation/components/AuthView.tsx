@@ -1,16 +1,29 @@
-import { useCallback, type CSSProperties, type FC, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FC,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import type { AuthUser } from '../../domain/index.js';
-import { Alert } from '../../../../shared/ui/index.js';
 import { useAuthFlows, type AuthScreen, type AuthTab } from '../hooks/useAuthFlows.js';
 import { AuthForgotPasswordForm } from './auth/AuthForgotPasswordForm.js';
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  CheckCircleIcon,
+  ShieldCheckIcon,
+} from './auth/AuthIcons.js';
 import { AuthLoginForm } from './auth/AuthLoginForm.js';
 import { AuthRegisterForm } from './auth/AuthRegisterForm.js';
 import { AuthResetPasswordForm } from './auth/AuthResetPasswordForm.js';
 import { AuthStudioShowcase } from './auth/AuthStudioShowcase.js';
 import { AuthTopNav } from './auth/AuthTopNav.js';
 import { AuthVerifyEmailForm } from './auth/AuthVerifyEmailForm.js';
-import { KineticText } from './auth/KineticText.js';
+import { LiquidGlassCardChrome } from './auth/LiquidGlassCardChrome.js';
 import '../styles/auth.css';
 
 export interface AuthViewProps {
@@ -38,17 +51,58 @@ function getSecondaryInstruction(
   switch (screen) {
     case 'verify-email':
       return verifyEmail.length > 0
-        ? `Código de 6 dígitos enviado a ${verifyEmail}.`
-        : 'Código de 6 dígitos enviado a tu correo.';
+        ? `Ingresa el código de 6 dígitos enviado a ${verifyEmail}.`
+        : 'Ingresa el código de 6 dígitos enviado a tu correo.';
     case 'forgot-password':
-      return 'Enviaremos un código de verificación de 6 dígitos a tu correo.';
+      return 'Ingresa tu correo registrado para recibir un código de recuperación de 6 dígitos.';
     case 'reset-password':
-      return `Código enviado a ${resetEmail.length > 0 ? resetEmail : 'tu correo'}.`;
+      return `Ingresa el código enviado a ${resetEmail.length > 0 ? resetEmail : 'tu correo'} y define tu nueva contraseña.`;
   }
 }
 
 export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
   const flows = useAuthFlows({ useCases, onAuthenticated });
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const glintRef = useRef<HTMLDivElement | null>(null);
+  const [isShaking, setIsShaking] = useState(false);
+
+  useEffect(() => {
+    if (flows.shakeNonce === 0) return;
+    setIsShaking(false);
+    const frame = window.requestAnimationFrame(() => setIsShaking(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [flows.shakeNonce]);
+
+  // Inclinación óptica 3D contenida (±2.1deg) + destello especular reactivo al cursor
+  const handleCardPointerMove = useCallback((event: PointerEvent<HTMLDivElement>): void => {
+    if (
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+    if (event.pointerType === 'touch') return;
+    const card = cardRef.current;
+    if (!card) return;
+
+    const rect = card.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    if (glintRef.current) {
+      glintRef.current.style.transform = `translate3d(${(x - 88).toFixed(1)}px, ${(y - 88).toFixed(1)}px, 0)`;
+    }
+
+    const rotateY = (x / rect.width - 0.5) * 4.2;
+    const rotateX = (y / rect.height - 0.5) * -4.2;
+    card.style.transform = `rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`;
+  }, []);
+
+  const handleCardPointerLeave = useCallback((): void => {
+    if (cardRef.current) {
+      cardRef.current.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    }
+  }, []);
 
   const handleTabKeyDown = useCallback(
     (event: KeyboardEvent<HTMLButtonElement>): void => {
@@ -73,209 +127,250 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     ? (flows.screen as Exclude<AuthScreen, 'login' | 'register'>)
     : null;
 
-  const primaryTitle = flows.activeTab === 'login' ? 'Accede a tu consola' : 'Crea tu cuenta';
-  const segmentedStyle = {
-    '--wf-seg-index': flows.activeTab === 'login' ? 0 : 1,
-  } as CSSProperties;
-
   return (
-    <div className="wf-auth-studio">
-      <AuthTopNav />
+    <div className="mlg-page">
+      <div className="mlg-shell">
+        <AuthTopNav />
 
-      <main className="wf-auth-main" aria-label="Acceso a Millast">
-        <AuthStudioShowcase />
+        <div className="mlg-grid" aria-label="Acceso a Millast">
+          <AuthStudioShowcase />
 
-        <section className="wf-auth-card" aria-label="Formulario de autenticación">
-          <div className="wf-auth-card__body">
-            {!flows.isSecondary ? (
-              <>
-                <div
-                  className="wf-segmented"
-                  role="tablist"
-                  aria-label="Modo de acceso"
-                  style={segmentedStyle}
-                >
-                  <span className="wf-segmented__thumb" aria-hidden="true" />
-                  {AUTH_TABS.map((tab) => {
-                    const isSelected = flows.activeTab === tab.value;
-                    return (
-                      <button
-                        key={tab.value}
-                        ref={tab.value === 'login' ? flows.loginTabRef : flows.registerTabRef}
-                        type="button"
-                        role="tab"
-                        id={`auth-tab-${tab.value}`}
-                        aria-selected={isSelected}
-                        aria-controls={`auth-panel-${tab.value}`}
-                        tabIndex={isSelected ? 0 : -1}
-                        className={'wf-tab ' + (isSelected ? 'wf-tab--active' : '')}
-                        onClick={() => flows.selectPrimaryTab(tab.value)}
-                        onKeyDown={handleTabKeyDown}
-                      >
-                        {tab.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <header className="wf-auth-card__head">
-                  <KineticText
-                    key={primaryTitle}
-                    as="h2"
-                    text={primaryTitle}
-                    className="wf-auth-card__title"
-                    staggerMs={45}
-                  />
-                  <p className="wf-auth-card__instruction">
-                    {flows.activeTab === 'login'
-                      ? 'Ingresa con tu cuenta de administrador, repartidor o cliente.'
-                      : 'Regístrate para solicitar y seguir entregas en tu zona.'}
-                  </p>
-                </header>
-              </>
-            ) : (
-              <>
-                <button type="button" className="wf-back-link" onClick={flows.goToLogin}>
-                  ← Volver a iniciar sesión
-                </button>
-
-                {secondaryScreen !== null && (
-                  <header className="wf-auth-card__head">
-                    <KineticText
-                      key={SECONDARY_TITLES[secondaryScreen]}
-                      as="h2"
-                      elementRef={flows.screenTitleRef}
-                      tabIndex={-1}
-                      text={SECONDARY_TITLES[secondaryScreen]}
-                      className="wf-auth-card__title"
-                      staggerMs={45}
-                    />
-                    <p className="wf-auth-card__instruction">
-                      {getSecondaryInstruction(
-                        secondaryScreen,
-                        flows.verifyEmailAddress,
-                        flows.resetEmail,
-                      )}
-                    </p>
-                  </header>
-                )}
-              </>
-            )}
-
-            {flows.requestError !== null && (
-              <Alert type="error" title="Atención" onClose={flows.clearError}>
-                {flows.requestError}
-              </Alert>
-            )}
-
-            {flows.notice !== null && (
-              <Alert type={flows.notice.type} title={flows.notice.title} onClose={flows.clearNotice}>
-                {flows.notice.message}
-              </Alert>
-            )}
-
-            {flows.screen === 'login' && (
-              <AuthLoginForm
-                email={flows.loginEmail}
-                password={flows.loginPassword}
-                onEmailChange={flows.setLoginEmail}
-                onPasswordChange={flows.setLoginPassword}
-                onClearError={flows.clearError}
-                onMarkTouched={flows.markTouched}
-                errorFor={flows.errorFor}
-                onOpenForgotPassword={flows.openForgotPassword}
-                onSubmit={flows.handleLoginSubmit}
-                isSubmitting={flows.isSubmitting}
-              />
-            )}
-
-            {flows.screen === 'register' && (
-              <AuthRegisterForm
-                email={flows.registerEmail}
-                password={flows.registerPassword}
-                displayName={flows.registerDisplayName}
-                strength={flows.registerStrength}
-                onEmailChange={flows.setRegisterEmail}
-                onPasswordChange={flows.setRegisterPassword}
-                onDisplayNameChange={flows.setRegisterDisplayName}
-                onClearError={flows.clearError}
-                onMarkTouched={flows.markTouched}
-                errorFor={flows.errorFor}
-                onSubmit={flows.handleRegisterSubmit}
-                isSubmitting={flows.isSubmitting}
-              />
-            )}
-
-            {flows.screen === 'verify-email' && (
-              <AuthVerifyEmailForm
-                code={flows.verifyCode}
-                onCodeChange={flows.setVerifyCode}
-                onClearError={flows.clearError}
-                onMarkTouched={flows.markTouched}
-                errorFor={flows.errorFor}
-                resendCooldown={flows.resendCooldown}
-                onResend={() => {
-                  void flows.handleResendVerification();
+          <section
+            className="mlg-enter mlg-delay-3 mlg-card-stage"
+            aria-label="Formulario de autenticación"
+          >
+            <div className="mlg-card-float">
+              <div
+                ref={cardRef}
+                onPointerMove={handleCardPointerMove}
+                onPointerLeave={handleCardPointerLeave}
+                onAnimationEnd={(event) => {
+                  if (event.animationName === 'mlg-shake-x') {
+                    setIsShaking(false);
+                  }
                 }}
-                onSubmit={flows.handleVerifySubmit}
-                isSubmitting={flows.isSubmitting}
-              />
-            )}
+                className={'mlg-card' + (isShaking ? ' mlg-shake' : '')}
+              >
+                <LiquidGlassCardChrome cardRef={cardRef} glintRef={glintRef} />
 
-            {flows.screen === 'forgot-password' && (
-              <AuthForgotPasswordForm
-                email={flows.forgotEmail}
-                onEmailChange={flows.setForgotEmail}
-                onClearError={flows.clearError}
-                onMarkTouched={flows.markTouched}
-                errorFor={flows.errorFor}
-                onSubmit={flows.handleForgotSubmit}
-                isSubmitting={flows.isSubmitting}
-              />
-            )}
+                <div className="mlg-card__content">
+                  {!flows.isSecondary && (
+                    <div
+                      role="tablist"
+                      aria-label="Modo de acceso"
+                      className="mlg-segmented"
+                    >
+                      <div
+                        aria-hidden="true"
+                        className={
+                          'mlg-segmented__pill' +
+                          (flows.activeTab === 'register' ? ' mlg-segmented__pill--right' : '')
+                        }
+                      >
+                        <span className="mlg-segmented__pill-bar" />
+                      </div>
 
-            {flows.screen === 'reset-password' && (
-              <AuthResetPasswordForm
-                email={flows.resetEmail}
-                code={flows.resetCode}
-                newPassword={flows.resetPassword}
-                strength={flows.resetStrength}
-                onEmailChange={flows.setResetEmail}
-                onCodeChange={flows.setResetCode}
-                onPasswordChange={flows.setResetPassword}
-                onClearError={flows.clearError}
-                onMarkTouched={flows.markTouched}
-                errorFor={flows.errorFor}
-                onSubmit={flows.handleResetSubmit}
-                isSubmitting={flows.isSubmitting}
-              />
-            )}
+                      {AUTH_TABS.map((tab) => {
+                        const isSelected = flows.activeTab === tab.value;
+                        return (
+                          <button
+                            key={tab.value}
+                            ref={tab.value === 'login' ? flows.loginTabRef : flows.registerTabRef}
+                            type="button"
+                            role="tab"
+                            id={`auth-tab-${tab.value}`}
+                            aria-selected={isSelected}
+                            aria-controls={`auth-panel-${tab.value}`}
+                            tabIndex={isSelected ? 0 : -1}
+                            className={'mlg-tab' + (isSelected ? ' mlg-tab--active' : '')}
+                            onClick={() => flows.selectPrimaryTab(tab.value)}
+                            onKeyDown={handleTabKeyDown}
+                          >
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
-            <footer className="wf-auth-card__footer">
-              <span className="wf-auth-card__trust">
-                <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                  <path
-                    d="M8 1.6 13.2 3.6v4.1c0 3.1-2.1 5.7-5.2 6.9-3.1-1.2-5.2-3.8-5.2-6.9V3.6L8 1.6Z"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="m5.8 8 1.5 1.5L10.4 6.4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Sesión cifrada en tránsito
-              </span>
-            </footer>
-          </div>
-        </section>
-      </main>
+                  <div key={flows.screen} className="mlg-panel-switch">
+                    {flows.isSecondary && (
+                      <button
+                        type="button"
+                        className="mlg-back-link"
+                        onClick={flows.goToLogin}
+                      >
+                        <ArrowLeftIcon className="mlg-back-link__icon" />
+                        <span>Volver a iniciar sesión</span>
+                      </button>
+                    )}
+
+                    <div className="mlg-card__head">
+                      {secondaryScreen !== null ? (
+                        <>
+                          <h2
+                            ref={flows.screenTitleRef}
+                            tabIndex={-1}
+                            className="mlg-display mlg-card__title"
+                          >
+                            {SECONDARY_TITLES[secondaryScreen]}
+                          </h2>
+                          <p className="mlg-card__subtitle">
+                            {getSecondaryInstruction(
+                              secondaryScreen,
+                              flows.verifyEmailAddress,
+                              flows.resetEmail,
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <h2 className="mlg-display mlg-card__title">
+                            {flows.activeTab === 'login'
+                              ? 'Accede a tu consola'
+                              : 'Crea tu cuenta'}
+                          </h2>
+                          <p className="mlg-card__subtitle">
+                            {flows.activeTab === 'login'
+                              ? 'Ingresa con tu cuenta de administrador, repartidor o cliente.'
+                              : 'Regístrate para solicitar y seguir entregas en tu zona.'}
+                          </p>
+                        </>
+                      )}
+                    </div>
+
+                    {flows.requestError !== null && (
+                      <div
+                        role="alert"
+                        className="mlg-banner mlg-banner--error"
+                      >
+                        <AlertCircleIcon className="mlg-banner__icon" />
+                        <span className="mlg-banner__text">{flows.requestError}</span>
+                        <button
+                          type="button"
+                          className="mlg-banner__close"
+                          aria-label="Cerrar alerta"
+                          onClick={flows.clearError}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+
+                    {flows.notice !== null && (
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className={
+                          'mlg-banner ' +
+                          (flows.notice.type === 'success'
+                            ? 'mlg-banner--success'
+                            : 'mlg-banner--info')
+                        }
+                      >
+                        <CheckCircleIcon className="mlg-banner__icon" />
+                        <span className="mlg-banner__text">
+                          <strong>{flows.notice.title}.</strong> {flows.notice.message}
+                        </span>
+                        <button
+                          type="button"
+                          className="mlg-banner__close"
+                          aria-label="Cerrar aviso"
+                          onClick={flows.clearNotice}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+
+                    {flows.screen === 'login' && (
+                      <AuthLoginForm
+                        email={flows.loginEmail}
+                        password={flows.loginPassword}
+                        onEmailChange={flows.setLoginEmail}
+                        onPasswordChange={flows.setLoginPassword}
+                        onClearError={flows.clearError}
+                        onMarkTouched={flows.markTouched}
+                        errorFor={flows.errorFor}
+                        onOpenForgotPassword={flows.openForgotPassword}
+                        onSubmit={flows.handleLoginSubmit}
+                        isSubmitting={flows.isSubmitting}
+                      />
+                    )}
+
+                    {flows.screen === 'register' && (
+                      <AuthRegisterForm
+                        email={flows.registerEmail}
+                        password={flows.registerPassword}
+                        displayName={flows.registerDisplayName}
+                        strength={flows.registerStrength}
+                        onEmailChange={flows.setRegisterEmail}
+                        onPasswordChange={flows.setRegisterPassword}
+                        onDisplayNameChange={flows.setRegisterDisplayName}
+                        onClearError={flows.clearError}
+                        onMarkTouched={flows.markTouched}
+                        errorFor={flows.errorFor}
+                        onSubmit={flows.handleRegisterSubmit}
+                        isSubmitting={flows.isSubmitting}
+                      />
+                    )}
+
+                    {flows.screen === 'verify-email' && (
+                      <AuthVerifyEmailForm
+                        code={flows.verifyCode}
+                        onCodeChange={flows.setVerifyCode}
+                        onClearError={flows.clearError}
+                        onMarkTouched={flows.markTouched}
+                        errorFor={flows.errorFor}
+                        resendCooldown={flows.resendCooldown}
+                        onResend={() => {
+                          void flows.handleResendVerification();
+                        }}
+                        onSubmit={flows.handleVerifySubmit}
+                        isSubmitting={flows.isSubmitting}
+                      />
+                    )}
+
+                    {flows.screen === 'forgot-password' && (
+                      <AuthForgotPasswordForm
+                        email={flows.forgotEmail}
+                        onEmailChange={flows.setForgotEmail}
+                        onClearError={flows.clearError}
+                        onMarkTouched={flows.markTouched}
+                        errorFor={flows.errorFor}
+                        onSubmit={flows.handleForgotSubmit}
+                        isSubmitting={flows.isSubmitting}
+                      />
+                    )}
+
+                    {flows.screen === 'reset-password' && (
+                      <AuthResetPasswordForm
+                        email={flows.resetEmail}
+                        code={flows.resetCode}
+                        newPassword={flows.resetPassword}
+                        strength={flows.resetStrength}
+                        onEmailChange={flows.setResetEmail}
+                        onCodeChange={flows.setResetCode}
+                        onPasswordChange={flows.setResetPassword}
+                        onClearError={flows.clearError}
+                        onMarkTouched={flows.markTouched}
+                        errorFor={flows.errorFor}
+                        onSubmit={flows.handleResetSubmit}
+                        isSubmitting={flows.isSubmitting}
+                      />
+                    )}
+                  </div>
+
+                  <footer className="mlg-footer">
+                    <ShieldCheckIcon className="mlg-footer__icon" />
+                    <span>Sesión cifrada en tránsito</span>
+                  </footer>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 };

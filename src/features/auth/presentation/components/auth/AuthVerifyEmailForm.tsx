@@ -1,5 +1,5 @@
 import type { FC, FormEvent } from 'react';
-import { Button, TextInput } from '../../../../../shared/ui/index.js';
+import { AuthTextField } from './AuthTextField.js';
 
 export interface AuthVerifyEmailFormProps {
   readonly code: string;
@@ -24,10 +24,9 @@ export const AuthVerifyEmailForm: FC<AuthVerifyEmailFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => (
-  <form id="auth-panel-verify" className="wf-auth-form" onSubmit={onSubmit} noValidate>
-    <TextInput
+  <form id="auth-panel-verify" className="mlg-form" onSubmit={onSubmit} noValidate>
+    <AuthTextField
       id="auth-verify-code"
-      className="wf-code-field"
       label="Código de verificación"
       type="text"
       name="code"
@@ -43,22 +42,25 @@ export const AuthVerifyEmailForm: FC<AuthVerifyEmailFormProps> = ({
       onBlur={() => onMarkTouched('code')}
       error={errorFor('code')}
       isRequired
+      isOtp
       maxLength={6}
       disabled={isSubmitting}
     />
 
-    <div className="wf-form-actions">
-      <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-        Confirmar código
-      </Button>
-      <Button
+    <div className="mlg-actions">
+      <button type="submit" disabled={isSubmitting} className="mlg-submit-btn">
+        {isSubmitting && <span className="mlg-spinner" aria-hidden="true" />}
+        <span>{isSubmitting ? 'Verificando...' : 'Confirmar código'}</span>
+      </button>
+
+      <button
         type="button"
-        variant="ghost"
+        className="mlg-secondary-btn"
         onClick={onResend}
         disabled={resendCooldown > 0 || isSubmitting}
       >
-        {resendCooldown > 0 ? 'Reenviar en ' + resendCooldown + ' s' : 'Reenviar código'}
-      </Button>
+        {resendCooldown > 0 ? `Reenviar en ${resendCooldown} s` : 'Reenviar código'}
+      </button>
     </div>
   </form>
 );
