@@ -72,7 +72,7 @@
   flex-direction: column;
 }
 
-/* --- Unified Waterline Header & Navbar ----------------------------------- */
+/* --- Unified Waterline Header & Navbar (Motor WebGL completo) ------------ */
 
 .wl-sticky-header {
   position: sticky;
@@ -88,53 +88,84 @@
   margin: 0 auto;
 }
 
-.wl-unified-shell {
+.nimbus-nav {
+  --n-tint: rgba(255, 255, 255, 0.52);
+  --n-fg: #0b132b;
+  --n-fg-soft: rgba(11, 19, 43, 0.68);
+  --n-rim: rgba(255, 255, 255, 0.94);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  min-height: 58px;
-  padding: 6px 10px;
+  gap: 8px;
+  padding: 7px 10px;
   border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.86);
-  box-shadow:
-    0 18px 40px -18px rgba(15, 23, 42, 0.24),
-    0 4px 12px -4px rgba(15, 23, 42, 0.10),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.96),
-    inset 0 -1px 0 rgba(11, 19, 43, 0.06);
-  transition: box-shadow 220ms ease, background-color 220ms ease;
+  isolation: isolate;
+  width: 100%;
+  font-family: var(--font-wf-visual-sans-variable);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.wl-sticky-header--scrolled .wl-unified-shell {
-  background-color: rgba(255, 255, 255, 0.74);
-  box-shadow:
-    0 22px 48px -18px rgba(15, 23, 42, 0.30),
-    0 6px 14px -4px rgba(15, 23, 42, 0.12),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.98),
-    inset 0 -1px 0 rgba(11, 19, 43, 0.08);
+.wl-sticky-header--scrolled .nimbus-nav {
+  --n-tint: rgba(255, 255, 255, 0.62);
 }
 
-.wl-refract-layer {
+.nimbus-glass {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
-  backdrop-filter: blur(22px) saturate(1.42) brightness(1.03);
-  -webkit-backdrop-filter: blur(22px) saturate(1.42) brightness(1.03);
+  z-index: -2;
+  overflow: hidden;
+  background-color: var(--n-tint);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35) brightness(1.04);
+  backdrop-filter: blur(18px) saturate(1.35) brightness(1.04);
+  box-shadow:
+    inset 0 1.5px 1px var(--n-rim),
+    inset 0 -2px 8px rgba(22, 104, 243, 0.10),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.68),
+    0 16px 36px -14px rgba(15, 38, 72, 0.22),
+    0 2px 8px rgba(15, 38, 72, 0.08);
+  transition: background-color 220ms ease, box-shadow 220ms ease;
 }
 
-.wl-shell-sheen {
+.nimbus-nav[data-refract='on'] .nimbus-glass {
+  -webkit-backdrop-filter: url(#nimbus-refract) blur(5px) saturate(1.32) brightness(1.03);
+  backdrop-filter: url(#nimbus-refract) blur(5px) saturate(1.32) brightness(1.03);
+}
+
+.nimbus-water {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  left: -16px;
+  top: -16px;
+  z-index: -1;
   pointer-events: none;
-  z-index: 1;
+}
+
+.nimbus-nav[data-gl='off'] .nimbus-water {
+  display: none;
+}
+
+.nimbus-drop {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 999px;
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform, width;
+  background-color: rgba(255, 255, 255, 0.78);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    inset 0 -1px 0 rgba(11, 19, 43, 0.05);
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.96),
+    inset 0 -2px 6px rgba(0, 140, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.80),
+    0 6px 16px -6px rgba(15, 48, 96, 0.24);
+}
+
+.nimbus-nav[data-gl='off'] .nimbus-drop {
+  display: block;
 }
 
 /* Brand leading slot */
@@ -144,6 +175,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding-left: 2px;
   flex-shrink: 0;
 }
 
@@ -198,7 +230,7 @@
 .wl-header-divider {
   width: 1px;
   height: 22px;
-  background-color: rgba(11, 19, 43, 0.12);
+  background-color: rgba(11, 19, 43, 0.11);
   margin: 0 2px;
   flex-shrink: 0;
 }
@@ -209,136 +241,192 @@
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 3px;
   min-width: 0;
-  padding: 2px;
-  border-radius: 999px;
-  overflow: hidden;
-  user-select: none;
   flex: 0 1 auto;
 }
 
-.wl-water-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
+.nimbus-item {
+  position: relative;
   z-index: 1;
-}
-
-.wl-fallback-drop {
-  position: absolute;
-  top: 0;
-  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
   border-radius: 999px;
-  pointer-events: none;
-  z-index: 1;
-  background-color: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.96);
-  box-shadow:
-    0 6px 18px -6px rgba(22, 104, 243, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.98);
-  transition:
-    transform 420ms cubic-bezier(0.32, 1.18, 0.42, 1),
-    width 420ms cubic-bezier(0.32, 1.18, 0.42, 1);
+  background: none;
+  color: var(--n-fg-soft);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 250ms ease;
 }
 
-.wl-nav-item {
+.nimbus-item:hover,
+.nimbus-item[aria-current='page'] {
+  color: var(--n-fg);
+}
+
+.nimbus-nav[data-tone='light'] .nimbus-item[aria-current='page'] {
+  color: #0b49c6;
+  font-weight: 700;
+}
+
+.nimbus-item:focus-visible {
+  outline: 2px solid #1668f3;
+  outline-offset: 2px;
+}
+
+.nimbus-label {
+  line-height: 1;
+}
+
+/* Micro-animaciones originales exactas de iconos Waterline */
+.nv-ico {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.nv-ico svg {
+  transition: transform 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.nimbus-item[aria-current='page'] .nv-ico svg {
+  transform: translateY(-1px) scale(1.08);
+}
+
+.nv-ico[data-fx='pop'] svg {
+  animation: nvPop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes nvPop {
+  0% { transform: scale(0.72); }
+  60% { transform: scale(1.2); }
+  100% { transform: translateY(-1px) scale(1.08); }
+}
+
+.nv-ico[data-fx='plane'] svg {
+  animation: nvPlane 1.15s cubic-bezier(0.55, 0, 0.3, 1) both;
+}
+
+@keyframes nvPlane {
+  0% { transform: none; }
+  12% { transform: translate(-3px, 2px) rotate(7deg); }
+  42% { transform: translate(44px, -18px) rotate(-20deg) scale(0.9); opacity: 0; }
+  43% { transform: translate(-42px, 12px) rotate(-10deg) scale(0.9); opacity: 0; }
+  58% { opacity: 1; }
+  80% { transform: translate(3px, -1px) rotate(2deg); }
+  100% { transform: translateY(-1px) scale(1.08); }
+}
+
+.nv-ico[data-fx='drop'] svg {
+  animation: nvDrop 0.95s cubic-bezier(0.4, 0, 0.3, 1) both;
+  transform-origin: 50% 100%;
+}
+
+@keyframes nvDrop {
+  0% { transform: translateY(-1px); }
+  26% { transform: translateY(-10px) scale(0.88, 1.12); }
+  46% { transform: translateY(3px) scale(1.26, 0.72); }
+  62% { transform: translateY(-3px) scale(0.92, 1.08); }
+  80% { transform: translateY(0) scale(1.04, 0.97); }
+  100% { transform: translateY(-1px) scale(1.08); }
+}
+
+.nv-ico[data-fx='drop']::before,
+.nv-ico[data-fx='drop']::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nv-ico[data-fx='drop']::before {
+  animation: nvSplashL 0.95s ease-out both;
+}
+
+.nv-ico[data-fx='drop']::after {
+  animation: nvSplashR 0.95s ease-out both;
+}
+
+@keyframes nvSplashL {
+  0%, 44% { opacity: 0; transform: none; }
+  50% { opacity: 0.9; transform: translate(-5px, -6px); }
+  75%, 100% { opacity: 0; transform: translate(-11px, 1px) scale(0.4); }
+}
+
+@keyframes nvSplashR {
+  0%, 44% { opacity: 0; transform: none; }
+  50% { opacity: 0.9; transform: translate(5px, -7px); }
+  75%, 100% { opacity: 0; transform: translate(12px, 1px) scale(0.4); }
+}
+
+.nv-ico[data-fx='spin'] svg {
+  animation: nvSpin 1s cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+@keyframes nvSpin {
+  0% { transform: perspective(80px) rotateY(0); }
+  100% { transform: perspective(80px) rotateY(360deg) translateY(-1px) scale(1.08); }
+}
+
+.nv-ico[data-fx='glow'] svg {
+  animation: nvHop 0.8s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  transform-origin: 50% 100%;
+}
+
+@keyframes nvHop {
+  0% { transform: none; }
+  30% { transform: translateY(-5px) scale(1.04, 0.96); }
+  55% { transform: translateY(0) scale(1.12, 0.88); }
+  75% { transform: translateY(-2px) scale(0.98, 1.04); }
+  100% { transform: translateY(-1px) scale(1.08); }
+}
+
+.nv-ico[data-fx='wave'] svg {
+  animation: nvWave 0.9s ease-in-out both;
+  transform-origin: 50% 92%;
+}
+
+@keyframes nvWave {
+  0% { transform: none; }
+  20% { transform: rotate(-15deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(4deg); }
+  100% { transform: translateY(-1px) scale(1.08); }
+}
+
+/* Trailing session slot */
+.wl-header-trailing-wrap {
   position: relative;
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 13px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: rgba(11, 19, 43, 0.74);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.008em;
-  white-space: nowrap;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: color 200ms ease, background-color 180ms ease;
-}
-
-.wl-nav-item:hover:not(.wl-nav-item--active) {
-  color: var(--wl-ink);
-  background-color: rgba(255, 255, 255, 0.34);
-}
-
-.wl-nav-item--active {
-  color: var(--wl-brand-active);
-  font-weight: 700;
-}
-
-.wl-nav-item:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--wl-brand);
-}
-
-.wl-nav-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding-right: 2px;
   flex-shrink: 0;
 }
 
-.wl-nav-label {
-  line-height: 1;
-}
-
-/* Micro-animaciones de iconos en la barra Waterline */
-@keyframes wl-ico-drop {
-  0% { transform: scale(1); }
-  35% { transform: scale(1.24, 0.80) translateY(1px); }
-  65% { transform: scale(0.92, 1.12) translateY(-1px); }
-  100% { transform: scale(1); }
-}
-
-@keyframes wl-ico-pop {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.25) rotate(-8deg); }
-  75% { transform: scale(0.96) rotate(3deg); }
-  100% { transform: scale(1); }
-}
-
-@keyframes wl-ico-plane {
-  0% { transform: translate(0, 0) scale(1); }
-  45% { transform: translate(2.5px, -2px) scale(1.14); }
-  100% { transform: translate(0, 0) scale(1); }
-}
-
-@keyframes wl-ico-wave {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-11deg) scale(1.1); }
-  60% { transform: rotate(9deg) scale(1.06); }
-}
-
-@keyframes wl-ico-glow {
-  0% { transform: scale(1); }
-  45% { transform: scale(1.24); }
-  100% { transform: scale(1); }
-}
-
-@keyframes wl-ico-spin {
-  0% { transform: rotate(0deg) scale(1); }
-  55% { transform: rotate(150deg) scale(1.12); }
-  100% { transform: rotate(180deg) scale(1); }
-}
-
-.wl-anim-drop { animation: wl-ico-drop 540ms cubic-bezier(0.22, 1, 0.36, 1); }
-.wl-anim-pop { animation: wl-ico-pop 460ms cubic-bezier(0.22, 1, 0.36, 1); }
-.wl-anim-plane { animation: wl-ico-plane 520ms cubic-bezier(0.22, 1, 0.36, 1); }
-.wl-anim-wave { animation: wl-ico-wave 540ms ease; }
-.wl-anim-glow { animation: wl-ico-glow 480ms cubic-bezier(0.22, 1, 0.36, 1); }
-.wl-anim-spin { animation: wl-ico-spin 560ms cubic-bezier(0.22, 1, 0.36, 1); }
-
-/* Trailing session slot */
 .wl-header-trailing {
   position: relative;
   z-index: 2;
@@ -1316,7 +1404,7 @@
 
 /* En laptops medianos y tablets landscape (960–1180px): mantener etiquetas visibles con espaciado compacto */
 @media (max-width: 1180px) {
-  .wl-header-bar--dense .wl-nav-item {
+  .wl-header-bar--dense .nimbus-item {
     padding: 0 9px;
     font-size: 12px;
     gap: 5px;
@@ -1335,18 +1423,23 @@
 
 /* Solo entre 820px y 959px (barra densa de 6 pestañas) ocultamos etiquetas antes de pasar a deck de 2 filas */
 @media (max-width: 959px) and (min-width: 820px) {
-  .wl-header-bar--dense .wl-nav-label {
-    display: none;
+  .wl-header-bar--dense .nimbus-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
-  .wl-header-bar--dense .wl-nav-item {
+  .wl-header-bar--dense .nimbus-item {
     padding: 0 12px;
   }
 }
 
 /* Compact 3-4 tab bar (Repartidor / Cliente) keeps labels visible down to 820px */
 @media (max-width: 860px) {
-  .wl-header-bar--compact .wl-nav-item {
+  .wl-header-bar--compact .nimbus-item {
     padding: 0 11px;
   }
 }
@@ -1357,7 +1450,7 @@
     padding: 10px 12px 4px;
   }
 
-  .wl-unified-shell {
+  .nimbus-nav {
     flex-wrap: wrap;
     row-gap: 8px;
     column-gap: 6px;
@@ -1367,6 +1460,11 @@
 
   .wl-header-divider {
     display: none;
+  }
+
+  .wl-header-trailing-wrap {
+    margin-left: auto;
+    padding-right: 0;
   }
 
   .wl-header-trailing {
@@ -1381,22 +1479,15 @@
     justify-content: flex-start;
     overflow-x: auto;
     scrollbar-width: none;
-    padding: 3px;
-    background-color: rgba(255, 255, 255, 0.40);
-    border: 1px solid rgba(255, 255, 255, 0.72);
+    padding-top: 6px;
+    border-top: 1px solid rgba(11, 19, 43, 0.08);
   }
 
   .wl-nav-track::-webkit-scrollbar {
     display: none;
   }
 
-  /* En el carril móvil dedicado, siempre mostramos etiquetas claras junto al icono */
-  .wl-header-bar--dense .wl-nav-label,
-  .wl-header-bar--compact .wl-nav-label {
-    display: inline;
-  }
-
-  .wl-nav-item {
+  .nimbus-item {
     height: 36px;
     padding: 0 11px;
     font-size: 12.5px;
@@ -1486,13 +1577,10 @@
 @media (prefers-reduced-motion: reduce) {
   .wl-dashboard .wf-app-panel,
   .wl-dashboard .app-panel,
-  .wl-anim-drop,
-  .wl-anim-pop,
-  .wl-anim-plane,
-  .wl-anim-wave,
-  .wl-anim-glow,
-  .wl-anim-spin {
-    animation: none;
+  .nv-ico svg,
+  .nv-ico::before,
+  .nv-ico::after {
+    animation: none !important;
   }
 
   .wl-dashboard .wl-card-sheen {
@@ -1500,7 +1588,7 @@
   }
 
   .wl-dashboard .segmented__thumb,
-  .wl-fallback-drop {
+  .nimbus-drop {
     transition: none;
   }
 }
@@ -1516,7 +1604,7 @@
     --wl-ink-muted: #1e293b;
   }
 
-  .wl-unified-shell,
+  .nimbus-glass,
   .wl-dashboard .ui-card,
   .wl-dashboard .zones-table-wrapper,
   .wl-dashboard .orders-table-wrapper,
