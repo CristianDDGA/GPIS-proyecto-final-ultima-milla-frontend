@@ -1,0 +1,1530 @@
+/* ============================================================================
+   Millast · Waterline Liquid Glass Design System (Authenticated Dashboards)
+   100% solid RGBA tints + optical backdrop-filter + specular inset rims.
+   Zero CSS gradients. Scoped under .wl-dashboard so Login (.mlg-page) stays pure.
+   ========================================================================== */
+
+.wl-lava-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+}
+
+.wl-refract-svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* --- Dashboard Root & Token Overrides ------------------------------------ */
+
+.wl-dashboard {
+  --wl-canvas: #b6c7da;
+  --wl-ink: #0b132b;
+  --wl-ink-soft: #334155;
+  --wl-ink-muted: #475569;
+  --wl-brand: #1668f3;
+  --wl-brand-hover: #0e56d6;
+  --wl-brand-active: #0b49c6;
+  --wl-glass-tint: rgba(255, 255, 255, 0.68);
+  --wl-glass-strong: rgba(248, 251, 255, 0.90);
+  --wl-glass-well: rgba(255, 255, 255, 0.50);
+  --wl-glass-subcard: rgba(255, 255, 255, 0.78);
+  --wl-glass-rim: rgba(255, 255, 255, 0.88);
+  --wl-hairline: rgba(11, 19, 43, 0.09);
+
+  /* Remapeo de tokens heredados para que todas las features hereden Waterline */
+  --font-wf-visual-sans-variable: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-wf-visual-sans-variable);
+  --color-obsidian: var(--wl-ink);
+  --color-slate: var(--wl-ink-soft);
+  --color-webflow-blue: var(--wl-brand);
+  --color-indigo-ink: var(--wl-brand-hover);
+  --color-ash-border: rgba(11, 19, 43, 0.11);
+  --color-border: rgba(11, 19, 43, 0.11);
+  --color-mist: rgba(255, 255, 255, 0.52);
+  --color-pure-white: #ffffff;
+  --page-max-width: 1280px;
+  --radius-cards: 26px;
+  --radius-inputs: 15px;
+  --radius-buttons: 999px;
+  --radius-tags: 999px;
+
+  position: relative;
+  min-height: 100dvh;
+  background-color: var(--wl-canvas);
+  color: var(--wl-ink);
+  font-family: var(--font-wf-visual-sans-variable);
+  overflow-x: clip;
+}
+
+.wl-dashboard-content {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Unified Waterline Header & Navbar ----------------------------------- */
+
+.wl-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  padding: 14px 20px 6px;
+}
+
+.wl-header-bar {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+}
+
+.wl-unified-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 58px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 18px 40px -18px rgba(15, 23, 42, 0.24),
+    0 4px 12px -4px rgba(15, 23, 42, 0.10),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.96),
+    inset 0 -1px 0 rgba(11, 19, 43, 0.06);
+  transition: box-shadow 220ms ease, background-color 220ms ease;
+}
+
+.wl-sticky-header--scrolled .wl-unified-shell {
+  background-color: rgba(255, 255, 255, 0.74);
+  box-shadow:
+    0 22px 48px -18px rgba(15, 23, 42, 0.30),
+    0 6px 14px -4px rgba(15, 23, 42, 0.12),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1px 0 rgba(11, 19, 43, 0.08);
+}
+
+.wl-refract-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  backdrop-filter: blur(22px) saturate(1.42) brightness(1.03);
+  -webkit-backdrop-filter: blur(22px) saturate(1.42) brightness(1.03);
+}
+
+.wl-shell-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -1px 0 rgba(11, 19, 43, 0.05);
+}
+
+/* Brand leading slot */
+.wl-header-leading {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wl-brand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 2px 6px 2px 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wl-ink);
+  cursor: pointer;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.wl-brand-btn:hover {
+  opacity: 0.92;
+}
+
+.wl-brand-btn:active {
+  transform: scale(0.98);
+}
+
+.wl-brand-btn:focus-visible {
+  outline: 2px solid var(--wl-brand);
+  outline-offset: 2px;
+}
+
+.wl-brand-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background-color: var(--wl-brand);
+  color: #ffffff;
+  box-shadow:
+    0 6px 14px -4px rgba(22, 104, 243, 0.54),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  flex-shrink: 0;
+}
+
+.wl-brand-wordmark {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--wl-ink);
+  line-height: 1;
+}
+
+.wl-header-divider {
+  width: 1px;
+  height: 22px;
+  background-color: rgba(11, 19, 43, 0.12);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* Waterline Nav Track */
+.wl-nav-track {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px;
+  border-radius: 999px;
+  overflow: hidden;
+  user-select: none;
+  flex: 0 1 auto;
+}
+
+.wl-water-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wl-fallback-drop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 1;
+  background-color: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 6px 18px -6px rgba(22, 104, 243, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  transition:
+    transform 420ms cubic-bezier(0.32, 1.18, 0.42, 1),
+    width 420ms cubic-bezier(0.32, 1.18, 0.42, 1);
+}
+
+.wl-nav-item {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(11, 19, 43, 0.74);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 200ms ease, background-color 180ms ease;
+}
+
+.wl-nav-item:hover:not(.wl-nav-item--active) {
+  color: var(--wl-ink);
+  background-color: rgba(255, 255, 255, 0.34);
+}
+
+.wl-nav-item--active {
+  color: var(--wl-brand-active);
+  font-weight: 700;
+}
+
+.wl-nav-item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--wl-brand);
+}
+
+.wl-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wl-nav-label {
+  line-height: 1;
+}
+
+/* Micro-animaciones de iconos en la barra Waterline */
+@keyframes wl-ico-drop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.24, 0.80) translateY(1px); }
+  65% { transform: scale(0.92, 1.12) translateY(-1px); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wl-ico-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25) rotate(-8deg); }
+  75% { transform: scale(0.96) rotate(3deg); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wl-ico-plane {
+  0% { transform: translate(0, 0) scale(1); }
+  45% { transform: translate(2.5px, -2px) scale(1.14); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes wl-ico-wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-11deg) scale(1.1); }
+  60% { transform: rotate(9deg) scale(1.06); }
+}
+
+@keyframes wl-ico-glow {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.24); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wl-ico-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  55% { transform: rotate(150deg) scale(1.12); }
+  100% { transform: rotate(180deg) scale(1); }
+}
+
+.wl-anim-drop { animation: wl-ico-drop 540ms cubic-bezier(0.22, 1, 0.36, 1); }
+.wl-anim-pop { animation: wl-ico-pop 460ms cubic-bezier(0.22, 1, 0.36, 1); }
+.wl-anim-plane { animation: wl-ico-plane 520ms cubic-bezier(0.22, 1, 0.36, 1); }
+.wl-anim-wave { animation: wl-ico-wave 540ms ease; }
+.wl-anim-glow { animation: wl-ico-glow 480ms cubic-bezier(0.22, 1, 0.36, 1); }
+.wl-anim-spin { animation: wl-ico-spin 560ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Trailing session slot */
+.wl-header-trailing {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.wl-session-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 5px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  max-width: 260px;
+}
+
+.wl-session-pill__avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background-color: var(--wl-ink);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.wl-session-pill__identity {
+  display: none;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+@media (min-width: 1360px) {
+  .wl-session-pill__identity {
+    display: flex;
+  }
+}
+
+.wl-session-pill__name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--wl-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 132px;
+}
+
+.wl-session-pill__email {
+  font-size: 11px;
+  color: var(--wl-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 132px;
+}
+
+.wl-session-pill__role {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  background-color: rgba(22, 104, 243, 0.12);
+  color: #0b49c6;
+  border: 1px solid rgba(22, 104, 243, 0.24);
+}
+
+.wl-session-pill__role--admin {
+  background-color: var(--wl-brand);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.wl-session-pill__role--repartidor {
+  background-color: rgba(22, 104, 243, 0.14);
+  color: #0b49c6;
+  border-color: rgba(22, 104, 243, 0.28);
+}
+
+.wl-session-pill__role--cliente {
+  background-color: rgba(22, 163, 74, 0.14);
+  color: #15803d;
+  border-color: rgba(22, 163, 74, 0.28);
+}
+
+.wl-header-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  background-color: rgba(255, 255, 255, 0.62);
+  color: var(--wl-ink);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  transition: background-color 180ms ease, transform 150ms ease, color 160ms ease, border-color 180ms ease;
+}
+
+.wl-header-action:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.90);
+  transform: translateY(-0.5px);
+}
+
+.wl-header-action:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.wl-header-action:focus-visible {
+  outline: 2px solid var(--wl-brand);
+  outline-offset: 2px;
+}
+
+.wl-header-action--subtle {
+  background-color: rgba(255, 255, 255, 0.48);
+  border-color: rgba(255, 255, 255, 0.72);
+  color: var(--wl-ink-soft);
+}
+
+.wl-header-action--subtle:hover:not(:disabled) {
+  color: var(--wl-ink);
+  background-color: rgba(255, 255, 255, 0.82);
+}
+
+/* --- Main Content Container & View Reveal -------------------------------- */
+
+.wl-dashboard .wf-app-main {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.wl-dashboard .wf-app-panel,
+.wl-dashboard .app-panel {
+  animation: wl-reveal 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes wl-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Section Header (Waterline Display) ---------------------------------- */
+
+.wl-dashboard .wf-section-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(11, 19, 43, 0.10);
+}
+
+.wl-dashboard .wf-section-header__title {
+  font-family: var(--font-wf-visual-sans-variable);
+  font-size: clamp(24px, 2.5vw, 31px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--wl-ink);
+}
+
+.wl-dashboard .wf-section-header__description,
+.wl-dashboard .wf-section-header__eyebrow,
+.wl-dashboard .wf-section-header__metrics {
+  color: var(--wl-ink-soft);
+}
+
+/* --- Waterline Glass Cards + Meniscus Sheen ------------------------------ */
+
+.wl-dashboard .ui-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+  padding: 24px;
+  background-color: var(--wl-glass-tint);
+  backdrop-filter: blur(22px) saturate(1.38) brightness(1.03);
+  -webkit-backdrop-filter: blur(22px) saturate(1.38) brightness(1.03);
+  border: 1px solid var(--wl-glass-rim);
+  box-shadow:
+    0 20px 44px -26px rgba(15, 23, 42, 0.24),
+    0 4px 14px -4px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  color: var(--wl-ink);
+  transition: border-color 180ms ease, box-shadow 220ms ease;
+}
+
+.wl-dashboard .ui-card--flat {
+  background-color: var(--wl-glass-well);
+}
+
+.wl-card-sheen {
+  display: none;
+}
+
+.wl-dashboard .wl-card-sheen {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.36);
+  filter: blur(52px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 280ms ease;
+  will-change: transform, opacity;
+}
+
+.wl-dashboard .ui-card > :not(.wl-card-sheen) {
+  position: relative;
+  z-index: 1;
+}
+
+.wl-dashboard .wf-loading-card {
+  border-radius: 22px;
+  background-color: var(--wl-glass-tint);
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border: 1px solid var(--wl-glass-rim);
+  color: var(--wl-ink-soft);
+  box-shadow:
+    0 16px 36px -22px rgba(15, 23, 42, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+/* --- Waterline Pill Buttons ---------------------------------------------- */
+
+.wl-dashboard .ui-btn,
+.wl-modal-host .ui-btn {
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 160ms ease,
+    box-shadow 200ms ease,
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.wl-dashboard .ui-btn--sm,
+.wl-modal-host .ui-btn--sm {
+  min-height: 34px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+}
+
+.wl-dashboard .ui-btn--md,
+.wl-modal-host .ui-btn--md {
+  min-height: 40px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+}
+
+.wl-dashboard .ui-btn--lg,
+.wl-modal-host .ui-btn--lg {
+  min-height: 44px;
+  padding: 11px 22px;
+  font-size: 14.5px;
+}
+
+.wl-dashboard .ui-btn--primary,
+.wl-modal-host .ui-btn--primary {
+  background-color: var(--wl-brand, #1668f3);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 10px 22px -8px rgba(22, 104, 243, 0.56),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.wl-dashboard .ui-btn--primary:hover:not(:disabled),
+.wl-modal-host .ui-btn--primary:hover:not(:disabled) {
+  background-color: var(--wl-brand-hover, #0e56d6);
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 26px -8px rgba(22, 104, 243, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.wl-dashboard .ui-btn--secondary,
+.wl-dashboard .ui-btn--outline,
+.wl-modal-host .ui-btn--secondary,
+.wl-modal-host .ui-btn--outline {
+  background-color: rgba(255, 255, 255, 0.72);
+  color: var(--wl-ink, #0b132b);
+  border-color: rgba(255, 255, 255, 0.90);
+  box-shadow:
+    0 4px 12px -6px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
+
+.wl-dashboard .ui-btn--secondary:hover:not(:disabled),
+.wl-dashboard .ui-btn--outline:hover:not(:disabled),
+.wl-modal-host .ui-btn--secondary:hover:not(:disabled),
+.wl-modal-host .ui-btn--outline:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.94);
+  border-color: #ffffff;
+  color: var(--wl-ink, #0b132b);
+  transform: translateY(-0.5px);
+}
+
+.wl-dashboard .ui-btn--danger,
+.wl-modal-host .ui-btn--danger {
+  background-color: #dc2626;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 10px 20px -8px rgba(220, 38, 38, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.wl-dashboard .ui-btn--danger:hover:not(:disabled),
+.wl-modal-host .ui-btn--danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.wl-modal-host .ui-btn--ghost {
+  background-color: rgba(255, 255, 255, 0.56);
+  color: var(--wl-ink, #0b132b);
+  border-color: rgba(11, 19, 43, 0.10);
+}
+
+.wl-dashboard .ui-btn--ghost {
+  background-color: rgba(255, 255, 255, 0.34);
+  color: var(--wl-ink, #0b132b);
+  border-color: transparent;
+}
+
+.wl-dashboard .ui-btn--ghost:hover:not(:disabled),
+.wl-modal-host .ui-btn--ghost:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.82);
+  color: var(--wl-brand-active, #0b49c6);
+}
+
+/* --- Waterline Inputs & Selects ------------------------------------------ */
+
+.wl-dashboard .ui-input-label,
+.wl-dashboard .ui-select-label,
+.wl-modal-host .ui-input-label,
+.wl-modal-host .ui-select-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wl-ink, #0b132b);
+}
+
+.wl-dashboard .ui-input-control,
+.wl-dashboard .ui-select-control,
+.wl-dashboard .wf-field-inline input,
+.wl-dashboard .wf-field-inline textarea,
+.wl-modal-host .ui-input-control,
+.wl-modal-host .ui-select-control {
+  min-height: 42px;
+  padding: 9px 14px;
+  border-radius: 15px;
+  border: 1px solid rgba(11, 19, 43, 0.13);
+  background-color: rgba(255, 255, 255, 0.78);
+  color: var(--wl-ink, #0b132b);
+  font-size: 13.5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.wl-dashboard .ui-input-control::placeholder,
+.wl-modal-host .ui-input-control::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.wl-dashboard .ui-input-control:hover:not(:disabled),
+.wl-dashboard .ui-select-control:hover:not(:disabled),
+.wl-modal-host .ui-input-control:hover:not(:disabled),
+.wl-modal-host .ui-select-control:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(11, 19, 43, 0.22);
+}
+
+.wl-dashboard .ui-input-control:focus-visible,
+.wl-dashboard .ui-select-control:focus-visible,
+.wl-dashboard .wf-field-inline input:focus-visible,
+.wl-dashboard .wf-field-inline textarea:focus-visible,
+.wl-modal-host .ui-input-control:focus-visible,
+.wl-modal-host .ui-select-control:focus-visible {
+  background-color: #ffffff;
+  border-color: rgba(22, 104, 243, 0.62);
+  box-shadow: 0 0 0 4px rgba(22, 104, 243, 0.16);
+}
+
+.wl-dashboard .ui-input-control:disabled,
+.wl-dashboard .ui-select-control:disabled,
+.wl-modal-host .ui-input-control:disabled,
+.wl-modal-host .ui-select-control:disabled {
+  background-color: rgba(241, 245, 249, 0.72);
+  color: #64748b;
+  border-color: rgba(11, 19, 43, 0.08);
+}
+
+.wl-dashboard .ui-input-message--helper,
+.wl-dashboard .ui-select-message--helper,
+.wl-modal-host .ui-input-message--helper {
+  color: var(--wl-ink-soft, #334155);
+}
+
+/* --- Waterline Sliding Droplet Segmented Switcher ------------------------ */
+
+.wl-dashboard .segmented {
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(16px) saturate(1.35);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.90);
+}
+
+.wl-dashboard .segmented__thumb {
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.94);
+  border: 1px solid #ffffff;
+  box-shadow:
+    0 6px 16px -6px rgba(22, 104, 243, 0.24),
+    0 2px 5px -2px rgba(15, 23, 42, 0.10),
+    inset 0 1px 0 #ffffff;
+  transition: transform 400ms cubic-bezier(0.32, 1.18, 0.42, 1);
+}
+
+.wl-dashboard .segmented__thumb::after {
+  display: none;
+}
+
+.wl-dashboard .fleet-filter .ui-btn,
+.wl-dashboard .wf-access__tab {
+  border-radius: 999px;
+  color: var(--wl-ink-soft);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.wl-dashboard .fleet-filter .ui-btn:hover:not(:disabled),
+.wl-dashboard .wf-access__tab:hover:not(.wf-access__tab--active) {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--wl-ink);
+  transform: none;
+}
+
+.wl-dashboard .fleet-filter .ui-btn--primary,
+.wl-dashboard .wf-access__tab--active {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--wl-brand-active);
+  font-weight: 700;
+}
+
+.wl-dashboard .fleet-filter .ui-btn--primary:hover:not(:disabled) {
+  background-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+/* --- Inset Liquid Wells & Tables ----------------------------------------- */
+
+.wl-dashboard .zones-table-wrapper,
+.wl-dashboard .orders-table-wrapper,
+.wl-dashboard .routes-table-wrapper,
+.wl-dashboard .couriers-table-wrapper,
+.wl-dashboard .wf-table-wrap {
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  overflow-x: auto;
+}
+
+.wl-dashboard .zones-table th,
+.wl-dashboard .orders-table th,
+.wl-dashboard .routes-table th,
+.wl-dashboard .couriers-table th,
+.wl-dashboard .wf-table th {
+  background-color: rgba(255, 255, 255, 0.60);
+  color: var(--wl-ink-soft);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--wl-hairline);
+}
+
+.wl-dashboard .zones-table td,
+.wl-dashboard .orders-table td,
+.wl-dashboard .routes-table td,
+.wl-dashboard .couriers-table td,
+.wl-dashboard .wf-table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(11, 19, 43, 0.07);
+  color: var(--wl-ink);
+}
+
+.wl-dashboard .zones-table tr:hover td,
+.wl-dashboard .orders-table tr:hover td,
+.wl-dashboard .routes-table tr:hover td,
+.wl-dashboard .couriers-table tr:hover td,
+.wl-dashboard .wf-table tbody tr:hover td {
+  background-color: rgba(255, 255, 255, 0.68);
+}
+
+.wl-dashboard .routes-table__row:focus-within td,
+.wl-dashboard .wf-table__row--selected td {
+  background-color: rgba(22, 104, 243, 0.09);
+}
+
+.wl-dashboard .orders-filters,
+.wl-dashboard .routes-filters,
+.wl-dashboard .zones-detail-card__hero,
+.wl-dashboard .orders-detail__list,
+.wl-dashboard .orders-timeline,
+.wl-dashboard .routes-detail-overview,
+.wl-dashboard .couriers-assignment-preview,
+.wl-dashboard .couriers-active-route__overview,
+.wl-dashboard .couriers-empty-inline,
+.wl-dashboard .deliveries-progress,
+.wl-dashboard .deliveries-route-completion,
+.wl-dashboard .deliveries-availability,
+.wl-dashboard .deliveries-inspector-result,
+.wl-dashboard .deliveries-empty-inline,
+.wl-dashboard .wf-application-file,
+.wl-dashboard .wf-review-box,
+.wl-dashboard .wf-client-file,
+.wl-dashboard .wf-client-detail,
+.wl-dashboard .ui-empty-state {
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.wl-dashboard .wf-toolbar,
+.wl-dashboard .wf-application-detail {
+  border-radius: 26px;
+  background-color: var(--wl-glass-tint);
+  backdrop-filter: blur(22px) saturate(1.38) brightness(1.03);
+  -webkit-backdrop-filter: blur(22px) saturate(1.38) brightness(1.03);
+  border: 1px solid var(--wl-glass-rim);
+  box-shadow:
+    0 18px 40px -24px rgba(15, 23, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
+
+.wl-dashboard .routes-detail-meta,
+.wl-dashboard .couriers-route-meta__item,
+.wl-dashboard .deliveries-route-meta__item,
+.wl-dashboard .couriers-stop,
+.wl-dashboard .deliveries-stop {
+  border-radius: 18px;
+  background-color: var(--wl-glass-subcard);
+  border: 1px solid rgba(255, 255, 255, 0.90);
+  box-shadow:
+    0 8px 20px -14px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.wl-dashboard .couriers-stop,
+.wl-dashboard .deliveries-stop {
+  border-left: 4px solid var(--wl-brand);
+}
+
+.wl-dashboard .deliveries-stop--selected {
+  border-color: rgba(22, 104, 243, 0.42);
+  border-left-color: var(--wl-brand);
+  background-color: rgba(238, 245, 255, 0.88);
+}
+
+.wl-dashboard .deliveries-route-completion {
+  border-style: solid;
+  border-color: rgba(22, 104, 243, 0.24);
+}
+
+.wl-dashboard .deliveries-progress__track,
+.wl-dashboard .couriers-capacity__bar {
+  border-radius: 999px;
+  background-color: rgba(11, 19, 43, 0.10);
+  border-color: transparent;
+}
+
+.wl-dashboard .deliveries-progress__fill,
+.wl-dashboard .couriers-capacity__fill {
+  border-radius: 999px;
+  background-color: var(--wl-brand);
+}
+
+.wl-dashboard .deliveries-progress__fill--complete {
+  background-color: #15803d;
+}
+
+.wl-dashboard .ui-empty-state__icon {
+  border-radius: 16px;
+  background-color: rgba(255, 255, 255, 0.82);
+  border: 1px solid #ffffff;
+  color: var(--wl-brand);
+}
+
+/* --- CodeBadge / ShortIdBadge -------------------------------------------- */
+
+.wl-dashboard .short-id__code,
+.wl-modal-host .short-id__code {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  color: var(--wl-ink, #0b132b);
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px -3px rgba(15, 23, 42, 0.12);
+}
+
+.wl-dashboard .short-id__prefix,
+.wl-modal-host .short-id__prefix {
+  color: var(--wl-brand, #1668f3);
+  font-weight: 800;
+}
+
+.wl-dashboard .short-id__copy,
+.wl-modal-host .short-id__copy {
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--wl-ink-soft, #334155);
+}
+
+.wl-dashboard .short-id__copy:hover,
+.wl-modal-host .short-id__copy:hover {
+  background-color: rgba(255, 255, 255, 0.88);
+  border-color: rgba(255, 255, 255, 0.94);
+  color: var(--wl-brand, #1668f3);
+}
+
+/* --- Waterline Droplet Status Pills (Todos los módulos + nuevos estados) - */
+
+.wl-dashboard .zones-badge-count,
+.wl-dashboard .orders-badge-count,
+.wl-dashboard .routes-badge-count,
+.wl-dashboard .couriers-badge-count,
+.wl-dashboard .orders-status-badge,
+.wl-dashboard .routes-status-badge,
+.wl-dashboard .couriers-status-badge,
+.wl-dashboard .deliveries-status-badge,
+.wl-dashboard .deliveries-stop__stage,
+.wl-dashboard .routes-table__unassigned,
+.wl-dashboard .wf-badge,
+.wl-dashboard .wf-client-status,
+.wl-dashboard .wf-client-badge,
+.wl-dashboard .kpi-chip,
+.wl-modal-host .wf-badge {
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.wl-dashboard .zones-badge-count,
+.wl-dashboard .orders-badge-count,
+.wl-dashboard .routes-badge-count,
+.wl-dashboard .couriers-badge-count,
+.wl-dashboard .kpi-chip {
+  background-color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.90);
+  color: var(--wl-ink-soft);
+}
+
+/* Neutral frosted droplets (base primero para no pisar --current / --done) */
+.wl-dashboard .orders-status-badge--recogido,
+.wl-dashboard .routes-status-badge--planificada,
+.wl-dashboard .deliveries-status-badge--recogido,
+.wl-dashboard .deliveries-status-badge--neutral,
+.wl-dashboard .deliveries-stop__stage,
+.wl-dashboard .wf-badge--off,
+.wl-dashboard .wf-badge--role-cliente,
+.wl-dashboard .wf-client-badge--pending,
+.wl-modal-host .wf-badge--off,
+.wl-modal-host .wf-badge--role-cliente {
+  background-color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(11, 19, 43, 0.12);
+  color: var(--wl-ink-soft);
+}
+
+/* Blue droplets */
+.wl-dashboard .orders-status-badge--asignado_a_ruta,
+.wl-dashboard .orders-status-badge--en_camino,
+.wl-dashboard .routes-status-badge--asignada,
+.wl-dashboard .routes-status-badge--asignado_a_ruta,
+.wl-dashboard .couriers-status-badge--asignado_a_ruta,
+.wl-dashboard .couriers-status-badge--recogido,
+.wl-dashboard .couriers-status-badge--en_camino,
+.wl-dashboard .couriers-status-badge--asignada,
+.wl-dashboard .deliveries-status-badge--asignado_a_ruta,
+.wl-dashboard .deliveries-status-badge--asignada,
+.wl-dashboard .deliveries-status-badge--en_camino,
+.wl-dashboard .deliveries-stop__stage--current,
+.wl-dashboard .wf-badge--info,
+.wl-dashboard .wf-badge--status-pendiente,
+.wl-dashboard .wf-badge--role-repartidor,
+.wl-dashboard .wf-client-status--pendiente,
+.wl-modal-host .wf-badge--role-repartidor {
+  background-color: rgba(22, 104, 243, 0.13);
+  border: 1px solid rgba(22, 104, 243, 0.28);
+  color: #0b49c6;
+}
+
+/* Green droplets */
+.wl-dashboard .orders-status-badge--entregado,
+.wl-dashboard .routes-status-badge--completada,
+.wl-dashboard .routes-status-badge--entregado,
+.wl-dashboard .couriers-status-badge--enabled,
+.wl-dashboard .couriers-status-badge--entregado,
+.wl-dashboard .couriers-status-badge--en_curso,
+.wl-dashboard .deliveries-status-badge--entregado,
+.wl-dashboard .deliveries-status-badge--en_curso,
+.wl-dashboard .deliveries-status-badge--disponible,
+.wl-dashboard .deliveries-stop__stage--done,
+.wl-dashboard .wf-badge--ok,
+.wl-dashboard .wf-badge--status-aprobada,
+.wl-dashboard .wf-client-status--aprobada,
+.wl-dashboard .wf-client-badge--ok,
+.wl-modal-host .wf-badge--ok {
+  background-color: rgba(22, 163, 74, 0.14);
+  border: 1px solid rgba(22, 163, 74, 0.30);
+  color: #15803d;
+}
+
+/* Amber droplets */
+.wl-dashboard .orders-status-badge--pendiente,
+.wl-dashboard .routes-status-badge--en_curso,
+.wl-dashboard .routes-status-badge--en_camino,
+.wl-dashboard .routes-status-badge--recogido,
+.wl-dashboard .routes-table__unassigned,
+.wl-dashboard .deliveries-status-badge--pendiente,
+.wl-dashboard .wf-badge--warn,
+.wl-dashboard .wf-badge--status-borrador,
+.wl-dashboard .wf-client-status--borrador,
+.wl-modal-host .wf-badge--warn {
+  background-color: rgba(217, 119, 6, 0.14);
+  border: 1px solid rgba(217, 119, 6, 0.30);
+  color: #9a3412;
+}
+
+/* Red droplets (incluye nuevos estados entrega_fallida y cancelado) */
+.wl-dashboard .orders-status-badge--entrega_fallida,
+.wl-dashboard .orders-status-badge--cancelado,
+.wl-dashboard .orders-status-badge--cancelada,
+.wl-dashboard .routes-status-badge--cancelada,
+.wl-dashboard .routes-status-badge--entrega_fallida,
+.wl-dashboard .routes-status-badge--cancelado,
+.wl-dashboard .couriers-status-badge--disabled,
+.wl-dashboard .couriers-status-badge--entrega_fallida,
+.wl-dashboard .couriers-status-badge--cancelado,
+.wl-dashboard .deliveries-status-badge--no_disponible,
+.wl-dashboard .deliveries-status-badge--entrega_fallida,
+.wl-dashboard .deliveries-status-badge--cancelado,
+.wl-dashboard .wf-badge--status-rechazada,
+.wl-dashboard .wf-badge--status-cancelada,
+.wl-dashboard .wf-client-status--rechazada,
+.wl-dashboard .wf-client-status--cancelada {
+  background-color: rgba(220, 38, 38, 0.13);
+  border: 1px solid rgba(220, 38, 38, 0.28);
+  color: #b91c1c;
+}
+
+.wl-dashboard .wf-badge--role-admin,
+.wl-modal-host .wf-badge--role-admin {
+  background-color: var(--wl-ink);
+  border-color: var(--wl-ink);
+  color: #ffffff;
+}
+
+/* --- Alerts (Waterline Frosted Banners) ---------------------------------- */
+
+.wl-dashboard .ui-alert,
+.wl-modal-host .ui-alert {
+  border-radius: 18px;
+  padding: 13px 16px;
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow:
+    0 12px 26px -18px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.90);
+}
+
+.wl-dashboard .ui-alert--info,
+.wl-modal-host .ui-alert--info {
+  background-color: rgba(239, 246, 255, 0.84);
+  border-color: rgba(22, 104, 243, 0.26);
+  color: #0b132b;
+}
+
+.wl-dashboard .ui-alert--success,
+.wl-modal-host .ui-alert--success {
+  background-color: rgba(240, 253, 244, 0.88);
+  border-color: rgba(22, 163, 74, 0.30);
+  color: #14532d;
+}
+
+.wl-dashboard .ui-alert--error,
+.wl-modal-host .ui-alert--error {
+  background-color: rgba(254, 242, 242, 0.90);
+  border-color: rgba(220, 38, 38, 0.30);
+  color: #991b1b;
+}
+
+.wl-dashboard .ui-alert--warning,
+.wl-modal-host .ui-alert--warning {
+  background-color: rgba(255, 247, 237, 0.90);
+  border-color: rgba(217, 119, 6, 0.32);
+  color: #9a3412;
+}
+
+.wl-dashboard .routes-cancel__confirm,
+.wl-dashboard .wf-application-detail__reason {
+  border-radius: 16px;
+  background-color: rgba(254, 242, 242, 0.88);
+  border-color: rgba(220, 38, 38, 0.28);
+}
+
+/* --- Isometric Capacity Cube (Waterline Frosted Frame) ------------------- */
+
+.wl-dashboard .iso-cube {
+  border-radius: 16px;
+  padding: 6px 10px;
+  background-color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 6px 16px -10px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 #ffffff;
+}
+
+.wl-dashboard .iso-cube--planificada {
+  --slot-top-from: #60a5fa;
+  --slot-left: #2563eb;
+  --slot-right: #1668f3;
+}
+
+/* --- Admin Role Pills & Password Controls -------------------------------- */
+
+.wl-dashboard .wf-role-pill,
+.wl-modal-host .wf-role-pill {
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.68);
+  border-color: rgba(11, 19, 43, 0.12);
+  color: var(--wl-ink-soft, #334155);
+  font-weight: 600;
+}
+
+.wl-dashboard .wf-role-pill--active,
+.wl-modal-host .wf-role-pill--active {
+  background-color: rgba(22, 104, 243, 0.13);
+  border-color: rgba(22, 104, 243, 0.45);
+  color: #0b49c6;
+}
+
+.wl-dashboard .wf-password-toggle,
+.wl-modal-host .wf-password-toggle {
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.88);
+  border-color: rgba(11, 19, 43, 0.14);
+}
+
+/* --- Waterline Frosted Modal Dialog -------------------------------------- */
+
+.wf-modal-backdrop {
+  background-color: rgba(11, 19, 43, 0.28);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.wf-modal {
+  border-radius: 26px;
+  padding: 26px;
+  background-color: rgba(246, 250, 255, 0.94);
+  backdrop-filter: blur(28px) saturate(1.45);
+  -webkit-backdrop-filter: blur(28px) saturate(1.45);
+  border: 1px solid rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 32px 72px -24px rgba(11, 19, 43, 0.34),
+    0 8px 20px -8px rgba(11, 19, 43, 0.14),
+    inset 0 1.5px 0 #ffffff;
+  color: #0b132b;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.wf-modal__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wf-modal__title {
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #0b132b;
+}
+
+.wf-modal__description,
+.wf-modal__paragraph {
+  color: #334155;
+}
+
+.wf-modal__close {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 19, 43, 0.10);
+  background-color: rgba(255, 255, 255, 0.78);
+  color: #334155;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 160ms ease, color 160ms ease, transform 140ms ease;
+}
+
+.wf-modal__close:hover {
+  background-color: #ffffff;
+  color: #0b132b;
+  transform: scale(1.04);
+}
+
+.wf-modal__close:focus-visible {
+  outline: 2px solid #1668f3;
+  outline-offset: 2px;
+}
+
+.wf-modal__actions {
+  border-top: 1px solid rgba(11, 19, 43, 0.09);
+}
+
+/* --- Responsive Ergonomics (1440 / 1024 / 768 / 390) --------------------- */
+
+/* En laptops medianos y tablets landscape (960–1180px): mantener etiquetas visibles con espaciado compacto */
+@media (max-width: 1180px) {
+  .wl-header-bar--dense .wl-nav-item {
+    padding: 0 9px;
+    font-size: 12px;
+    gap: 5px;
+  }
+
+  .wl-dashboard .zones-grid {
+    grid-template-columns: minmax(260px, 290px) minmax(0, 1fr);
+  }
+
+  .wl-dashboard .zones-table th,
+  .wl-dashboard .zones-table td {
+    padding: 10px 10px;
+    font-size: 13px;
+  }
+}
+
+/* Solo entre 820px y 959px (barra densa de 6 pestañas) ocultamos etiquetas antes de pasar a deck de 2 filas */
+@media (max-width: 959px) and (min-width: 820px) {
+  .wl-header-bar--dense .wl-nav-label {
+    display: none;
+  }
+
+  .wl-header-bar--dense .wl-nav-item {
+    padding: 0 12px;
+  }
+}
+
+/* Compact 3-4 tab bar (Repartidor / Cliente) keeps labels visible down to 820px */
+@media (max-width: 860px) {
+  .wl-header-bar--compact .wl-nav-item {
+    padding: 0 11px;
+  }
+}
+
+/* Tablet & Mobile: unified two-row frosted deck so Clave + all tabs remain 100% accessible */
+@media (max-width: 819px) {
+  .wl-sticky-header {
+    padding: 10px 12px 4px;
+  }
+
+  .wl-unified-shell {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: 6px;
+    padding: 8px 10px;
+    border-radius: 24px;
+  }
+
+  .wl-header-divider {
+    display: none;
+  }
+
+  .wl-header-trailing {
+    margin-left: auto;
+    gap: 4px;
+  }
+
+  .wl-nav-track {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 3px;
+    background-color: rgba(255, 255, 255, 0.40);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+  }
+
+  .wl-nav-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* En el carril móvil dedicado, siempre mostramos etiquetas claras junto al icono */
+  .wl-header-bar--dense .wl-nav-label,
+  .wl-header-bar--compact .wl-nav-label {
+    display: inline;
+  }
+
+  .wl-nav-item {
+    height: 36px;
+    padding: 0 11px;
+    font-size: 12.5px;
+  }
+
+  .wl-dashboard .zones-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wl-dashboard .wf-app-main {
+    padding: 14px 12px 48px;
+    gap: 18px;
+  }
+
+  .wl-dashboard .ui-card {
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .wl-dashboard .orders-form__row {
+    grid-template-columns: 1fr;
+  }
+
+  .wl-dashboard .orders-detail__list {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 520px) {
+  .wl-brand-badge {
+    width: 30px;
+    height: 30px;
+  }
+
+  .wl-brand-btn {
+    gap: 6px;
+    padding: 1px 4px 1px 1px;
+  }
+
+  .wl-brand-wordmark {
+    font-size: 14.5px;
+  }
+
+  /* Mantener marca + rol + Clave + Salir en UNA sola fila superior para los 3 roles en 390px */
+  .wl-session-pill {
+    padding: 2px;
+    gap: 0;
+    background-color: transparent;
+    border-color: transparent;
+  }
+
+  .wl-session-pill__avatar {
+    display: none;
+  }
+
+  .wl-session-pill__role {
+    font-size: 10.5px;
+    padding: 3px 8px;
+  }
+
+  /* Mantener Clave accesible en móvil como botón compacto con icono + aria-label */
+  .wl-header-action__label--collapsible {
+    display: none;
+  }
+
+  .wl-header-action {
+    padding: 0 9px;
+    height: 30px;
+    font-size: 11.5px;
+    gap: 4px;
+  }
+
+  .wl-dashboard .ui-card {
+    padding: 16px;
+  }
+}
+
+/* --- Touch, Motion & High-Contrast Accessibility ------------------------- */
+
+@media (hover: none), (pointer: coarse) {
+  .wl-dashboard .wl-card-sheen {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wl-dashboard .wf-app-panel,
+  .wl-dashboard .app-panel,
+  .wl-anim-drop,
+  .wl-anim-pop,
+  .wl-anim-plane,
+  .wl-anim-wave,
+  .wl-anim-glow,
+  .wl-anim-spin {
+    animation: none;
+  }
+
+  .wl-dashboard .wl-card-sheen {
+    display: none;
+  }
+
+  .wl-dashboard .segmented__thumb,
+  .wl-fallback-drop {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .wl-dashboard {
+    --wl-glass-tint: rgba(255, 255, 255, 0.96);
+    --wl-glass-strong: #ffffff;
+    --wl-glass-well: rgba(255, 255, 255, 0.92);
+    --wl-glass-subcard: #ffffff;
+    --wl-glass-rim: #0b132b;
+    --wl-ink-soft: #0b132b;
+    --wl-ink-muted: #1e293b;
+  }
+
+  .wl-unified-shell,
+  .wl-dashboard .ui-card,
+  .wl-dashboard .zones-table-wrapper,
+  .wl-dashboard .orders-table-wrapper,
+  .wl-dashboard .routes-table-wrapper,
+  .wl-dashboard .couriers-table-wrapper,
+  .wl-dashboard .wf-table-wrap,
+  .wf-modal {
+    border-color: #0b132b;
+    background-color: rgba(255, 255, 255, 0.96);
+  }
+}

@@ -14,6 +14,7 @@ const VERIFIED_VIA_LABELS: Record<string, string> = {
   admin: 'Verificado por admin',
   legacy: 'Cuenta heredada',
   demo: 'Modo demo',
+  google: 'Google',
 };
 
 export interface UserCreateModalProps {

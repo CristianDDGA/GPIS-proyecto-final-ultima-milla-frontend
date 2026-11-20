@@ -82,13 +82,17 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
   const statusOf = (orderId: string, fallback: OrderStatus): OrderStatus =>
     deliveryRecords[orderId]?.status ?? fallback;
 
+  const closedCount = stops.filter((stop) => {
+    const st = statusOf(stop.orderId, stop.status);
+    return st === 'entregado' || st === 'entrega_fallida';
+  }).length;
   const deliveredCount = stops.filter(
     (stop) => statusOf(stop.orderId, stop.status) === 'entregado',
   ).length;
-  const allDelivered = stops.length > 0 && deliveredCount === stops.length;
+  const allClosed = stops.length > 0 && closedCount === stops.length;
   const canCompleteRoute =
-    activeRoute !== null && activeRoute.status === 'en_curso' && allDelivered;
-  const progressPercent = stops.length === 0 ? 0 : Math.round((deliveredCount / stops.length) * 100);
+    activeRoute !== null && activeRoute.status === 'en_curso' && allClosed;
+  const progressPercent = stops.length === 0 ? 0 : Math.round((closedCount / stops.length) * 100);
 
   const completeRouteReason = ((): string => {
     if (!activeRoute) return 'No hay una hoja de ruta activa cargada.';
@@ -96,8 +100,8 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
     if (activeRoute.status !== 'en_curso') {
       return 'Inicia la ruta marcando al menos un pedido en camino para poder completarla.';
     }
-    if (!allDelivered) {
-      return `Faltan entregas: ${deliveredCount} de ${stops.length} pedidos entregados.`;
+    if (!allClosed) {
+      return `Faltan entregas: ${closedCount} de ${stops.length} paradas cerradas.`;
     }
     return '';
   })();
@@ -214,7 +218,7 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
             >
               <span
                 className={`deliveries-progress__fill ${
-                  allDelivered ? 'deliveries-progress__fill--complete' : ''
+                  allClosed ? 'deliveries-progress__fill--complete' : ''
                 }`.trim()}
                 style={{ width: `${progressPercent}%` }}
               />
@@ -315,7 +319,11 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
                           <span className="deliveries-stop__done" role="status">
                             {currentStatus === 'entregado'
                               ? 'Pedido entregado'
-                              : 'Sin transición disponible'}
+                              : currentStatus === 'entrega_fallida'
+                                ? 'Entrega fallida'
+                                : currentStatus === 'cancelado'
+                                  ? 'Pedido cancelado'
+                                  : 'Sin transición disponible'}
                           </span>
                         )}
                       </div>

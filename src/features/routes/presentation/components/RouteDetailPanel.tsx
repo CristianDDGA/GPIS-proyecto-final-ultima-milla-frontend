@@ -30,11 +30,18 @@ const STOP_STATUS_LABELS: Record<StopOrderStatus, string> = {
   recogido: 'Recogido',
   en_camino: 'En camino',
   entregado: 'Entregado',
+  entrega_fallida: 'Entrega fallida',
+  cancelado: 'Cancelado',
 };
 
 const EDITABLE_ROUTE_STATUSES: ReadonlySet<RouteStatus> = new Set<RouteStatus>(['planificada', 'asignada']);
 
-const STARTED_STOP_STATUSES: ReadonlySet<StopOrderStatus> = new Set<StopOrderStatus>(['recogido', 'en_camino', 'entregado']);
+const STARTED_STOP_STATUSES: ReadonlySet<StopOrderStatus> = new Set<StopOrderStatus>([
+  'recogido',
+  'en_camino',
+  'entregado',
+  'entrega_fallida',
+]);
 
 const MOVABLE_ROUTE_STATUSES: ReadonlySet<RouteStatus> = new Set<RouteStatus>(['planificada', 'asignada']);
 

@@ -3,7 +3,15 @@ import { HttpError } from '../../../../shared/infrastructure/http/httpClient.js'
 import { hasMetadata, isRecord, isUuid, readItem, readItems } from './response.js';
 import { validateOrder, type Order, type CreateOrderInput, type OrderFilters, type OrderGateway } from '../../domain/index.js';
 
-const statuses = new Set(['pendiente', 'asignado_a_ruta', 'recogido', 'en_camino', 'entregado']);
+const statuses = new Set([
+  'pendiente',
+  'asignado_a_ruta',
+  'recogido',
+  'en_camino',
+  'entregado',
+  'entrega_fallida',
+  'cancelado',
+]);
 function isOrder(value: unknown): value is Order {
   return isRecord(value) && hasMetadata(value) && isUuid(value.zoneId) &&
     typeof value.deliveryAddress === 'string' && typeof value.deliveryDate === 'string' &&

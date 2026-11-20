@@ -115,5 +115,9 @@ export function orderStatusLabel(status: OrderStatus): string {
       return 'En camino';
     case 'entregado':
       return 'Entregado';
+    case 'entrega_fallida':
+      return 'Entrega fallida';
+    case 'cancelado':
+      return 'Cancelado';
   }
 }

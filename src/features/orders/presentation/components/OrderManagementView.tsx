@@ -36,6 +36,8 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   recogido: 'Recogido',
   en_camino: 'En camino',
   entregado: 'Entregado',
+  entrega_fallida: 'Entrega fallida',
+  cancelado: 'Cancelado',
 };
 
 export const OrderManagementView: FC<OrderManagementViewProps> = ({
@@ -215,31 +217,39 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
 
                 <aside className="orders-timeline" aria-label="Línea de tiempo del pedido">
                   <p className="orders-timeline__title">Progreso operativo</p>
-                  <ol className="orders-timeline__list">
-                    {STATUS_TIMELINE.map((step) => {
-                      const stepIndex = STATUS_TIMELINE.findIndex(
-                        (candidate) => candidate.status === detail.status,
-                      );
-                      const currentIndex = STATUS_TIMELINE.findIndex(
-                        (candidate) => candidate.status === step.status,
-                      );
-                      const state =
-                        currentIndex < stepIndex
-                          ? 'done'
-                          : currentIndex === stepIndex
-                            ? 'current'
-                            : 'pending';
-                      return (
-                        <li
-                          key={step.status}
-                          className={`orders-timeline__item orders-timeline__item--${state}`}
-                        >
-                          <span className="orders-timeline__dot" aria-hidden="true" />
-                          <span className="orders-timeline__label">{step.label}</span>
-                        </li>
-                      );
-                    })}
-                  </ol>
+                  {detail.status === 'entrega_fallida' || detail.status === 'cancelado' ? (
+                    <div style={{ marginBottom: '14px' }}>
+                      <span className={`orders-status-badge orders-status-badge--${detail.status}`}>
+                        {STATUS_LABELS[detail.status]}
+                      </span>
+                    </div>
+                  ) : (
+                    <ol className="orders-timeline__list">
+                      {STATUS_TIMELINE.map((step) => {
+                        const stepIndex = STATUS_TIMELINE.findIndex(
+                          (candidate) => candidate.status === detail.status,
+                        );
+                        const currentIndex = STATUS_TIMELINE.findIndex(
+                          (candidate) => candidate.status === step.status,
+                        );
+                        const state =
+                          currentIndex < stepIndex
+                            ? 'done'
+                            : currentIndex === stepIndex
+                              ? 'current'
+                              : 'pending';
+                        return (
+                          <li
+                            key={step.status}
+                            className={`orders-timeline__item orders-timeline__item--${state}`}
+                          >
+                            <span className="orders-timeline__dot" aria-hidden="true" />
+                            <span className="orders-timeline__label">{step.label}</span>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
                   <ShortIdBadge id={detail.id} prefix="PED" />
                 </aside>
               </div>
