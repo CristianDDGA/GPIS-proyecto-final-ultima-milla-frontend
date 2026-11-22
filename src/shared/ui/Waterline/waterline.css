@@ -1402,12 +1402,42 @@
 
 /* --- Responsive Ergonomics (1440 / 1024 / 768 / 390) --------------------- */
 
-/* En laptops medianos y tablets landscape (960–1180px): mantener etiquetas visibles con espaciado compacto */
+/* En laptops medianos y tablets landscape (960–1180px): mantener las 7 etiquetas visibles sin recortes */
 @media (max-width: 1180px) {
+  .wl-header-bar--dense .wl-header-divider {
+    display: none;
+  }
+
+  .wl-header-bar--dense .wl-brand-wordmark {
+    font-size: 15px;
+  }
+
+  .wl-header-bar--dense .wl-nav-track {
+    gap: 2px;
+  }
+
   .wl-header-bar--dense .nimbus-item {
     padding: 0 9px;
     font-size: 12px;
     gap: 5px;
+  }
+
+  .wl-header-bar--dense .wl-session-pill {
+    padding: 3px 4px;
+    gap: 0;
+  }
+
+  .wl-header-bar--dense .wl-session-pill__avatar {
+    display: none;
+  }
+
+  .wl-header-bar--dense .wl-header-action__label--collapsible {
+    display: none;
+  }
+
+  .wl-header-bar--dense .wl-header-action {
+    padding: 0 10px;
+    font-size: 12px;
   }
 
   .wl-dashboard .zones-grid {
@@ -1514,6 +1544,50 @@
   .wl-dashboard .orders-detail__list {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .wl-dashboard .wf-section-header__actions {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* Evita compresión del thumb en controles segmentados con 4–5 pestañas en móvil (390px) */
+  .wl-dashboard .segmented {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .wl-dashboard .segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wl-dashboard .segmented__thumb {
+    display: none;
+  }
+
+  .wl-dashboard .segmented > button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 8px 13px;
+  }
+
+  .wl-dashboard .segmented .wf-access__tab--active,
+  .wl-dashboard .segmented .ui-btn--primary {
+    background-color: rgba(255, 255, 255, 0.94);
+    border: 1px solid #ffffff;
+    box-shadow:
+      0 6px 16px -6px rgba(22, 104, 243, 0.24),
+      0 2px 5px -2px rgba(15, 23, 42, 0.10),
+      inset 0 1px 0 #ffffff;
+    color: var(--wl-brand-active);
   }
 }
 

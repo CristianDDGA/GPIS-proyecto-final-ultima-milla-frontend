@@ -1,0 +1,792 @@
+/* ============================================================================
+   Millast · Módulo Tienda (/store) — Waterline Liquid Glass
+   100% sólido RGBA + backdrop-filter + bordes especulares, cero degradados CSS.
+   ========================================================================== */
+
+.store-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.store-tabs {
+  min-width: 240px;
+}
+
+.store-tab {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: var(--wl-ink-soft, #334155);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 180ms ease;
+}
+
+.store-tab:hover:not(.store-tab--active) {
+  color: var(--wl-ink, #0b132b);
+}
+
+.store-tab--active {
+  color: var(--wl-brand-active, #0b49c6);
+  font-weight: 700;
+}
+
+.store-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.store-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.store-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--wl-ink, #0b132b);
+}
+
+.store-card__subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--wl-ink-soft, #334155);
+}
+
+/* --- Filtros & Barras ---------------------------------------------------- */
+
+.store-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.store-filters__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.store-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 15px;
+  background-color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(11, 19, 43, 0.12);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wl-ink, #0b132b);
+  cursor: pointer;
+}
+
+.store-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: #1668f3;
+}
+
+/* --- Rejilla de productos del catálogo ----------------------------------- */
+
+.store-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.store-product-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background-color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.90);
+  box-shadow:
+    0 14px 32px -22px rgba(15, 23, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  transition: transform 180ms ease, box-shadow 200ms ease;
+}
+
+.store-product-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 18px 36px -20px rgba(15, 23, 42, 0.26),
+    inset 0 1px 0 #ffffff;
+}
+
+.store-product-card__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: rgba(226, 234, 244, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  display: grid;
+  place-items: center;
+}
+
+.store-product-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.store-product-card__placeholder {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wl-ink-muted, #475569);
+  padding: 8px;
+  text-align: center;
+}
+
+.store-product-card__discount {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background-color: #1668f3;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.store-product-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.store-product-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--wl-ink-soft, #334155);
+}
+
+.store-product-card__name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wl-ink, #0b132b);
+  line-height: 1.3;
+}
+
+.store-product-card__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.store-price {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--wl-ink, #0b132b);
+  font-variant-numeric: tabular-nums;
+}
+
+.store-price--compare {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wl-ink-muted, #475569);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+
+.store-product-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* --- Franjas horarias (Delivery Slots) ----------------------------------- */
+
+.store-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 8px;
+}
+
+.store-slot-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(11, 19, 43, 0.13);
+  background-color: rgba(255, 255, 255, 0.76);
+  color: var(--wl-ink, #0b132b);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 140ms ease;
+}
+
+.store-slot-btn:hover:not(:disabled) {
+  background-color: #ffffff;
+  border-color: rgba(22, 104, 243, 0.45);
+  transform: translateY(-1px);
+}
+
+.store-slot-btn--selected {
+  background-color: #1668f3;
+  border-color: #1668f3;
+  color: #ffffff;
+  box-shadow: 0 10px 20px -8px rgba(22, 104, 243, 0.56);
+}
+
+.store-slot-btn--selected .store-slot-btn__cap {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.store-slot-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  background-color: rgba(226, 232, 240, 0.65);
+}
+
+.store-slot-btn__time {
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.store-slot-btn__cap {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wl-ink-soft, #334155);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Carrito y Checkout -------------------------------------------------- */
+
+.store-checkout-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 1040px) {
+  .store-checkout-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  }
+}
+
+.store-cart-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.store-cart-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background-color: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.90);
+}
+
+.store-cart-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 180px;
+}
+
+.store-cart-item__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wl-ink, #0b132b);
+}
+
+.store-cart-item__meta {
+  font-size: 12px;
+  color: var(--wl-ink-soft, #334155);
+  font-variant-numeric: tabular-nums;
+}
+
+.store-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.store-qty__value {
+  min-width: 24px;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.store-total-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background-color: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+}
+
+/* --- KPI Grid (Resumen Admin & Caja Repartidor) -------------------------- */
+
+.store-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.store-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.90);
+  box-shadow:
+    0 12px 28px -20px rgba(15, 23, 42, 0.20),
+    inset 0 1px 0 #ffffff;
+}
+
+.store-kpi-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wl-ink-soft, #334155);
+}
+
+.store-kpi-card__value {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--wl-ink, #0b132b);
+  font-variant-numeric: tabular-nums;
+}
+
+.store-kpi-card__meta {
+  font-size: 12px;
+  color: var(--wl-ink-muted, #475569);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Grillas de 2 columnas & Formularios --------------------------------- */
+
+.store-two-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 1020px) {
+  .store-two-col {
+    grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+  }
+}
+
+.store-two-col--equal {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .store-two-col--equal {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.store-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.store-form__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 600px) {
+  .store-form__row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.store-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* --- Badges & Enlaces de Mapa -------------------------------------------- */
+
+.store-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  background-color: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(11, 19, 43, 0.12);
+  color: var(--wl-ink-soft, #334155);
+}
+
+.store-pill--blue {
+  background-color: rgba(22, 104, 243, 0.13);
+  border-color: rgba(22, 104, 243, 0.28);
+  color: #0b49c6;
+}
+
+.store-pill--green {
+  background-color: rgba(22, 163, 74, 0.14);
+  border-color: rgba(22, 163, 74, 0.30);
+  color: #15803d;
+}
+
+.store-pill--amber {
+  background-color: rgba(217, 119, 6, 0.14);
+  border-color: rgba(217, 119, 6, 0.30);
+  color: #9a3412;
+}
+
+.store-pill--red {
+  background-color: rgba(220, 38, 38, 0.13);
+  border-color: rgba(220, 38, 38, 0.28);
+  color: #b91c1c;
+}
+
+.store-map-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.store-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: rgba(22, 104, 243, 0.11);
+  border: 1px solid rgba(22, 104, 243, 0.24);
+  color: #0b49c6;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.store-map-link:hover {
+  background-color: rgba(22, 104, 243, 0.18);
+}
+
+/* --- EcuadorMapPicker (OpenStreetMap Slippy Tiles) ----------------------- */
+
+.wl-map-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+}
+
+.wl-map-picker__search {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.wl-map-picker__results {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(11, 19, 43, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wl-map-picker__result-btn {
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--wl-ink, #0b132b);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.wl-map-picker__result-btn:hover {
+  background-color: rgba(22, 104, 243, 0.10);
+  color: #0b49c6;
+}
+
+.wl-map-picker__viewport {
+  position: relative;
+  width: 100%;
+  height: 230px;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #dbe6f2;
+  border: 1px solid rgba(11, 19, 43, 0.14);
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+
+.wl-map-picker__tiles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+.wl-map-picker__tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 256px;
+  height: 256px;
+  pointer-events: none;
+}
+
+.wl-map-picker__pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.wl-map-picker__pin-dot {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border-radius: 999px;
+  background-color: #1668f3;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(11, 19, 43, 0.40);
+}
+
+.wl-map-picker__zoom {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wl-map-picker__zoom-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.90);
+  background-color: rgba(255, 255, 255, 0.90);
+  color: #0b132b;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+}
+
+.wl-map-picker__zoom-btn:hover {
+  background-color: #ffffff;
+}
+
+.wl-map-picker__attribution {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 4;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.84);
+  font-size: 10.5px;
+  color: #334155;
+}
+
+.wl-map-picker__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wl-map-picker__coords {
+  font-size: 12px;
+  color: var(--wl-ink-soft, #334155);
+  font-variant-numeric: tabular-nums;
+}
+
+.wl-map-picker__notice {
+  margin: 0;
+  font-size: 12px;
+  color: #9a3412;
+  font-weight: 500;
+}
+
+/* --- Tarjetas de parada COD / Libreta / Detalle -------------------------- */
+
+.store-stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.store-stop-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-left: 4px solid #1668f3;
+  box-shadow:
+    0 10px 24px -18px rgba(15, 23, 42, 0.20),
+    inset 0 1px 0 #ffffff;
+}
+
+.store-stop-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.store-lines-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.store-lines-table th,
+.store-lines-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(11, 19, 43, 0.08);
+  text-align: left;
+}
+
+.store-lines-table th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--wl-ink-soft, #334155);
+}
+
+.store-lines-table tr:last-child td {
+  border-bottom: none;
+}
+
+.store-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(11, 19, 43, 0.10);
+  background-color: rgba(226, 234, 244, 0.7);
+  flex-shrink: 0;
+}
+
+.store-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.store-pagination__info {
+  font-size: 13px;
+  color: var(--wl-ink-soft, #334155);
+  font-variant-numeric: tabular-nums;
+}
+
+.store-pagination__actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .store-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .wl-map-picker__search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

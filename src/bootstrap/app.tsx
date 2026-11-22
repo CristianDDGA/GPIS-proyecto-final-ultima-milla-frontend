@@ -10,11 +10,13 @@ import {
   Modal,
   PackageIcon,
   RouteIcon,
+  ShoppingBagIcon,
   Spinner,
   TruckIcon,
   UnifiedWaterlineNavbar,
   UserCheckIcon,
   UsersIcon,
+  WalletIcon,
   type WaterlineIconAnim,
   type WaterlineNavItem,
 } from '../shared/ui/index.js';
@@ -36,11 +38,27 @@ import { RouteManagementView } from '../features/routes/index.js';
 import { CourierFleetDispatchView, type Courier } from '../features/couriers/index.js';
 import { DeliveryExecutionView, type DeliveryActor } from '../features/deliveries/index.js';
 import { ClientCourierApplicationView } from '../features/courier-applications/index.js';
+import {
+  AdminStoreView,
+  CourierStoreView,
+  CustomerStoreView,
+} from '../features/store/index.js';
 import { composeUseCases } from './compose-use-cases.js';
 
-type AppTab = 'zones' | 'orders' | 'routes' | 'dispatch' | 'deliveries' | 'users' | 'application';
+type AppTab =
+  | 'store'
+  | 'courier-cash'
+  | 'zones'
+  | 'orders'
+  | 'routes'
+  | 'dispatch'
+  | 'deliveries'
+  | 'users'
+  | 'application';
 
 const TAB_CONFIG: Readonly<Record<AppTab, { readonly label: string; readonly anim: WaterlineIconAnim }>> = {
+  store: { label: 'Tienda', anim: 'pop' },
+  'courier-cash': { label: 'Cobros', anim: 'glow' },
   zones: { label: 'Zonas', anim: 'drop' },
   orders: { label: 'Pedidos', anim: 'pop' },
   routes: { label: 'Rutas', anim: 'plane' },
@@ -52,6 +70,10 @@ const TAB_CONFIG: Readonly<Record<AppTab, { readonly label: string; readonly ani
 
 function renderTabIcon(tab: AppTab) {
   switch (tab) {
+    case 'store':
+      return <ShoppingBagIcon size={15} />;
+    case 'courier-cash':
+      return <WalletIcon size={15} />;
     case 'zones':
       return <MapPinIcon size={15} />;
     case 'orders':
@@ -70,18 +92,20 @@ function renderTabIcon(tab: AppTab) {
 }
 
 const TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
-  personal: ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'users'],
-  repartidor: ['deliveries', 'routes', 'orders', 'zones'],
-  cliente: ['orders', 'zones', 'application'],
+  personal: ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'store', 'users'],
+  repartidor: ['deliveries', 'courier-cash', 'routes', 'orders', 'zones'],
+  cliente: ['store', 'orders', 'zones', 'application'],
 };
 
 const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
   personal: 'zones',
   repartidor: 'deliveries',
-  cliente: 'orders',
+  cliente: 'store',
 };
 
 const APP_TABS: readonly AppTab[] = [
+  'store',
+  'courier-cash',
   'zones',
   'orders',
   'routes',
@@ -426,6 +450,29 @@ export function App() {
             aria-labelledby={`tab-${activeTab}`}
             tabIndex={-1}
           >
+            {activeTab === 'store' && currentUser.role === 'cliente' && (
+              <CustomerStoreView
+                storeGateway={useCases.store}
+                zones={zones}
+                onOrderPlaced={() => {
+                  void loadSharedCatalog();
+                }}
+              />
+            )}
+
+            {activeTab === 'store' && currentUser.role === 'personal' && (
+              <AdminStoreView storeGateway={useCases.store} zones={zones} />
+            )}
+
+            {activeTab === 'courier-cash' && currentUser.role === 'repartidor' && (
+              <CourierStoreView
+                storeGateway={useCases.store}
+                onOrdersChanged={() => {
+                  void loadSharedCatalog();
+                }}
+              />
+            )}
+
             {activeTab === 'zones' && (
               <ZoneManagementView
                 httpClient={httpClient}

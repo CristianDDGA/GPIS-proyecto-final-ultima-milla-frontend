@@ -294,6 +294,10 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
                         errorFor={flows.errorFor}
                         onOpenForgotPassword={flows.openForgotPassword}
                         onSubmit={flows.handleLoginSubmit}
+                        onGoogleCredential={(idToken) => {
+                          void flows.handleGoogleLogin(idToken);
+                        }}
+                        googleDisabledByServer={flows.googleDisabledByServer}
                         isSubmitting={flows.isSubmitting}
                       />
                     )}

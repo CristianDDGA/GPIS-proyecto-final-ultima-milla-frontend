@@ -70,6 +70,19 @@ export class LoginUseCase {
   }
 }
 
+export class LoginWithGoogleUseCase {
+  constructor(private readonly authGateway: AuthGateway) {}
+
+  public async execute(idToken: string): Promise<AuthSession> {
+    const token = idToken.trim();
+    if (token.length === 0) {
+      throw new Error('No se recibió el token de Google.');
+    }
+
+    return this.authGateway.loginWithGoogle(token);
+  }
+}
+
 export class RegisterCustomerUseCase {
   constructor(private readonly authGateway: AuthGateway) {}
 
@@ -235,6 +248,7 @@ export class ResetManagedUserPasswordUseCase {
 export interface AuthUseCases {
   checkHealth: Pick<CheckHealthUseCase, 'execute'>;
   login: Pick<LoginUseCase, 'execute'>;
+  loginWithGoogle: Pick<LoginWithGoogleUseCase, 'execute'>;
   registerCustomer: Pick<RegisterCustomerUseCase, 'execute'>;
   verifyEmail: Pick<VerifyEmailUseCase, 'execute'>;
   resendVerification: Pick<ResendVerificationUseCase, 'execute'>;

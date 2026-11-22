@@ -549,13 +549,22 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
     };
   }, [loop]);
 
+  const activeRef = useRef(active);
+  activeRef.current = active;
+
   // Transición suave de la gota cuando cambia la pestaña activa
   useLayoutEffect(() => {
-    measure(false);
+    const track = trackRef.current;
     const activeButton = itemRefs.current[active];
-    if (activeButton && typeof activeButton.scrollIntoView === 'function') {
-      activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    if (track && activeButton && track.scrollWidth > track.clientWidth + 2) {
+      const targetLeft =
+        activeButton.offsetLeft - track.clientWidth / 2 + activeButton.offsetWidth / 2;
+      track.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: st.current.ready ? 'smooth' : 'auto',
+      });
     }
+    measure(false);
   }, [measure, active, items.length]);
 
   const measureRef = useRef(measure);
@@ -571,6 +580,13 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
       if (w !== lastW || h !== lastH) {
         lastW = w;
         lastH = h;
+        const track = trackRef.current;
+        const activeButton = itemRefs.current[activeRef.current];
+        if (track && activeButton && track.scrollWidth > track.clientWidth + 2) {
+          const targetLeft =
+            activeButton.offsetLeft - track.clientWidth / 2 + activeButton.offsetWidth / 2;
+          track.scrollLeft = Math.max(0, targetLeft);
+        }
         st.current.ready = false;
         measureRef.current(true);
       }

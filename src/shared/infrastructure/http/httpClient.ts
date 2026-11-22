@@ -62,6 +62,8 @@ export interface HttpClient {
   ): Promise<T>;
   /** Descarga autenticada de un recurso binario (imágenes privadas). */
   getBlob(endpoint: string, options?: RequestOptions): Promise<Blob>;
+  /** Resuelve una ruta relativa de la API a URL absoluta (preserva URLs http/https externas). */
+  resolveUrl?(endpoint: string): string;
 }
 
 export interface HttpClientAuthConfig {
@@ -71,6 +73,7 @@ export interface HttpClientAuthConfig {
 
 const UNAUTHENTICATED_ENDPOINTS: ReadonlySet<string> = new Set([
   '/auth/login',
+  '/auth/google',
   '/auth/register',
   '/auth/verify-email',
   '/auth/resend-verification',
@@ -114,6 +117,13 @@ export class FetchHttpClient implements HttpClient {
   private buildUrl(endpoint: string): string {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     return `${this.baseUrl}${cleanEndpoint}`;
+  }
+
+  public resolveUrl(endpoint: string): string {
+    if (/^https?:\/\//i.test(endpoint)) {
+      return endpoint;
+    }
+    return this.buildUrl(endpoint);
   }
 
   private applyAuthorizationHeader(headers: Record<string, string>): void {

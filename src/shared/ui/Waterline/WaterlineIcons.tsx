@@ -73,6 +73,21 @@ export const UserCheckIcon: FC<IconProps> = ({ size = 16, ...rest }) => (
   </svg>
 );
 
+export const ShoppingBagIcon: FC<IconProps> = ({ size = 16, ...rest }) => (
+  <svg {...baseProps(size)} {...rest}>
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+    <path d="M3 6h18" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
+  </svg>
+);
+
+export const WalletIcon: FC<IconProps> = ({ size = 16, ...rest }) => (
+  <svg {...baseProps(size)} {...rest}>
+    <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+    <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+  </svg>
+);
+
 export const KeyRoundIcon: FC<IconProps> = ({ size = 14, ...rest }) => (
   <svg {...baseProps(size)} {...rest}>
     <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
