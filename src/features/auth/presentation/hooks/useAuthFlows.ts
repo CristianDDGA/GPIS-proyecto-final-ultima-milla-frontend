@@ -506,6 +506,15 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     }
   };
 
+  const reportGoogleUnavailable = useCallback(
+    (message: string): void => {
+      setNotice(null);
+      setRequestError(message);
+      triggerShake();
+    },
+    [triggerShake],
+  );
+
   const handleGoogleLogin = useCallback(
     async (idToken: string): Promise<void> => {
       if (isSubmitting) return;
@@ -522,6 +531,10 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
         if (!mountedRef.current) return;
         if (error_ instanceof HttpError && error_.code === 'GOOGLE_NOT_ENABLED') {
           setGoogleDisabledByServer(true);
+          setRequestError(
+            'El inicio de sesión con Google está deshabilitado en el servidor (configura GOOGLE_CLIENT_ID en el backend).',
+          );
+          triggerShake();
           return;
         }
         setRequestError(
@@ -581,6 +594,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     openForgotPassword,
     handleLoginSubmit,
     handleGoogleLogin,
+    reportGoogleUnavailable,
     googleDisabledByServer,
     handleRegisterSubmit,
     handleVerifySubmit,
