@@ -2,6 +2,7 @@ import { useState, type FC, type FormEvent } from 'react';
 import type { PasswordStrength } from '../../../domain/index.js';
 import { AuthPasswordField } from './AuthPasswordField.js';
 import { AuthTextField } from './AuthTextField.js';
+import { GoogleSignInButton } from './GoogleSignInButton.js';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter.js';
 
 export interface AuthRegisterFormProps {
@@ -16,6 +17,9 @@ export interface AuthRegisterFormProps {
   readonly onMarkTouched: (field: string) => void;
   readonly errorFor: (field: string) => string | undefined;
   readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  readonly onGoogleCredential?: ((idToken: string) => void) | undefined;
+  readonly onGoogleUnavailable?: ((message: string) => void) | undefined;
+  readonly googleDisabledByServer?: boolean | undefined;
   readonly isSubmitting: boolean;
 }
 
@@ -31,6 +35,9 @@ export const AuthRegisterForm: FC<AuthRegisterFormProps> = ({
   onMarkTouched,
   errorFor,
   onSubmit,
+  onGoogleCredential,
+  onGoogleUnavailable,
+  googleDisabledByServer = false,
   isSubmitting,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -106,6 +113,16 @@ export const AuthRegisterForm: FC<AuthRegisterFormProps> = ({
         {isSubmitting && <span className="mlg-spinner" aria-hidden="true" />}
         <span>{isSubmitting ? 'Registrando...' : 'Crear cuenta'}</span>
       </button>
+
+      {onGoogleCredential !== undefined && (
+        <GoogleSignInButton
+          mode="register"
+          disabled={isSubmitting}
+          hidden={googleDisabledByServer}
+          onCredential={onGoogleCredential}
+          onUnavailable={onGoogleUnavailable}
+        />
+      )}
     </form>
   );
 };

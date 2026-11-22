@@ -14,6 +14,7 @@ export interface AuthLoginFormProps {
   readonly onOpenForgotPassword: () => void;
   readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   readonly onGoogleCredential?: ((idToken: string) => void) | undefined;
+  readonly onGoogleUnavailable?: ((message: string) => void) | undefined;
   readonly googleDisabledByServer?: boolean | undefined;
   readonly isSubmitting: boolean;
 }
@@ -29,6 +30,7 @@ export const AuthLoginForm: FC<AuthLoginFormProps> = ({
   onOpenForgotPassword,
   onSubmit,
   onGoogleCredential,
+  onGoogleUnavailable,
   googleDisabledByServer = false,
   isSubmitting,
 }) => {
@@ -99,9 +101,11 @@ export const AuthLoginForm: FC<AuthLoginFormProps> = ({
 
       {onGoogleCredential !== undefined && (
         <GoogleSignInButton
+          mode="login"
           disabled={isSubmitting}
           hidden={googleDisabledByServer}
           onCredential={onGoogleCredential}
+          onUnavailable={onGoogleUnavailable}
         />
       )}
     </form>

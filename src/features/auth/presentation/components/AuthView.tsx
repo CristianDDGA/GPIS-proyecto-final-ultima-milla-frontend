@@ -297,6 +297,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
                         onGoogleCredential={(idToken) => {
                           void flows.handleGoogleLogin(idToken);
                         }}
+                        onGoogleUnavailable={flows.reportGoogleUnavailable}
                         googleDisabledByServer={flows.googleDisabledByServer}
                         isSubmitting={flows.isSubmitting}
                       />
@@ -315,6 +316,11 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
                         onMarkTouched={flows.markTouched}
                         errorFor={flows.errorFor}
                         onSubmit={flows.handleRegisterSubmit}
+                        onGoogleCredential={(idToken) => {
+                          void flows.handleGoogleLogin(idToken);
+                        }}
+                        onGoogleUnavailable={flows.reportGoogleUnavailable}
+                        googleDisabledByServer={flows.googleDisabledByServer}
                         isSubmitting={flows.isSubmitting}
                       />
                     )}
