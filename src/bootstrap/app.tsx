@@ -1,13 +1,31 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FetchHttpClient } from '../shared/infrastructure/http/index.js';
-import { Alert, Spinner } from '../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  ClipboardCheckIcon,
+  LiquidLavaBackground,
+  MapPinIcon,
+  MillastEmblemGlyph,
+  Modal,
+  PackageIcon,
+  RouteIcon,
+  ShoppingBagIcon,
+  Spinner,
+  TruckIcon,
+  UnifiedWaterlineNavbar,
+  UserCheckIcon,
+  UsersIcon,
+  WalletIcon,
+  type WaterlineIconAnim,
+  type WaterlineNavItem,
+} from '../shared/ui/index.js';
 
 import {
   AdminAccessView,
   AuthView,
   ChangePasswordModal,
   HttpAuthGateway,
-  MillastMark,
   SessionBar,
   clearToken,
   getToken,
@@ -20,33 +38,74 @@ import { RouteManagementView } from '../features/routes/index.js';
 import { CourierFleetDispatchView, type Courier } from '../features/couriers/index.js';
 import { DeliveryExecutionView, type DeliveryActor } from '../features/deliveries/index.js';
 import { ClientCourierApplicationView } from '../features/courier-applications/index.js';
+import {
+  AdminStoreView,
+  CourierStoreView,
+  CustomerStoreView,
+} from '../features/store/index.js';
 import { composeUseCases } from './compose-use-cases.js';
 
-type AppTab = 'zones' | 'orders' | 'routes' | 'dispatch' | 'deliveries' | 'users' | 'application';
+type AppTab =
+  | 'store'
+  | 'courier-cash'
+  | 'zones'
+  | 'orders'
+  | 'routes'
+  | 'dispatch'
+  | 'deliveries'
+  | 'users'
+  | 'application';
 
-const TAB_LABELS: Readonly<Record<AppTab, string>> = {
-  zones: 'Zonas',
-  orders: 'Pedidos',
-  routes: 'Rutas',
-  dispatch: 'Despacho',
-  deliveries: 'Entregas',
-  users: 'Accesos',
-  application: 'Ser repartidor',
+const TAB_CONFIG: Readonly<Record<AppTab, { readonly label: string; readonly anim: WaterlineIconAnim }>> = {
+  store: { label: 'Tienda', anim: 'pop' },
+  'courier-cash': { label: 'Cobros', anim: 'glow' },
+  zones: { label: 'Zonas', anim: 'drop' },
+  orders: { label: 'Pedidos', anim: 'pop' },
+  routes: { label: 'Rutas', anim: 'plane' },
+  dispatch: { label: 'Despacho', anim: 'wave' },
+  deliveries: { label: 'Entregas', anim: 'glow' },
+  users: { label: 'Accesos', anim: 'spin' },
+  application: { label: 'Ser repartidor', anim: 'glow' },
 };
 
+function renderTabIcon(tab: AppTab) {
+  switch (tab) {
+    case 'store':
+      return <ShoppingBagIcon size={15} />;
+    case 'courier-cash':
+      return <WalletIcon size={15} />;
+    case 'zones':
+      return <MapPinIcon size={15} />;
+    case 'orders':
+      return <PackageIcon size={15} />;
+    case 'routes':
+      return <RouteIcon size={15} />;
+    case 'dispatch':
+      return <TruckIcon size={15} />;
+    case 'deliveries':
+      return <ClipboardCheckIcon size={15} />;
+    case 'users':
+      return <UsersIcon size={15} />;
+    case 'application':
+      return <UserCheckIcon size={15} />;
+  }
+}
+
 const TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
-  personal: ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'users'],
-  repartidor: ['deliveries', 'routes', 'orders', 'zones'],
-  cliente: ['orders', 'zones', 'application'],
+  personal: ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'store', 'users'],
+  repartidor: ['deliveries', 'courier-cash', 'routes', 'orders', 'zones'],
+  cliente: ['store', 'orders', 'zones', 'application'],
 };
 
 const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
   personal: 'zones',
   repartidor: 'deliveries',
-  cliente: 'orders',
+  cliente: 'store',
 };
 
 const APP_TABS: readonly AppTab[] = [
+  'store',
+  'courier-cash',
   'zones',
   'orders',
   'routes',
@@ -97,6 +156,7 @@ export function App() {
     setCatalogError(null);
     setRequestedTab(null);
     setPasswordModalOpen(false);
+    setLogoutModalOpen(false);
 
     const url = new URL(window.location.href);
     url.searchParams.delete('tab');
@@ -121,6 +181,7 @@ export function App() {
   const [requestedTab, setRequestedTab] = useState<string | null>(readRequestedTab);
   const activeTab = resolveTab(requestedTab, currentRole);
   const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
+  const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -131,19 +192,22 @@ export function App() {
 
   useEffect(() => {
     const handleScroll = (): void => {
-      setIsScrolled(window.scrollY > 4);
+      setIsScrolled(window.scrollY > 6);
     };
     handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const allowedTabs: readonly AppTab[] =
-    currentRole === null ? APP_TABS : TABS_BY_ROLE[currentRole];
-  const navTabs = useMemo(
-    () => APP_TABS.filter((tab) => allowedTabs.includes(tab)),
-    [allowedTabs],
-  );
+  const navItems = useMemo<readonly WaterlineNavItem<AppTab>[]>(() => {
+    const roleTabs = currentRole === null ? APP_TABS : TABS_BY_ROLE[currentRole];
+    return roleTabs.map((tab) => ({
+      id: tab,
+      label: TAB_CONFIG[tab].label,
+      anim: TAB_CONFIG[tab].anim,
+      icon: renderTabIcon(tab),
+    }));
+  }, [currentRole]);
 
   const selectTab = useCallback((tab: AppTab, params?: Readonly<Record<string, string>>) => {
     const url = new URL(window.location.href);
@@ -257,7 +321,14 @@ export function App() {
       ];
     }
     return [];
-  }, [couriers, currentUser?.role, currentUser?.courierId, currentUser?.displayName, currentUser?.email, currentUser?.isActive]);
+  }, [
+    couriers,
+    currentUser?.role,
+    currentUser?.courierId,
+    currentUser?.displayName,
+    currentUser?.email,
+    currentUser?.isActive,
+  ]);
 
   const deliveryActor = useMemo<DeliveryActor>(
     () => ({
@@ -269,7 +340,8 @@ export function App() {
     [currentUser?.id, currentUser?.role, currentUser?.courierId, currentUser?.displayName],
   );
 
-  const handleLogout = useCallback(() => {
+  const confirmLogout = useCallback(() => {
+    setLogoutModalOpen(false);
     void auth.logout().finally(() => {
       resetSessionViewState();
     });
@@ -281,13 +353,16 @@ export function App() {
 
   if (auth.status === 'loading') {
     return (
-      <div className="app-frame">
-        <main className="app-shell app-shell--centered">
-          <div className="wf-loading-card">
-            <Spinner size="lg" label="Restaurando la sesión activa" />
-            <p role="status">Restaurando la sesión activa...</p>
-          </div>
-        </main>
+      <div className="app-frame wl-dashboard">
+        <LiquidLavaBackground />
+        <div className="wl-dashboard-content">
+          <main className="app-shell app-shell--centered">
+            <div className="wf-loading-card">
+              <Spinner size="lg" label="Restaurando la sesión activa" />
+              <p role="status">Restaurando la sesión activa...</p>
+            </div>
+          </main>
+        </div>
       </div>
     );
   }
@@ -307,180 +382,171 @@ export function App() {
     );
   }
 
-  const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    const currentIndex = navTabs.indexOf(activeTab);
-    if (currentIndex < 0) {
-      return;
-    }
-
-    let nextIndex: number;
-    if (event.key === 'ArrowRight') {
-      nextIndex = (currentIndex + 1) % navTabs.length;
-    } else if (event.key === 'ArrowLeft') {
-      nextIndex = (currentIndex - 1 + navTabs.length) % navTabs.length;
-    } else if (event.key === 'Home') {
-      nextIndex = 0;
-    } else if (event.key === 'End') {
-      nextIndex = navTabs.length - 1;
-    } else {
-      return;
-    }
-
-    const nextTab = navTabs[nextIndex];
-    if (nextTab === undefined) {
-      return;
-    }
-
-    event.preventDefault();
-    selectTab(nextTab);
-    window.requestAnimationFrame(() => document.getElementById('app-tab-' + nextTab)?.focus());
-  };
+  const defaultRoleTab = DEFAULT_TAB_BY_ROLE[currentUser.role];
 
   return (
-    <div className="app-frame wf-app">
-      <header className={'wf-app-topbar ' + (isScrolled ? 'wf-app-topbar--scrolled' : '')}>
-        <div className="wf-app-topbar__inner">
-          <div className="wf-app-brand">
-            <MillastMark className="wf-app-brand__mark" />
-            <span className="wf-app-brand__name">Millast</span>
-          </div>
+    <div className="app-frame wl-dashboard">
+      <LiquidLavaBackground />
 
-          <nav
-            className="wf-app-nav"
-            role="tablist"
-            aria-label="Navegación principal del sistema"
-            onKeyDown={handleTabKeyDown}
-          >
-            {navTabs.map((tab) => {
-              const isSelected = activeTab === tab;
-              return (
+      <div className="wl-dashboard-content">
+        <header className={`wl-sticky-header ${isScrolled ? 'wl-sticky-header--scrolled' : ''}`}>
+          <UnifiedWaterlineNavbar
+            items={navItems}
+            activeId={activeTab}
+            onSelect={(tab) => selectTab(tab)}
+            ariaLabel="Navegación principal del sistema"
+            leadingSlot={
+              <>
                 <button
-                  key={tab}
-                  id={'app-tab-' + tab}
                   type="button"
-                  role="tab"
-                  aria-selected={isSelected}
-                  aria-controls={'app-panel-' + tab}
-                  tabIndex={isSelected ? 0 : -1}
-                  className={'wf-app-nav__tab ' + (isSelected ? 'wf-app-nav__tab--active' : '')}
-                  onClick={() => selectTab(tab)}
+                  className="wl-brand-btn"
+                  onClick={() => selectTab(defaultRoleTab)}
+                  aria-label="Ir al inicio de Millast"
                 >
-                  <span>{TAB_LABELS[tab]}</span>
+                  <span className="wl-brand-badge" aria-hidden="true">
+                    <MillastEmblemGlyph size={17} />
+                  </span>
+                  <span className="wl-brand-wordmark">Millast</span>
                 </button>
-              );
-            })}
-          </nav>
-
-          <SessionBar
-            user={currentUser}
-            isLoading={auth.isSubmitting}
-            onOpenPassword={() => setPasswordModalOpen(true)}
-            onLogout={handleLogout}
+                <span className="wl-header-divider" aria-hidden="true" />
+              </>
+            }
+            trailingSlot={
+              <SessionBar
+                user={currentUser}
+                isLoading={auth.isSubmitting}
+                onOpenPassword={() => setPasswordModalOpen(true)}
+                onLogout={() => setLogoutModalOpen(true)}
+              />
+            }
           />
-        </div>
-      </header>
+        </header>
 
-      <main className="wf-app-main">
-        {auth.error !== null && (
-          <Alert type="error" title="Atención" onClose={auth.clearError}>
-            {auth.error}
-          </Alert>
-        )}
+        <main className="wf-app-main">
+          {auth.error !== null && (
+            <Alert type="error" title="Atención" onClose={auth.clearError}>
+              {auth.error}
+            </Alert>
+          )}
 
-        {catalogError !== null && (
-          <Alert type="error" title="Catálogo compartido" onClose={() => setCatalogError(null)}>
-            {catalogError}
-          </Alert>
-        )}
+          {catalogError !== null && (
+            <Alert type="error" title="Catálogo compartido" onClose={() => setCatalogError(null)}>
+              {catalogError}
+            </Alert>
+          )}
 
-        {isLoadingCatalog && zones.length === 0 && (
-          <div className="wf-loading-card wf-loading-card--inline">
-            <Spinner size="md" label="Cargando zonas y pedidos" />
-            <p role="status">Sincronizando catálogo operativo...</p>
+          {isLoadingCatalog && zones.length === 0 && (
+            <div className="wf-loading-card wf-loading-card--inline">
+              <Spinner size="md" label="Cargando zonas y pedidos" />
+              <p role="status">Sincronizando catálogo operativo...</p>
+            </div>
+          )}
+
+          <div
+            key={activeTab}
+            className="wf-app-panel app-panel"
+            role="tabpanel"
+            id={`panel-${activeTab}`}
+            aria-labelledby={`tab-${activeTab}`}
+            tabIndex={-1}
+          >
+            {activeTab === 'store' && currentUser.role === 'cliente' && (
+              <CustomerStoreView
+                storeGateway={useCases.store}
+                zones={zones}
+                onOrderPlaced={() => {
+                  void loadSharedCatalog();
+                }}
+              />
+            )}
+
+            {activeTab === 'store' && currentUser.role === 'personal' && (
+              <AdminStoreView storeGateway={useCases.store} zones={zones} />
+            )}
+
+            {activeTab === 'courier-cash' && currentUser.role === 'repartidor' && (
+              <CourierStoreView
+                storeGateway={useCases.store}
+                onOrdersChanged={() => {
+                  void loadSharedCatalog();
+                }}
+              />
+            )}
+
+            {activeTab === 'zones' && (
+              <ZoneManagementView
+                httpClient={httpClient}
+                canCreateZone={currentUser.role === 'personal'}
+                orders={orders}
+                onNavigateToOrders={(zoneId) => selectTab('orders', { zoneId })}
+              />
+            )}
+
+            {activeTab === 'orders' && (
+              <OrderManagementView
+                useCases={useCases.orders}
+                canCreateOrder={currentUser.role !== 'repartidor'}
+                onNavigateToRoutes={
+                  currentUser.role === 'personal'
+                    ? (deliveryDate) => selectTab('routes', { deliveryDate })
+                    : undefined
+                }
+              />
+            )}
+
+            {activeTab === 'routes' && (
+              <RouteManagementView
+                useCases={useCases.routes}
+                zones={zones}
+                pendingOrders={orders}
+                couriers={routeCouriers}
+                isAdmin={currentUser.role === 'personal'}
+                onCatalogChanged={() => {
+                  void loadSharedCatalog();
+                }}
+                onNavigateToFleet={
+                  currentUser.role === 'personal' ? () => selectTab('dispatch') : undefined
+                }
+              />
+            )}
+
+            {activeTab === 'dispatch' && (
+              <CourierFleetDispatchView
+                useCases={useCases.couriers}
+                listPlanifiedRoutes={listPlanifiedRoutes}
+                zones={zones}
+                onNavigateToDeliveries={() => selectTab('deliveries')}
+              />
+            )}
+
+            {activeTab === 'deliveries' && (
+              <DeliveryExecutionView
+                useCases={useCases.deliveries}
+                courierUseCases={useCases.couriers}
+                actor={deliveryActor}
+                zones={zones}
+                onDeliveryChanged={() => {
+                  void loadSharedCatalog();
+                }}
+              />
+            )}
+
+            {activeTab === 'users' && (
+              <AdminAccessView
+                authUseCases={useCases.auth}
+                applicationUseCases={useCases.courierApplications}
+              />
+            )}
+
+            {activeTab === 'application' && (
+              <ClientCourierApplicationView
+                useCases={useCases.courierApplications}
+                defaultFullName={currentUser.displayName ?? ''}
+              />
+            )}
           </div>
-        )}
-
-        <div
-          key={activeTab}
-          className="wf-app-panel app-panel"
-          role="tabpanel"
-          id={'app-panel-' + activeTab}
-          aria-labelledby={'app-tab-' + activeTab}
-          tabIndex={-1}
-        >
-          {activeTab === 'zones' && (
-            <ZoneManagementView
-              httpClient={httpClient}
-              canCreateZone={currentUser.role === 'personal'}
-              orders={orders}
-              onNavigateToOrders={(zoneId) => selectTab('orders', { zoneId })}
-            />
-          )}
-
-          {activeTab === 'orders' && (
-            <OrderManagementView
-              useCases={useCases.orders}
-              canCreateOrder={currentUser.role !== 'repartidor'}
-              onNavigateToRoutes={
-                currentUser.role === 'personal'
-                  ? (deliveryDate) => selectTab('routes', { deliveryDate })
-                  : undefined
-              }
-            />
-          )}
-
-          {activeTab === 'routes' && (
-            <RouteManagementView
-              useCases={useCases.routes}
-              zones={zones}
-              pendingOrders={orders}
-              couriers={routeCouriers}
-              isAdmin={currentUser.role === 'personal'}
-              onCatalogChanged={() => {
-                void loadSharedCatalog();
-              }}
-              onNavigateToFleet={
-                currentUser.role === 'personal' ? () => selectTab('dispatch') : undefined
-              }
-            />
-          )}
-
-          {activeTab === 'dispatch' && (
-            <CourierFleetDispatchView
-              useCases={useCases.couriers}
-              listPlanifiedRoutes={listPlanifiedRoutes}
-              zones={zones}
-              onNavigateToDeliveries={() => selectTab('deliveries')}
-            />
-          )}
-
-          {activeTab === 'deliveries' && (
-            <DeliveryExecutionView
-              useCases={useCases.deliveries}
-              courierUseCases={useCases.couriers}
-              actor={deliveryActor}
-              zones={zones}
-              onDeliveryChanged={() => {
-                void loadSharedCatalog();
-              }}
-            />
-          )}
-
-          {activeTab === 'users' && (
-            <AdminAccessView
-              authUseCases={useCases.auth}
-              applicationUseCases={useCases.courierApplications}
-            />
-          )}
-
-          {activeTab === 'application' && (
-            <ClientCourierApplicationView
-              useCases={useCases.courierApplications}
-              defaultFullName={currentUser.displayName ?? ''}
-            />
-          )}
-        </div>
-      </main>
+        </main>
+      </div>
 
       {isPasswordModalOpen && (
         <ChangePasswordModal
@@ -491,6 +557,41 @@ export function App() {
             void auth.refreshMe();
           }}
         />
+      )}
+
+      {isLogoutModalOpen && (
+        <Modal
+          title="Cerrar sesión"
+          description={`¿Deseas cerrar la sesión activa de ${currentUser.displayName || currentUser.email}?`}
+          size="sm"
+          onClose={() => setLogoutModalOpen(false)}
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setLogoutModalOpen(false)}
+                disabled={auth.isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={confirmLogout}
+                isLoading={auth.isSubmitting}
+              >
+                Cerrar sesión
+              </Button>
+            </>
+          }
+        >
+          <p className="wf-modal__paragraph">
+            Tu token de acceso será revocado y volverás a la pantalla de inicio de sesión.
+          </p>
+        </Modal>
       )}
     </div>
   );

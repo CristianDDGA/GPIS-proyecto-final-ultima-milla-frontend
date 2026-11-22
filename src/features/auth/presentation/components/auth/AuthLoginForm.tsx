@@ -1,6 +1,7 @@
 import { useState, type FC, type FormEvent } from 'react';
 import { AuthPasswordField } from './AuthPasswordField.js';
 import { AuthTextField } from './AuthTextField.js';
+import { GoogleSignInButton } from './GoogleSignInButton.js';
 
 export interface AuthLoginFormProps {
   readonly email: string;
@@ -12,6 +13,8 @@ export interface AuthLoginFormProps {
   readonly errorFor: (field: string) => string | undefined;
   readonly onOpenForgotPassword: () => void;
   readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  readonly onGoogleCredential?: ((idToken: string) => void) | undefined;
+  readonly googleDisabledByServer?: boolean | undefined;
   readonly isSubmitting: boolean;
 }
 
@@ -25,6 +28,8 @@ export const AuthLoginForm: FC<AuthLoginFormProps> = ({
   errorFor,
   onOpenForgotPassword,
   onSubmit,
+  onGoogleCredential,
+  googleDisabledByServer = false,
   isSubmitting,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -91,6 +96,14 @@ export const AuthLoginForm: FC<AuthLoginFormProps> = ({
         {isSubmitting && <span className="mlg-spinner" aria-hidden="true" />}
         <span>{isSubmitting ? 'Verificando...' : 'Entrar al sistema'}</span>
       </button>
+
+      {onGoogleCredential !== undefined && (
+        <GoogleSignInButton
+          disabled={isSubmitting}
+          hidden={googleDisabledByServer}
+          onCredential={onGoogleCredential}
+        />
+      )}
     </form>
   );
 };

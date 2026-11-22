@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import type { AuthUser } from '../../domain/index.js';
 import { APP_ROLE_LABELS } from '../../domain/index.js';
-import { Button } from '../../../../shared/ui/index.js';
+import { KeyRoundIcon, LogOutIcon } from '../../../../shared/ui/index.js';
 
 export interface SessionBarProps {
   readonly user: AuthUser;
@@ -25,7 +25,7 @@ function initialsOf(name: string): string {
   return (first + last).toUpperCase();
 }
 
-/** Cápsula de sesión Webflow Studio: identidad, rol y acciones directas. */
+/** Cápsula de sesión Waterline Liquid Glass: identidad, rol y acciones accesibles en todos los viewports. */
 export const SessionBar: FC<SessionBarProps> = ({
   user,
   isLoading = false,
@@ -34,33 +34,45 @@ export const SessionBar: FC<SessionBarProps> = ({
 }) => {
   const hasDisplayName = user.displayName !== null && user.displayName.trim().length > 0;
   const displayName = hasDisplayName && user.displayName !== null ? user.displayName : user.email;
+  const roleLabel = APP_ROLE_LABELS[user.role];
 
   return (
-    <section className="wf-session" aria-label="Cápsula de sesión del usuario">
-      <span className="wf-session__avatar" aria-hidden="true">
-        {initialsOf(displayName)}
-      </span>
-      <div className="wf-session__identity">
-        <p className="wf-session__name">{displayName}</p>
-        <p className="wf-session__email">{user.email}</p>
+    <div className="wl-header-trailing" aria-label="Sesión del usuario">
+      <div className="wl-session-pill" title={`${displayName} · ${user.email} (${roleLabel})`}>
+        <span className="wl-session-pill__avatar" aria-hidden="true">
+          {initialsOf(displayName)}
+        </span>
+        <div className="wl-session-pill__identity">
+          <span className="wl-session-pill__name">{displayName}</span>
+          <span className="wl-session-pill__email">{user.email}</span>
+        </div>
+        <span className={`wl-session-pill__role wl-session-pill__role--${user.publicRole}`}>
+          {roleLabel}
+        </span>
       </div>
-      <span className={'wf-session__role wf-session__role--' + user.publicRole}>
-        {APP_ROLE_LABELS[user.role]}
-      </span>
-      <div className="wf-session__actions">
-        <Button type="button" variant="ghost" size="sm" onClick={onOpenPassword}>
-          Clave
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={onLogout}
-          isLoading={isLoading}
-        >
-          Salir
-        </Button>
-      </div>
-    </section>
+
+      <button
+        type="button"
+        className="wl-header-action wl-header-action--subtle"
+        onClick={onOpenPassword}
+        aria-label="Cambiar contraseña"
+        title="Cambiar contraseña"
+      >
+        <KeyRoundIcon size={13} />
+        <span className="wl-header-action__label wl-header-action__label--collapsible">Clave</span>
+      </button>
+
+      <button
+        type="button"
+        className="wl-header-action"
+        onClick={onLogout}
+        disabled={isLoading}
+        aria-label="Cerrar sesión"
+        title="Cerrar sesión"
+      >
+        <LogOutIcon size={13} />
+        <span className="wl-header-action__label">{isLoading ? 'Saliendo...' : 'Salir'}</span>
+      </button>
+    </div>
   );
 };

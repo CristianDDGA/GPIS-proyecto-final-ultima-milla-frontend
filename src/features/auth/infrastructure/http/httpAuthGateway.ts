@@ -71,6 +71,15 @@ export class HttpAuthGateway implements AuthGateway {
     return session;
   }
 
+  public async loginWithGoogle(idToken: string): Promise<AuthSession> {
+    const session = readAuthSession(
+      await this.httpClient.post<unknown>('/auth/google', { idToken }),
+    );
+
+    setToken(session.token);
+    return session;
+  }
+
   public async registerCustomer(input: RegisterCustomerInput): Promise<RegisterCustomerOutcome> {
     const request: RegisterRequest = {
       email: input.email,

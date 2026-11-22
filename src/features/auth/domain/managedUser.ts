@@ -9,9 +9,15 @@ import {
   type ValidationResult,
 } from './authUser.js';
 
-export type EmailVerifiedVia = 'code' | 'admin' | 'legacy' | 'demo';
+export type EmailVerifiedVia = 'code' | 'admin' | 'legacy' | 'demo' | 'google';
 
-export const EMAIL_VERIFIED_VIA_VALUES: readonly EmailVerifiedVia[] = ['code', 'admin', 'legacy', 'demo'];
+export const EMAIL_VERIFIED_VIA_VALUES: readonly EmailVerifiedVia[] = [
+  'code',
+  'admin',
+  'legacy',
+  'demo',
+  'google',
+];
 
 /** Vista administrativa del usuario: nunca incluye hash de contraseña. */
 export interface ManagedUser extends AuthUser {

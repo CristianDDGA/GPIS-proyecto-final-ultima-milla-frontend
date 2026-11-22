@@ -49,7 +49,9 @@ export function isStopOrderStatus(value: unknown): value is StopOrderStatus {
     value === 'asignado_a_ruta' ||
     value === 'recogido' ||
     value === 'en_camino' ||
-    value === 'entregado'
+    value === 'entregado' ||
+    value === 'entrega_fallida' ||
+    value === 'cancelado'
   );
 }
 

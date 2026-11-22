@@ -21,6 +21,8 @@ const ACTIVE_ROUTE_STOP_STATUSES: ReadonlySet<string> = new Set([
   'recogido',
   'en_camino',
   'entregado',
+  'entrega_fallida',
+  'cancelado',
 ]);
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

@@ -24,6 +24,8 @@ const STATUS_LABELS: Record<string, string> = {
   recogido: 'Recogido',
   en_camino: 'En camino',
   entregado: 'Entregado',
+  entrega_fallida: 'Entrega fallida',
+  cancelado: 'Cancelado',
 };
 
 export const OrderList: FC<OrderListProps> = ({

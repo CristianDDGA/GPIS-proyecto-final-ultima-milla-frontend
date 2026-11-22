@@ -41,7 +41,13 @@ export interface ActiveCourierRouteStop {
   readonly position: number;
   readonly deliveryAddress: string;
   readonly deliveryTime: string;
-  readonly status: 'asignado_a_ruta' | 'recogido' | 'en_camino' | 'entregado';
+  readonly status:
+    | 'asignado_a_ruta'
+    | 'recogido'
+    | 'en_camino'
+    | 'entregado'
+    | 'entrega_fallida'
+    | 'cancelado';
 }
 
 export interface ActiveCourierRoute {

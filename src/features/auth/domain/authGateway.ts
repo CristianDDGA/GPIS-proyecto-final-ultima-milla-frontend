@@ -22,6 +22,8 @@ import type {
 export interface AuthGateway {
   checkHealth(): Promise<HealthStatus>;
   login(input: LoginInput): Promise<AuthSession>;
+  /** Inicio de sesión o alta de cliente verificado mediante Google ID Token (POST /auth/google). */
+  loginWithGoogle(idToken: string): Promise<AuthSession>;
   /** Sesión directa (modo demo) o correo pendiente de verificación con código de 6 dígitos. */
   registerCustomer(input: RegisterCustomerInput): Promise<RegisterCustomerOutcome>;
   verifyEmail(input: VerifyEmailInput): Promise<AuthSession>;

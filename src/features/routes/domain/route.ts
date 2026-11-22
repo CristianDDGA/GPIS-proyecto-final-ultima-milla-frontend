@@ -1,6 +1,12 @@
 export type RouteStatus = 'planificada' | 'asignada' | 'en_curso' | 'completada' | 'cancelada';
 
-export type StopOrderStatus = 'asignado_a_ruta' | 'recogido' | 'en_camino' | 'entregado';
+export type StopOrderStatus =
+  | 'asignado_a_ruta'
+  | 'recogido'
+  | 'en_camino'
+  | 'entregado'
+  | 'entrega_fallida'
+  | 'cancelado';
 
 export interface RouteSummary {
   id: string;

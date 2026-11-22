@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, type FC, type ReactNode } from 'react';
+import { CloseIcon } from '../Waterline/WaterlineIcons.js';
 import './Modal.css';
 
 export interface ModalProps {
@@ -12,9 +13,9 @@ export interface ModalProps {
 }
 
 /**
- * Modal Webflow Studio (DESIGN.md):
- * Tarjeta #ffffff de 8px de radio con borde 1px solid #d8d8d8, sombra multicapa
- * --shadow-xl, foco inicial accesible y revelado cinético en el título.
+ * Diálogo modal Waterline Liquid Glass:
+ * superficie esmerilada de 26px con backdrop-blur, cierre por Escape,
+ * botón de cierre accesible y foco inicial en el primer control interactivo.
  */
 export const Modal: FC<ModalProps> = ({
   eyebrow,
@@ -32,9 +33,9 @@ export const Modal: FC<ModalProps> = ({
   useEffect(() => {
     const dialog = dialogRef.current;
     const focusable = dialog?.querySelector<HTMLElement>(
-      'input, select, textarea, button, [href], [tabindex]:not([tabindex="-1"])',
+      'input, select, textarea, button:not(.wf-modal__close), [href], [tabindex]:not([tabindex="-1"])',
     );
-    focusable?.focus();
+    (focusable ?? dialog?.querySelector<HTMLElement>('.wf-modal__close'))?.focus();
   }, []);
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export const Modal: FC<ModalProps> = ({
   const words = title.split(' ').filter((word) => word.length > 0);
 
   return (
-    <div className="wf-modal-root" role="presentation">
+    <div className="wf-modal-root wl-modal-host" role="presentation">
       <div className="wf-modal-backdrop" aria-hidden="true" onClick={onClose} />
       <section
         ref={dialogRef}
@@ -60,27 +61,38 @@ export const Modal: FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <header className="wf-modal__header">
-          {eyebrow !== undefined && eyebrow.length > 0 && (
-            <p className="wf-modal__eyebrow">{eyebrow}</p>
-          )}
-          <h2 id={titleId} className="wf-modal__title">
-            {words.map((word, index) => (
-              <Fragment key={`${title}-${word}-${index}`}>
-                <span
-                  className="wf-modal__title-word"
-                  style={{ animationDelay: `${index * 45}ms` }}
-                >
-                  {word}
-                </span>
-                {index < words.length - 1 ? ' ' : null}
-              </Fragment>
-            ))}
-          </h2>
-          {description !== undefined && description.length > 0 && (
-            <p className="wf-modal__description">{description}</p>
-          )}
-        </header>
+        <div className="wf-modal__top">
+          <header className="wf-modal__header">
+            {eyebrow !== undefined && eyebrow.length > 0 && (
+              <p className="wf-modal__eyebrow">{eyebrow}</p>
+            )}
+            <h2 id={titleId} className="wf-modal__title">
+              {words.map((word, index) => (
+                <Fragment key={`${title}-${word}-${index}`}>
+                  <span
+                    className="wf-modal__title-word"
+                    style={{ animationDelay: `${index * 40}ms` }}
+                  >
+                    {word}
+                  </span>
+                  {index < words.length - 1 ? ' ' : null}
+                </Fragment>
+              ))}
+            </h2>
+            {description !== undefined && description.length > 0 && (
+              <p className="wf-modal__description">{description}</p>
+            )}
+          </header>
+
+          <button
+            type="button"
+            className="wf-modal__close"
+            onClick={onClose}
+            aria-label="Cerrar ventana"
+          >
+            <CloseIcon size={15} />
+          </button>
+        </div>
 
         <div className="wf-modal__body">{children}</div>
 

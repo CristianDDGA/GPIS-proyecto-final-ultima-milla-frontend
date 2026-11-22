@@ -136,6 +136,7 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [shakeNonce, setShakeNonce] = useState(0);
+  const [googleDisabledByServer, setGoogleDisabledByServer] = useState(false);
 
   const mountedRef = useRef(true);
   const screenTitleRef = useRef<HTMLHeadingElement | null>(null);
@@ -505,6 +506,37 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     }
   };
 
+  const handleGoogleLogin = useCallback(
+    async (idToken: string): Promise<void> => {
+      if (isSubmitting) return;
+      setRequestError(null);
+      setNotice(null);
+      setIsSubmitting(true);
+      try {
+        const session = await useCases.loginWithGoogle.execute(idToken);
+        setToken(session.token);
+        if (mountedRef.current) {
+          onAuthenticated?.(session.user);
+        }
+      } catch (error_) {
+        if (!mountedRef.current) return;
+        if (error_ instanceof HttpError && error_.code === 'GOOGLE_NOT_ENABLED') {
+          setGoogleDisabledByServer(true);
+          return;
+        }
+        setRequestError(
+          toErrorMessage(error_, 'No se pudo iniciar sesión con Google.'),
+        );
+        triggerShake();
+      } finally {
+        if (mountedRef.current) {
+          setIsSubmitting(false);
+        }
+      }
+    },
+    [isSubmitting, onAuthenticated, triggerShake, useCases.loginWithGoogle],
+  );
+
   return {
     screen,
     activeTab: (screen === 'register' ? 'register' : 'login') as AuthTab,
@@ -548,6 +580,8 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
     goToLogin,
     openForgotPassword,
     handleLoginSubmit,
+    handleGoogleLogin,
+    googleDisabledByServer,
     handleRegisterSubmit,
     handleVerifySubmit,
     handleResendVerification,

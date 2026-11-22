@@ -18,6 +18,8 @@ const ORDER_STATUSES = [
   'recogido',
   'en_camino',
   'entregado',
+  'entrega_fallida',
+  'cancelado',
 ] as const;
 
 const TARGET_STATUSES = ['recogido', 'en_camino', 'entregado'] as const;

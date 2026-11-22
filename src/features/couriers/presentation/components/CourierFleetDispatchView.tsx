@@ -44,6 +44,8 @@ const STOP_STATUS_LABELS: Record<ActiveCourierRouteStop['status'], string> = {
   recogido: 'Recogido',
   en_camino: 'En camino',
   entregado: 'Entregado',
+  entrega_fallida: 'Entrega fallida',
+  cancelado: 'Cancelado',
 };
 
 const ROUTE_STATUS_LABELS: Record<string, string> = {

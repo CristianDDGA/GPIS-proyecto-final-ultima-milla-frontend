@@ -13,6 +13,7 @@ import {
   HttpAuthGateway,
   ListManagedUsersUseCase,
   LoginUseCase,
+  LoginWithGoogleUseCase,
   LogoutUseCase,
   RegisterCustomerUseCase,
   ResendVerificationUseCase,
@@ -79,6 +80,7 @@ import {
   UploadApplicationFileUseCase,
   type CourierApplicationUseCases,
 } from '../features/courier-applications/index.js';
+import { HttpStoreGateway } from '../features/store/index.js';
 
 export interface AppUseCases {
   readonly auth: AuthUseCases;
@@ -87,6 +89,7 @@ export interface AppUseCases {
   readonly routes: RouteUseCases;
   readonly couriers: CourierUseCases;
   readonly deliveries: DeliveryUseCases;
+  readonly store: HttpStoreGateway;
 }
 
 /**
@@ -101,11 +104,13 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
   const courierGateway = new HttpCourierGateway(httpClient);
   const deliveryGateway = new HttpDeliveryGateway(httpClient);
   const applicationGateway = new HttpCourierApplicationGateway(httpClient);
+  const storeGateway = new HttpStoreGateway(httpClient);
 
   return {
     auth: {
       checkHealth: new CheckHealthUseCase(authGateway),
       login: new LoginUseCase(authGateway),
+      loginWithGoogle: new LoginWithGoogleUseCase(authGateway),
       registerCustomer: new RegisterCustomerUseCase(authGateway),
       verifyEmail: new VerifyEmailUseCase(authGateway),
       resendVerification: new ResendVerificationUseCase(authGateway),
@@ -160,5 +165,6 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       changeStatus: new ChangeDeliveryStatusUseCase(deliveryGateway),
       completeRoute: new CompleteRouteUseCase(deliveryGateway),
     },
+    store: storeGateway,
   };
 }

@@ -1,4 +1,11 @@
-export type OrderStatus = 'pendiente' | 'asignado_a_ruta' | 'recogido' | 'en_camino' | 'entregado';
+export type OrderStatus =
+  | 'pendiente'
+  | 'asignado_a_ruta'
+  | 'recogido'
+  | 'en_camino'
+  | 'entregado'
+  | 'entrega_fallida'
+  | 'cancelado';
 
 export interface OrderFilters {
   zoneId?: string;
