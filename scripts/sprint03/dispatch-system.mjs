@@ -1,4 +1,3 @@
-/* global console */
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';

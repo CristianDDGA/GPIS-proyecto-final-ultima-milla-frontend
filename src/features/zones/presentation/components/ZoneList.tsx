@@ -14,7 +14,7 @@ function formatDate(isoDateString?: string): string {
   if (!isoDateString) return '—';
   try {
     const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) return isoDateString;
+    if (Number.isNaN(date.getTime())) return isoDateString;
     return new Intl.DateTimeFormat('es-ES', {
       dateStyle: 'medium',
       timeStyle: 'short',

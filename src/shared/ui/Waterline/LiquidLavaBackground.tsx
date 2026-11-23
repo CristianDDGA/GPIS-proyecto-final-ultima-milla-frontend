@@ -392,5 +392,5 @@ export const LiquidLavaBackground: FC = () => {
     };
   }, []);
 
-  return <canvas ref={canvasRef} aria-hidden="true" className="wl-lava-canvas" />;
+  return <canvas ref={canvasRef} role="presentation" className="wl-lava-canvas" />;
 };

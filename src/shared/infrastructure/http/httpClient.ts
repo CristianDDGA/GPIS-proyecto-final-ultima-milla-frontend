@@ -94,6 +94,19 @@ function headerKey(headers: Record<string, string>, name: string): string | unde
   return Object.keys(headers).find((key) => key.toLowerCase() === lowerCaseName);
 }
 
+/** Lee el cuerpo de error una sola vez: JSON si se puede, si no el texto (p. ej. HTML de un proxy). */
+async function readErrorDetails(response: Response): Promise<unknown> {
+  const text = await response.text().catch(() => '');
+  if (text.length === 0) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
 export class FetchHttpClient implements HttpClient {
   private readonly baseUrl: string;
   private getAccessToken: (() => string | null) | undefined;
@@ -172,12 +185,7 @@ export class FetchHttpClient implements HttpClient {
     }
 
     if (!response.ok) {
-      let errorDetails: unknown;
-      try {
-        errorDetails = await response.json();
-      } catch {
-        errorDetails = await response.text();
-      }
+      const errorDetails = await readErrorDetails(response);
 
       if (response.status === 401 && !UNAUTHENTICATED_ENDPOINTS.has(normalizeEndpoint(endpoint))) {
         this.onUnauthorized?.();
@@ -261,12 +269,7 @@ export class FetchHttpClient implements HttpClient {
     }
 
     if (!response.ok) {
-      let errorDetails: unknown;
-      try {
-        errorDetails = await response.json();
-      } catch {
-        errorDetails = await response.text();
-      }
+      const errorDetails = await readErrorDetails(response);
 
       if (response.status === 401 && !UNAUTHENTICATED_ENDPOINTS.has(normalizeEndpoint(endpoint))) {
         this.onUnauthorized?.();

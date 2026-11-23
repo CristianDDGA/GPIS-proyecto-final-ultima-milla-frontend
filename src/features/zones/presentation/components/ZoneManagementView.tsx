@@ -26,7 +26,7 @@ export interface ZoneManagementViewProps {
 
 function formatUtcTimestamp(isoDateString: string): string {
   const date = new Date(isoDateString);
-  if (isNaN(date.getTime())) return isoDateString;
+  if (Number.isNaN(date.getTime())) return isoDateString;
   const formatted = new Intl.DateTimeFormat('es-ES', {
     dateStyle: 'medium',
     timeStyle: 'short',
