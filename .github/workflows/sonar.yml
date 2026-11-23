@@ -1,0 +1,54 @@
+name: Sonar quality gate
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [develop, main]
+permissions:
+  contents: read
+concurrency:
+  group: sonar-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  configuration:
+    # Los secretos no se pueden leer en un if a nivel de job; este job solo informa si Sonar está configurado.
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FRONT }}
+        run: |
+          if [ -n "$SONAR_HOST_URL" ] && [ -n "$SONAR_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Sonar remoto no configurado (faltan los secretos SONAR_HOST_URL y SONAR_TOKEN_FRONT)."
+          fi
+  sonar:
+    # Se omite (no falla) hasta que el repositorio tenga los secretos de SonarQube Cloud.
+    needs: configuration
+    if: needs.configuration.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+        env:
+          CYPRESS_INSTALL_BINARY: "0"
+      - name: Generate test coverage report
+        run: npm run test:coverage
+      - name: Analyze and upload to SonarQube Cloud
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FRONT }}
+        run: |
+          docker run --rm -e SONAR_HOST_URL -e SONAR_TOKEN --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/usr/src" sonarsource/sonar-scanner-cli@sha256:a3f4215076706c95a17a68c19322ee916e40a3acd081a8c1a1e839e0194afa57 "-Dsonar.scm.revision=$GITHUB_SHA"

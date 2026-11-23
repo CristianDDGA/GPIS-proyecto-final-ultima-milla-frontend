@@ -296,7 +296,7 @@ function edt1d(
     const fq = grid[offset + q * stride] ?? 0;
     f[q] = fq;
     const q2 = q * q;
-    let s = 0;
+    let s: number;
     do {
       const r = v[k] ?? 0;
       s = (fq - (f[r] ?? 0) + q2 - r * r) / (q - r) / 2;
