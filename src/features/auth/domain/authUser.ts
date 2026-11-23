@@ -73,7 +73,20 @@ export interface ValidationResult {
   errors: ValidationErrors;
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Forma básica usuario@dominio.tld sin espacios (sin regex con retroceso). */
+function isBasicEmail(value: string): boolean {
+  if (/\s/.test(value)) {
+    return false;
+  }
+  const parts = value.split('@');
+  if (parts.length !== 2) {
+    return false;
+  }
+  const [local = '', domain = ''] = parts;
+  const lastDot = domain.lastIndexOf('.');
+  return local.length > 0 && lastDot > 0 && lastDot < domain.length - 1;
+}
+
 const ROLE_VALUES: ReadonlySet<string> = new Set(PUBLIC_ROLES);
 
 const EMAIL_MAX_LENGTH = 254;
@@ -142,7 +155,7 @@ function validateEmailField(email: string, errors: ValidationErrors, strict: boo
   }
 
   if (!strict) {
-    if (!EMAIL_PATTERN.test(trimmedEmail)) {
+    if (!isBasicEmail(trimmedEmail)) {
       errors.email = 'El formato del correo electrónico no es válido.';
     }
     return;

@@ -170,8 +170,8 @@ function svgToUrl(text: string): string {
   if (!svg || svg.nodeName.toLowerCase() !== 'svg') {
     throw new Error('GlassIconReveal: the SVG could not be read');
   }
-  let w = parseFloat(svg.getAttribute('width') || '');
-  let h = parseFloat(svg.getAttribute('height') || '');
+  let w = Number.parseFloat(svg.getAttribute('width') || '');
+  let h = Number.parseFloat(svg.getAttribute('height') || '');
   const vb = (svg.getAttribute('viewBox') || '')
     .split(/[\s,]+/)
     .map(Number);
@@ -777,7 +777,7 @@ function hexToRgb(hex: string): RgbTuple {
   if (h.length === 3) {
     h = h.replace(/./g, '$&$&');
   }
-  const v = parseInt(h.slice(0, 6), 16) || 0;
+  const v = Number.parseInt(h.slice(0, 6), 16) || 0;
   return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255];
 }
 

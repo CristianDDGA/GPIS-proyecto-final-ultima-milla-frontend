@@ -594,7 +594,7 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
     if (navRef.current) ro.observe(navRef.current);
 
     let cancelled = false;
-    if (document.fonts && document.fonts.ready) {
+    if (document.fonts?.ready !== undefined) {
       void document.fonts.ready.then(() => {
         if (!cancelled) {
           st.current.ready = false;
@@ -730,7 +730,7 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
 
         {/* Fondo vítreo + WebGL Waterline extendido a toda la barra */}
         <span className="nimbus-glass" aria-hidden="true" />
-        <canvas className="nimbus-water" ref={canvasRef} aria-hidden="true" />
+        <canvas className="nimbus-water" ref={canvasRef} role="presentation" />
         <span className="nimbus-drop" ref={dropRef} aria-hidden="true" />
 
         {/* Zona izquierda: Logotipo Millast dentro del navbar */}
