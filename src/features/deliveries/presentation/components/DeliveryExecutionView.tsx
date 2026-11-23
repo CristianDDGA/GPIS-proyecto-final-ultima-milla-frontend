@@ -1,13 +1,20 @@
-import type { FC } from 'react';
+import { useEffect, useMemo, useState, type FC } from 'react';
 import type { CourierUseCases } from '../../../couriers/application/courierUseCases.js';
 import type { ActiveCourierRouteStop } from '../../../couriers/domain/index.js';
+import type { HttpStoreGateway } from '../../../store/infrastructure/http/httpStoreGateway.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import type { DeliveryUseCases } from '../../application/deliveryUseCases.js';
 import { useDeliveries } from '../hooks/useDeliveries.js';
 import { CourierOperationCard } from './CourierOperationCard.js';
 import { DeliveryOrderInspectorCard } from './DeliveryOrderInspectorCard.js';
 import { DeliveryStopList } from './DeliveryStopList.js';
-import { Alert, Button, KineticHeader } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  KineticHeader,
+  RouteStopsMap,
+  type RouteMapStop,
+} from '../../../../shared/ui/index.js';
 import '../styles/deliveries.css';
 
 export interface DeliveryActor {
@@ -23,8 +30,19 @@ export interface DeliveryExecutionViewProps {
   actor: DeliveryActor;
   /** Catálogo de zonas para resolver el nombre real de la zona de la ruta. */
   zones?: readonly Zone[] | undefined;
+  /** Gateway de tienda para enriquecer paradas con coordenadas (migración 013) y datos COD. */
+  storeGateway?: HttpStoreGateway | undefined;
   /** Sincroniza catálogos compartidos tras cambiar estados o completar una ruta. */
   onDeliveryChanged?: (() => void) | undefined;
+}
+
+interface StopGeoMeta {
+  readonly latitude: number | null;
+  readonly longitude: number | null;
+  readonly recipientName?: string | null | undefined;
+  readonly recipientPhone?: string | null | undefined;
+  readonly totalCents?: number | null | undefined;
+  readonly notes?: string | null | undefined;
 }
 
 const EMPTY_STOPS: readonly ActiveCourierRouteStop[] = [];
@@ -34,6 +52,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
   courierUseCases,
   actor,
   zones,
+  storeGateway,
   onDeliveryChanged,
 }) => {
   const deliveries = useDeliveries(useCases, courierUseCases, actor, { onDeliveryChanged });
@@ -41,6 +60,85 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
   const selectedCourier =
     deliveries.couriers.find((courier) => courier.id === deliveries.effectiveCourierId) ?? null;
   const hasCourierBinding = actor.role === 'repartidor' ? actor.courierId !== null : true;
+
+  const [geoByOrderId, setGeoByOrderId] = useState<Record<string, StopGeoMeta>>({});
+
+  useEffect(() => {
+    const route = deliveries.activeRoute;
+    if (!storeGateway || !route || route.stops.length === 0) {
+      setGeoByOrderId({});
+      return;
+    }
+
+    let cancelled = false;
+    const loadGeo = async () => {
+      try {
+        const next: Record<string, StopGeoMeta> = {};
+        if (actor.role === 'repartidor') {
+          const items = await storeGateway.getCourierOrders();
+          for (const item of items) {
+            next[item.orderId] = {
+              latitude: item.deliveryLatitude,
+              longitude: item.deliveryLongitude,
+              recipientName: item.recipientName,
+              recipientPhone: item.recipientPhone,
+              totalCents: item.totalCents,
+              notes: item.notes,
+            };
+          }
+        } else if (actor.role === 'personal') {
+          const res = await storeGateway.adminListOrders({
+            deliveryDate: route.serviceDate,
+            pageSize: 50,
+          });
+          for (const item of res.items) {
+            next[item.id] = {
+              latitude: item.deliveryLatitude,
+              longitude: item.deliveryLongitude,
+              recipientName: item.recipientName,
+              recipientPhone: item.recipientPhone,
+              totalCents: item.totalCents,
+              notes: item.notes,
+            };
+          }
+        }
+        if (!cancelled) setGeoByOrderId(next);
+      } catch {
+        // Las coordenadas son opcionales: si la consulta falla la ejecución operativa sigue intacta.
+      }
+    };
+
+    void loadGeo();
+    return () => {
+      cancelled = true;
+    };
+  }, [actor.role, deliveries.activeRoute, storeGateway]);
+
+  const mapStops = useMemo<readonly RouteMapStop[]>(() => {
+    return stops.map((stop) => {
+      const record = deliveries.deliveryRecords[stop.orderId];
+      const geo = geoByOrderId[stop.orderId];
+      return {
+        orderId: stop.orderId,
+        position: stop.position,
+        address: stop.deliveryAddress,
+        status: record?.status ?? stop.status,
+        latitude: geo?.latitude ?? null,
+        longitude: geo?.longitude ?? null,
+        deliveryDate: deliveries.activeRoute?.serviceDate,
+        deliveryTime: stop.deliveryTime,
+        recipientName: geo?.recipientName,
+        recipientPhone: geo?.recipientPhone,
+        totalCents: geo?.totalCents,
+        notes: geo?.notes,
+      };
+    });
+  }, [deliveries.deliveryRecords, geoByOrderId, stops]);
+
+  const activeZoneName =
+    deliveries.activeRoute
+      ? zones?.find((z) => z.id === deliveries.activeRoute?.zoneId)?.name ?? null
+      : null;
 
   return (
     <section className="deliveries-layout" aria-labelledby="deliveries-view-title">
@@ -87,6 +185,16 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
       {hasCourierBinding && (
         <div className="deliveries-grid">
           <div className="deliveries-grid__main">
+            {deliveries.activeRoute && stops.length > 0 && (
+              <RouteStopsMap
+                title="Mapa de la ruta activa"
+                subtitle={`${deliveries.activeRoute.serviceDate}${activeZoneName ? ` · ${activeZoneName}` : ''}${selectedCourier ? ` · ${selectedCourier.displayName}` : ''}`}
+                stops={mapStops}
+                selectedOrderId={deliveries.inspectorOrderId}
+                onSelectStop={(orderId) => void deliveries.inspectOrder(orderId)}
+              />
+            )}
+
             <DeliveryStopList
               actor={actor}
               effectiveCourierId={deliveries.effectiveCourierId}

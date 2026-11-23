@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import type { Courier } from '../../../couriers/domain/index.js';
 import type { Order } from '../../../orders/domain/index.js';
+import type { HttpStoreGateway } from '../../../store/infrastructure/http/httpStoreGateway.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import type {
   LateOrderPlacementResult,
@@ -23,6 +24,8 @@ export interface RouteManagementViewProps {
   pendingOrders?: readonly Order[] | undefined;
   /** Catálogo de repartidores para resolver nombres en tablas y detalles. */
   couriers?: readonly Courier[] | undefined;
+  /** Gateway de tienda para mostrar coordenadas reales de las paradas en el mapa de ruta. */
+  storeGateway?: HttpStoreGateway | undefined;
   isAdmin: boolean;
   /**
    * Se invoca después de una planificación o inserción de pedido tardío exitosa para
@@ -38,6 +41,7 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
   zones,
   pendingOrders,
   couriers,
+  storeGateway,
   isAdmin,
   onCatalogChanged,
   onNavigateToFleet,
@@ -168,6 +172,7 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
           routes={routes.routes}
           zones={zones}
           couriers={courierList}
+          storeGateway={storeGateway}
           isAdmin={isAdmin}
           isLoadingDetail={routes.isLoadingDetail}
           detailError={routes.detailError}

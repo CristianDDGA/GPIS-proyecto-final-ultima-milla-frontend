@@ -500,6 +500,7 @@ export function App() {
                 zones={zones}
                 pendingOrders={orders}
                 couriers={routeCouriers}
+                storeGateway={useCases.store}
                 isAdmin={currentUser.role === 'personal'}
                 onCatalogChanged={() => {
                   void loadSharedCatalog();
@@ -525,6 +526,7 @@ export function App() {
                 courierUseCases={useCases.couriers}
                 actor={deliveryActor}
                 zones={zones}
+                storeGateway={useCases.store}
                 onDeliveryChanged={() => {
                   void loadSharedCatalog();
                 }}

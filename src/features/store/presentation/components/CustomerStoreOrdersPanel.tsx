@@ -6,6 +6,7 @@ import {
   Card,
   EmptyState,
   Modal,
+  RouteStopsMap,
   Select,
   ShortIdBadge,
   Spinner,
@@ -383,24 +384,49 @@ export const CustomerStoreOrdersPanel: FC<CustomerStoreOrdersPanelProps> = ({
             </p>
 
             {detail.deliveryLatitude !== null && detail.deliveryLongitude !== null && (
-              <div className="store-map-links">
-                <a
-                  href={osmDirectionsUrl(detail.deliveryLatitude, detail.deliveryLongitude)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="store-map-link"
-                >
-                  Ver pin en OpenStreetMap
-                </a>
-                <a
-                  href={googleMapsDirectionsUrl(detail.deliveryLatitude, detail.deliveryLongitude)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="store-map-link"
-                >
-                  Abrir en Google Maps
-                </a>
-              </div>
+              <>
+                <RouteStopsMap
+                  title="Ubicación de entrega"
+                  subtitle={detail.deliveryAddress}
+                  compact
+                  height={240}
+                  showRoutePolyline={false}
+                  selectedOrderId={detail.id}
+                  stops={[
+                    {
+                      orderId: detail.id,
+                      position: 1,
+                      address: detail.deliveryAddress,
+                      status: detail.status,
+                      latitude: detail.deliveryLatitude,
+                      longitude: detail.deliveryLongitude,
+                      deliveryDate: detail.deliveryDate,
+                      deliveryTime: detail.deliveryTime,
+                      recipientName: detail.recipientName,
+                      recipientPhone: detail.recipientPhone,
+                      totalCents: detail.totalCents,
+                    },
+                  ]}
+                />
+                <div className="store-map-links">
+                  <a
+                    href={osmDirectionsUrl(detail.deliveryLatitude, detail.deliveryLongitude)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="store-map-link"
+                  >
+                    Ver pin en OpenStreetMap
+                  </a>
+                  <a
+                    href={googleMapsDirectionsUrl(detail.deliveryLatitude, detail.deliveryLongitude)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="store-map-link"
+                  >
+                    Abrir en Google Maps
+                  </a>
+                </div>
+              </>
             )}
 
             {detail.items && detail.items.length > 0 && (

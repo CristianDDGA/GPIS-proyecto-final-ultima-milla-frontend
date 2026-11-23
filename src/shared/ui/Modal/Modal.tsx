@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, type FC, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { CloseIcon } from '../Waterline/WaterlineIcons.js';
 import './Modal.css';
 
@@ -51,7 +52,7 @@ export const Modal: FC<ModalProps> = ({
   const titleId = 'wf-modal-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const words = title.split(' ').filter((word) => word.length > 0);
 
-  return (
+  const modalNode = (
     <div className="wf-modal-root wl-modal-host" role="presentation">
       <div className="wf-modal-backdrop" aria-hidden="true" onClick={onClose} />
       <section
@@ -100,4 +101,6 @@ export const Modal: FC<ModalProps> = ({
       </section>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 };

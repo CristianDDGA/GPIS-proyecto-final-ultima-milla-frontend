@@ -5,6 +5,7 @@ import {
   Card,
   EmptyState,
   Modal,
+  RouteStopsMap,
   SectionHeader,
   Select,
   ShortIdBadge,
@@ -69,6 +70,7 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
   const [cashError, setCashError] = useState<string | null>(null);
 
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
   // Modal de entrega con cobro COD
   const [deliverTarget, setDeliverTarget] = useState<CourierStoreOrder | null>(null);
@@ -288,68 +290,106 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
               description="Cuando tengas una ruta asignada o en curso verás aquí tus paradas con productos, total a cobrar y destino en el mapa."
             />
           ) : (
-            <ol className="store-stop-list" aria-label="Paradas con detalle y cobro">
-              {orders.map((stop) => {
-                const canActOnRoad = stop.status === 'en_camino';
-                const canCollect = stop.isStoreOrder && canActOnRoad;
-                const canFail = canActOnRoad;
-                return (
-                  <li key={stop.orderId} className="store-stop-card">
-                    <div className="store-stop-card__head">
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span className="store-pill store-pill--blue">Parada #{stop.position}</span>
-                          <ShortIdBadge id={stop.orderId} prefix="PED" />
-                          <span className={`store-pill ${statusPillTone(stop.status)}`}>
-                            {STORE_ORDER_STATUS_LABELS[stop.status] ?? stop.status}
-                          </span>
-                          {stop.isStoreOrder && stop.totalCents !== null && (
-                            <span className="store-pill store-pill--green">
-                              Cobrar: {formatCents(stop.totalCents)}
+            <>
+              <RouteStopsMap
+                title="Mapa de paradas de tu ruta"
+                subtitle="Secuencia de entrega en calles reales con trazado y navegación directa."
+                selectedOrderId={selectedStopId}
+                onSelectStop={(orderId) => setSelectedStopId(orderId)}
+                stops={orders.map((stop) => ({
+                  orderId: stop.orderId,
+                  position: stop.position,
+                  address: stop.deliveryAddress,
+                  status: stop.status,
+                  latitude: stop.deliveryLatitude,
+                  longitude: stop.deliveryLongitude,
+                  deliveryDate: stop.deliveryDate,
+                  deliveryTime: stop.deliveryTime,
+                  recipientName: stop.recipientName,
+                  recipientPhone: stop.recipientPhone,
+                  totalCents: stop.totalCents,
+                  notes: stop.notes,
+                }))}
+              />
+
+              <ol className="store-stop-list" aria-label="Paradas con detalle y cobro">
+                {orders.map((stop) => {
+                  const canActOnRoad = stop.status === 'en_camino';
+                  const canCollect = stop.isStoreOrder && canActOnRoad;
+                  const canFail = canActOnRoad;
+                  const isFocused = selectedStopId === stop.orderId;
+                  return (
+                    <li
+                      key={stop.orderId}
+                      className="store-stop-card"
+                      style={
+                        isFocused
+                          ? { borderColor: 'rgba(22, 104, 243, 0.52)', backgroundColor: 'rgba(238, 245, 255, 0.90)' }
+                          : undefined
+                      }
+                    >
+                      <div className="store-stop-card__head">
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span className="store-pill store-pill--blue">Parada #{stop.position}</span>
+                            <ShortIdBadge id={stop.orderId} prefix="PED" />
+                            <span className={`store-pill ${statusPillTone(stop.status)}`}>
+                              {STORE_ORDER_STATUS_LABELS[stop.status] ?? stop.status}
                             </span>
-                          )}
-                          {stop.failedAttempts > 0 && (
-                            <span className="store-pill store-pill--amber">
-                              Intentos fallidos: {stop.failedAttempts}/{MAX_DELIVERY_ATTEMPTS}
-                            </span>
+                            {stop.isStoreOrder && stop.totalCents !== null && (
+                              <span className="store-pill store-pill--green">
+                                Cobrar: {formatCents(stop.totalCents)}
+                              </span>
+                            )}
+                            {stop.failedAttempts > 0 && (
+                              <span className="store-pill store-pill--amber">
+                                Intentos fallidos: {stop.failedAttempts}/{MAX_DELIVERY_ATTEMPTS}
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ marginTop: '8px', fontWeight: 700, fontSize: '15px' }}>
+                            {stop.deliveryAddress}
+                          </p>
+                          <p className="store-card__subtitle" style={{ marginTop: '2px' }}>
+                            {stop.deliveryDate} · {stop.deliveryTime}
+                            {stop.recipientName ? ` · Recibe: ${stop.recipientName}` : ''}
+                            {stop.recipientPhone ? ` (${stop.recipientPhone})` : ''}
+                          </p>
+                          {stop.notes && (
+                            <p className="store-card__subtitle" style={{ marginTop: '4px' }}>
+                              Nota: {stop.notes}
+                            </p>
                           )}
                         </div>
-                        <p style={{ marginTop: '8px', fontWeight: 700, fontSize: '15px' }}>
-                          {stop.deliveryAddress}
-                        </p>
-                        <p className="store-card__subtitle" style={{ marginTop: '2px' }}>
-                          {stop.deliveryDate} · {stop.deliveryTime}
-                          {stop.recipientName ? ` · Recibe: ${stop.recipientName}` : ''}
-                          {stop.recipientPhone ? ` (${stop.recipientPhone})` : ''}
-                        </p>
-                        {stop.notes && (
-                          <p className="store-card__subtitle" style={{ marginTop: '4px' }}>
-                            Nota: {stop.notes}
-                          </p>
+
+                        {stop.deliveryLatitude !== null && stop.deliveryLongitude !== null && (
+                          <div className="store-map-links">
+                            <button
+                              type="button"
+                              className="route-map-chip route-map-chip--active"
+                              onClick={() => setSelectedStopId(stop.orderId)}
+                            >
+                              Ubicar en mapa
+                            </button>
+                            <a
+                              href={osmDirectionsUrl(stop.deliveryLatitude, stop.deliveryLongitude)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="store-map-link"
+                            >
+                              Abrir en OpenStreetMap
+                            </a>
+                            <a
+                              href={googleMapsDirectionsUrl(stop.deliveryLatitude, stop.deliveryLongitude)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="store-map-link"
+                            >
+                              Google Maps
+                            </a>
+                          </div>
                         )}
                       </div>
-
-                      {stop.deliveryLatitude !== null && stop.deliveryLongitude !== null && (
-                        <div className="store-map-links">
-                          <a
-                            href={osmDirectionsUrl(stop.deliveryLatitude, stop.deliveryLongitude)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="store-map-link"
-                          >
-                            Abrir en OpenStreetMap
-                          </a>
-                          <a
-                            href={googleMapsDirectionsUrl(stop.deliveryLatitude, stop.deliveryLongitude)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="store-map-link"
-                          >
-                            Google Maps
-                          </a>
-                        </div>
-                      )}
-                    </div>
 
                     {stop.items.length > 0 && (
                       <div style={{ overflowX: 'auto' }}>
@@ -409,6 +449,7 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
                 );
               })}
             </ol>
+            </>
           )}
         </Card>
       ) : (

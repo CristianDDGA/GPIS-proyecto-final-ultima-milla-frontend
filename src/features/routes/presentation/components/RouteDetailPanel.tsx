@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import type { Courier } from '../../../couriers/domain/index.js';
+import type { HttpStoreGateway } from '../../../store/infrastructure/http/httpStoreGateway.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import type {
   RouteDetail,
@@ -13,8 +14,10 @@ import {
   Button,
   Card,
   IsometricCapacityCube,
+  RouteStopsMap,
   Select,
   ShortIdBadge,
+  type RouteMapStop,
 } from '../../../../shared/ui/index.js';
 
 const ROUTE_STATUS_LABELS: Record<RouteStatus, string> = {
@@ -50,6 +53,7 @@ export interface RouteDetailPanelProps {
   routes: readonly RouteSummary[];
   zones: readonly Zone[];
   couriers?: readonly Courier[] | undefined;
+  storeGateway?: HttpStoreGateway | undefined;
   isAdmin: boolean;
   isLoadingDetail: boolean;
   detailError: string | null;
@@ -69,6 +73,7 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
   routes,
   zones,
   couriers,
+  storeGateway,
   isAdmin,
   isLoadingDetail,
   detailError,
@@ -85,12 +90,81 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
   const [draftOrderIds, setDraftOrderIds] = useState<string[]>(() => route.stops.map((stop) => stop.orderId));
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [moveTargets, setMoveTargets] = useState<Record<string, string>>({});
+  const [selectedMapOrderId, setSelectedMapOrderId] = useState<string | null>(null);
+  const [geoByOrderId, setGeoByOrderId] = useState<
+    Record<
+      string,
+      {
+        readonly latitude: number | null;
+        readonly longitude: number | null;
+        readonly recipientName?: string | null | undefined;
+        readonly recipientPhone?: string | null | undefined;
+        readonly totalCents?: number | null | undefined;
+      }
+    >
+  >({});
 
   useEffect(() => {
     setDraftOrderIds(route.stops.map((stop) => stop.orderId));
     setConfirmingCancel(false);
     setMoveTargets({});
+    setSelectedMapOrderId(null);
   }, [route]);
+
+  useEffect(() => {
+    if (!storeGateway || route.stops.length === 0) {
+      setGeoByOrderId({});
+      return;
+    }
+    let cancelled = false;
+    const loadGeo = async () => {
+      try {
+        const next: Record<
+          string,
+          {
+            readonly latitude: number | null;
+            readonly longitude: number | null;
+            readonly recipientName?: string | null | undefined;
+            readonly recipientPhone?: string | null | undefined;
+            readonly totalCents?: number | null | undefined;
+          }
+        > = {};
+        if (isAdmin) {
+          const res = await storeGateway.adminListOrders({
+            deliveryDate: route.serviceDate,
+            pageSize: 50,
+          });
+          for (const item of res.items) {
+            next[item.id] = {
+              latitude: item.deliveryLatitude,
+              longitude: item.deliveryLongitude,
+              recipientName: item.recipientName,
+              recipientPhone: item.recipientPhone,
+              totalCents: item.totalCents,
+            };
+          }
+        } else {
+          const items = await storeGateway.getCourierOrders();
+          for (const item of items) {
+            next[item.orderId] = {
+              latitude: item.deliveryLatitude,
+              longitude: item.deliveryLongitude,
+              recipientName: item.recipientName,
+              recipientPhone: item.recipientPhone,
+              totalCents: item.totalCents,
+            };
+          }
+        }
+        if (!cancelled) setGeoByOrderId(next);
+      } catch {
+        // Las coordenadas son opcionales: el detalle de ruta funciona igual si no hay datos de tienda.
+      }
+    };
+    void loadGeo();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, route.id, route.serviceDate, route.stops.length, storeGateway]);
 
   const stopsByOrderId = useMemo(() => {
     const byOrderId = new Map<string, RouteStop>();
@@ -106,6 +180,27 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
         .map((orderId) => stopsByOrderId.get(orderId))
         .filter((stop): stop is RouteStop => stop !== undefined),
     [draftOrderIds, stopsByOrderId],
+  );
+
+  const mapStops = useMemo<readonly RouteMapStop[]>(
+    () =>
+      orderedStops.map((stop, idx) => {
+        const geo = geoByOrderId[stop.orderId];
+        return {
+          orderId: stop.orderId,
+          position: idx + 1,
+          address: stop.deliveryAddress,
+          status: stop.status,
+          latitude: geo?.latitude ?? null,
+          longitude: geo?.longitude ?? null,
+          deliveryDate: stop.deliveryDate,
+          deliveryTime: stop.deliveryTime,
+          recipientName: geo?.recipientName,
+          recipientPhone: geo?.recipientPhone,
+          totalCents: geo?.totalCents,
+        };
+      }),
+    [geoByOrderId, orderedStops],
   );
 
   const isEditable = EDITABLE_ROUTE_STATUSES.has(route.status);
@@ -232,6 +327,16 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
           </div>
         </dl>
       </div>
+
+      {orderedStops.length > 0 && (
+        <RouteStopsMap
+          title="Mapa interactivo de la ruta"
+          subtitle={`${route.serviceDate} · ${zoneName}${isDraftDirty ? ' · Vista previa del nuevo orden' : ''}`}
+          stops={mapStops}
+          selectedOrderId={selectedMapOrderId}
+          onSelectStop={(orderId) => setSelectedMapOrderId(orderId)}
+        />
+      )}
 
       <section className="routes-stops" aria-labelledby="routes-stops-title">
         <h4 id="routes-stops-title" className="routes-stops__title">

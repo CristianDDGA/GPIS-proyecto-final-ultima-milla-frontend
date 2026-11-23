@@ -6,6 +6,7 @@ import {
   Card,
   EmptyState,
   Modal,
+  RouteStopsMap,
   Select,
   ShortIdBadge,
   Spinner,
@@ -62,6 +63,7 @@ export const AdminStoreOrdersPanel: FC<{
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const [cancelTarget, setCancelTarget] = useState<StoreOrderDetail | null>(null);
   const [cancelReason, setCancelReason] = useState<CancelReason>('sin_stock');
@@ -243,15 +245,47 @@ export const AdminStoreOrdersPanel: FC<{
           description="No hay compras registradas que coincidan con los filtros seleccionados."
         />
       ) : (
-        <ul className="store-stop-list">
-          {orders.map((order) => {
-            const canCancel =
-              order.status === 'pendiente' ||
-              order.status === 'asignado_a_ruta' ||
-              order.status === 'entrega_fallida';
-            const canReschedule = order.status === 'entrega_fallida';
-            return (
-              <li key={order.id} className="store-stop-card">
+        <>
+          <RouteStopsMap
+            title="Mapa de pedidos de tienda"
+            subtitle="Distribución geográfica de entregas en Ecuador según los filtros activos."
+            showRoutePolyline={false}
+            selectedOrderId={selectedOrderId}
+            onSelectStop={(orderId) => setSelectedOrderId(orderId)}
+            stops={orders.map((order, idx) => ({
+              orderId: order.id,
+              position: idx + 1,
+              address: order.deliveryAddress,
+              status: order.status,
+              latitude: order.deliveryLatitude,
+              longitude: order.deliveryLongitude,
+              deliveryDate: order.deliveryDate,
+              deliveryTime: order.deliveryTime,
+              recipientName: order.recipientName,
+              recipientPhone: order.recipientPhone,
+              totalCents: order.totalCents,
+              notes: order.notes,
+            }))}
+          />
+
+          <ul className="store-stop-list">
+            {orders.map((order) => {
+              const canCancel =
+                order.status === 'pendiente' ||
+                order.status === 'asignado_a_ruta' ||
+                order.status === 'entrega_fallida';
+              const canReschedule = order.status === 'entrega_fallida';
+              const isFocused = selectedOrderId === order.id;
+              return (
+                <li
+                  key={order.id}
+                  className="store-stop-card"
+                  style={
+                    isFocused
+                      ? { borderColor: 'rgba(22, 104, 243, 0.52)', backgroundColor: 'rgba(238, 245, 255, 0.90)' }
+                      : undefined
+                  }
+                >
                 <div className="store-stop-card__head">
                   <div>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -349,6 +383,7 @@ export const AdminStoreOrdersPanel: FC<{
             );
           })}
         </ul>
+        </>
       )}
 
       {total > pageSize && (
