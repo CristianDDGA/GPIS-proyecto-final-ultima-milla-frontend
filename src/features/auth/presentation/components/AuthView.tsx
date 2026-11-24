@@ -374,6 +374,14 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
                   <footer className="mlg-footer">
                     <ShieldCheckIcon className="mlg-footer__icon" />
                     <span>Sesión cifrada en tránsito</span>
+                    <span aria-hidden="true"> · </span>
+                    <a href="/privacidad.html" target="_blank" rel="noopener noreferrer">
+                      Privacidad
+                    </a>
+                    <span aria-hidden="true"> · </span>
+                    <a href="/terminos.html" target="_blank" rel="noopener noreferrer">
+                      Condiciones
+                    </a>
                   </footer>
                 </div>
               </div>
