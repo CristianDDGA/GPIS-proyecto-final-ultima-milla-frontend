@@ -4,7 +4,6 @@ import {
   firstValidationError,
   isAuthRole,
   isPublicRole,
-  validateCreateManagedUserInput,
   validateForgotPasswordInput,
   validateLoginInput,
   validatePasswordPolicy,
@@ -93,16 +92,6 @@ describe('validateRegisterCustomerInput (reglas estrictas del backend)', () => {
     expect(validateRegisterCustomerInput({ email: 'a.b@millast.ec', password: STRONG, displayName: '  ' }).isValid).toBe(
       true,
     );
-  });
-});
-
-describe('validateCreateManagedUserInput', () => {
-  it('exige un rol válido', () => {
-    const result = validateCreateManagedUserInput({ email: 'c@millast.ec', password: STRONG, role: 'personal' });
-    expect(result.errors.role).toMatch(/rol válido/);
-    expect(
-      validateCreateManagedUserInput({ email: 'c@millast.ec', password: STRONG, role: 'repartidor' }).isValid,
-    ).toBe(true);
   });
 });
 

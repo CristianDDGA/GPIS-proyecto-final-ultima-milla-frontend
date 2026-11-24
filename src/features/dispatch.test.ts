@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { HttpCourierGateway } from './couriers/infrastructure/http/httpCourierGateway.js';
 import {
   AssignRouteUseCase,
-  CreateCourierUseCase,
   GetActiveCourierRouteUseCase,
   GetCouriersUseCase,
   UpdateCourierAvailabilityUseCase,
@@ -48,12 +47,6 @@ const DELIVERY = {
 };
 
 describe('repartidores', () => {
-  it('crea un repartidor recortando el nombre', async () => {
-    const http = createFakeHttpClient(COURIER);
-    await new CreateCourierUseCase(new HttpCourierGateway(http)).execute({ displayName: '  Luis Andrade ', maxOrdersPerTrip: 8 });
-    expect(http.post).toHaveBeenCalledWith('/couriers', { displayName: 'Luis Andrade', maxOrdersPerTrip: 8 });
-  });
-
   it('lista con filtros y valida el contrato de la página', async () => {
     const http = createFakeHttpClient({ items: [COURIER], limit: 20, offset: 0 });
     const page = await new GetCouriersUseCase(new HttpCourierGateway(http)).execute({ available: false, limit: 20 });

@@ -44,13 +44,6 @@ export interface RegisterCustomerInput {
   displayName?: string | null | undefined;
 }
 
-export interface CreateManagedUserInput {
-  email: string;
-  password: string;
-  role: PublicRole;
-  displayName?: string | null | undefined;
-}
-
 export interface VerifyEmailInput {
   email: string;
   code: string;
@@ -312,26 +305,6 @@ export function validateRegisterCustomerInput(input: {
 
   validateEmailField(input.email, errors, true);
   validateNewPasswordField(input.password, input.email, errors);
-  validateDisplayNameField(input.displayName, errors, true);
-
-  return buildResult(errors);
-}
-
-export function validateCreateManagedUserInput(input: {
-  email: string;
-  password: string;
-  role: string;
-  displayName?: string | null | undefined;
-}): ValidationResult {
-  const errors: ValidationErrors = {};
-
-  validateEmailField(input.email, errors, true);
-  validateNewPasswordField(input.password, input.email, errors);
-
-  if (!ROLE_VALUES.has(input.role)) {
-    errors.role = 'Selecciona un rol válido: administrador, repartidor o cliente.';
-  }
-
   validateDisplayNameField(input.displayName, errors, true);
 
   return buildResult(errors);
