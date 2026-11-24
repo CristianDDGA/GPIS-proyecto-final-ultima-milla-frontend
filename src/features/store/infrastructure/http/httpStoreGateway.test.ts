@@ -3,6 +3,23 @@ import { extractOrderConflicts, HttpStoreGateway } from './httpStoreGateway.js';
 import { HttpError } from '../../../../shared/infrastructure/http/httpClient.js';
 import { createFakeHttpClient, VALID_UUID } from '../../../../test/fakeHttpClient.js';
 
+describe('HttpStoreGateway.lookupZone', () => {
+  it('consulta /zones/lookup con el punto y devuelve la zona que lo cubre', async () => {
+    const http = createFakeHttpClient({ zone: { id: VALID_UUID, name: 'Centro', coverage: null } });
+    await expect(new HttpStoreGateway(http).lookupZone(-1.25, -78.62)).resolves.toEqual({
+      id: VALID_UUID,
+      name: 'Centro',
+    });
+    expect(http.get).toHaveBeenCalledWith('/zones/lookup?latitude=-1.25&longitude=-78.62');
+  });
+
+  it('devuelve null si ninguna zona cubre el punto o la respuesta no trae zona válida', async () => {
+    await expect(new HttpStoreGateway(createFakeHttpClient({ zone: null })).lookupZone(0, -78)).resolves.toBeNull();
+    await expect(new HttpStoreGateway(createFakeHttpClient({ zone: { id: 3 } })).lookupZone(0, -78)).resolves.toBeNull();
+    await expect(new HttpStoreGateway(createFakeHttpClient({})).lookupZone(0, -78)).resolves.toBeNull();
+  });
+});
+
 describe('HttpStoreGateway', () => {
   it('crea el pedido con Idempotency-Key, recortando opcionales y con coordenadas', async () => {
     const http = createFakeHttpClient({ id: 'o1' });

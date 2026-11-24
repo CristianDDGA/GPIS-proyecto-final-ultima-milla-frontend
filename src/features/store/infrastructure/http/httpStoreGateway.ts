@@ -110,6 +110,22 @@ export class HttpStoreGateway {
     );
   }
 
+  /** Zona activa que cubre el punto (`GET /zones/lookup`); `null` si ninguna lo cubre. */
+  public async lookupZone(
+    latitude: number,
+    longitude: number,
+  ): Promise<{ readonly id: string; readonly name: string } | null> {
+    const params = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude) });
+    const response = await this.httpClient.get<{ zone: { id?: unknown; name?: unknown } | null }>(
+      `/zones/lookup?${params.toString()}`,
+    );
+    const zone = response?.zone;
+    if (zone && typeof zone.id === 'string' && typeof zone.name === 'string') {
+      return { id: zone.id, name: zone.name };
+    }
+    return null;
+  }
+
   public async getDeliverySlots(zoneId: string, date: string): Promise<DeliverySlotsResponse> {
     const params = new URLSearchParams({ zoneId, date });
     return this.httpClient.get<DeliverySlotsResponse>(`/store/delivery-slots?${params.toString()}`);
