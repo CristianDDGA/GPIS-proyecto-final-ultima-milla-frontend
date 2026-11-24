@@ -924,6 +924,20 @@
   color: #64748b;
 }
 
+.mlg-footer {
+  flex-wrap: wrap;
+}
+
+.mlg-footer a {
+  color: #475569;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mlg-footer a:hover {
+  color: #0f172a;
+}
+
 .mlg-footer__icon {
   width: 15px;
   height: 15px;
