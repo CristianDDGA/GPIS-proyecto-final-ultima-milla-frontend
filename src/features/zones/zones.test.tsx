@@ -8,7 +8,16 @@ import { SetZoneCoverageUseCase } from './application/index.js';
 import { describeCoverage, validateCoverage } from './domain/index.js';
 import type { Zone, ZoneCoverage, ZoneRepository } from './domain/index.js';
 import { HttpError } from '../../shared/infrastructure/http/httpClient.js';
-import { createFakeHttpClient, VALID_UUID } from '../../test/fakeHttpClient.js';
+import { createFakeHttpClient, OTHER_UUID, VALID_UUID } from '../../test/fakeHttpClient.js';
+
+// El mapa real usa teselas y búsqueda en línea: aquí se sustituye por un botón que marca un punto.
+vi.mock('../store/presentation/components/EcuadorMapPicker.js', () => ({
+  EcuadorMapPicker: ({ onChange }: { onChange: (c: { latitude: number; longitude: number }) => void }) => (
+    <button type="button" onClick={() => onChange({ latitude: -1.2491, longitude: -78.6167 })}>
+      Marcar punto de prueba
+    </button>
+  ),
+}));
 
 const ZONE: Zone = {
   id: VALID_UUID,
@@ -61,8 +70,48 @@ describe('ZoneForm (React Testing Library)', () => {
     await userEvent.type(input, 'Norte');
     await userEvent.click(screen.getByRole('button', { name: 'Crear Zona' }));
 
-    expect(onSubmit).toHaveBeenCalledWith('Norte');
+    // Sin centro en el mapa no se envía.
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/centro de la zona/);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar punto de prueba' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Crear Zona' }));
+
+    expect(onSubmit).toHaveBeenCalledWith('Norte', { latitude: -1.2491, longitude: -78.6167, radiusKm: 3 });
     await waitFor(() => expect(input).toHaveValue(''));
+  });
+
+  it('acepta el radio con coma decimal y rechaza uno fuera de rango', async () => {
+    const onSubmit = vi.fn(() => Promise.resolve(true));
+    render(<ZoneForm onSubmit={onSubmit} />);
+    await userEvent.type(screen.getByLabelText(/Nombre de la Zona/), 'Norte');
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar punto de prueba' }));
+    const radius = screen.getByLabelText(/Radio de cobertura en km/);
+
+    await userEvent.clear(radius);
+    await userEvent.type(radius, '80');
+    await userEvent.click(screen.getByRole('button', { name: 'Crear Zona' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/radio/);
+
+    await userEvent.clear(radius);
+    await userEvent.type(radius, '2,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Crear Zona' }));
+    expect(onSubmit).toHaveBeenCalledWith('Norte', expect.objectContaining({ radiusKm: 2.5 }));
+  });
+
+  it('rechaza nombres que el servidor también rechaza (muy corto o sin letras)', async () => {
+    const onSubmit = vi.fn(() => Promise.resolve(true));
+    render(<ZoneForm onSubmit={onSubmit} />);
+    const input = screen.getByLabelText(/Nombre de la Zona/);
+    await userEvent.type(input, 'ab');
+    await userEvent.click(screen.getByRole('button', { name: 'Crear Zona' }));
+    expect(screen.getByText(/entre 3 y 40/)).toBeInTheDocument();
+    await userEvent.clear(input);
+    await userEvent.type(input, '1 2 a b');
+    await userEvent.click(screen.getByRole('button', { name: 'Crear Zona' }));
+    expect(screen.getByText(/al menos 3 letras/)).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('deshabilita el formulario mientras guarda', () => {
@@ -90,18 +139,54 @@ describe('useZones', () => {
   });
 
   it('agrega la zona creada al inicio y muestra el mensaje', async () => {
-    const repo = repository();
+    const repo = repository({
+      create: vi.fn((input: { name: string }) => Promise.resolve({ ...ZONE, id: OTHER_UUID, name: input.name })),
+      setCoverage: vi.fn((id: string, coverage: ZoneCoverage | null) => Promise.resolve({ ...ZONE, id, name: 'Sur', coverage })),
+    });
     const { result } = renderHook(() => useZones(repo));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     let created = false;
     await act(async () => {
-      created = await result.current.createZone('Sur');
+      created = await result.current.createZone('Sur', { latitude: -1.25, longitude: -78.61, radiusKm: 3 });
     });
 
     expect(created).toBe(true);
     await waitFor(() => expect(result.current.zones[0]?.name).toBe('Sur'));
+    expect(result.current.zones[0]?.coverage).toEqual({ latitude: -1.25, longitude: -78.61, radiusKm: 3 });
     expect(result.current.successMessage).toMatch(/Sur/);
+  });
+
+  it('si falla la cobertura, la zona queda en la lista y se avisa cómo completarla', async () => {
+    const repo = repository({
+      create: vi.fn((input: { name: string }) => Promise.resolve({ ...ZONE, id: OTHER_UUID, name: input.name })),
+      setCoverage: vi.fn(() => Promise.reject(new Error('sin red'))),
+    });
+    const { result } = renderHook(() => useZones(repo));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.createZone('Sur', { latitude: -1.25, longitude: -78.61, radiusKm: 3 });
+    });
+
+    expect(result.current.zones[0]?.name).toBe('Sur');
+    expect(result.current.error).toMatch(/no se pudo guardar su cobertura.*Cobertura/);
+  });
+
+  it('si falla la creación (p. ej. nombre repetido) no toca la lista ni intenta la cobertura', async () => {
+    const setCoverage = vi.fn();
+    const repo = repository({ create: vi.fn(() => Promise.reject(new Error('Ya existe una zona con ese nombre'))), setCoverage });
+    const { result } = renderHook(() => useZones(repo));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let created = true;
+    await act(async () => {
+      created = await result.current.createZone('Centro', { latitude: -1.25, longitude: -78.61, radiusKm: 3 });
+    });
+
+    expect(created).toBe(false);
+    expect(result.current.error).toMatch(/Ya existe/);
+    expect(setCoverage).not.toHaveBeenCalled();
   });
 
   it('expone el error de carga', async () => {

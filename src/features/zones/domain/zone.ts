@@ -48,6 +48,12 @@ export function validateCoverage(coverage: ZoneCoverage): ZoneValidationResult {
   return { isValid: true };
 }
 
+/** Convierte el texto del radio (acepta coma decimal) a número; `NaN` si no es válido. */
+export function parseRadius(text: string): number {
+  const normalized = text.trim().replace(',', '.');
+  return normalized.length === 0 ? Number.NaN : Number(normalized);
+}
+
 /** Texto corto para listados: "3 km" o "Sin cobertura". */
 export function describeCoverage(coverage: ZoneCoverage | null | undefined): string {
   if (!coverage) return 'Sin cobertura';
@@ -79,6 +85,11 @@ export function isZoneId(value: string): boolean {
   return typeof value === 'string' && ZONE_ID_PATTERN.test(value.trim());
 }
 
+/** Mismos límites que el backend (`validateZoneName`). */
+export const ZONE_NAME_MIN_LENGTH = 3;
+export const ZONE_NAME_MAX_LENGTH = 40;
+const ZONE_NAME_MIN_LETTERS = 3;
+
 /**
  * Regla de negocio para Zonas:
  * Una zona válida requiere un nombre no vacío (rechazar espacios vacíos o cadenas vacías).
@@ -100,17 +111,17 @@ export function validateZoneName(name: string): ZoneValidationResult {
     };
   }
 
-  if (trimmed.length < 2) {
+  if (trimmed.length < ZONE_NAME_MIN_LENGTH || trimmed.length > ZONE_NAME_MAX_LENGTH) {
     return {
       isValid: false,
-      error: 'El nombre de la zona debe tener al menos 2 caracteres.',
+      error: `El nombre de la zona debe tener entre ${ZONE_NAME_MIN_LENGTH} y ${ZONE_NAME_MAX_LENGTH} caracteres.`,
     };
   }
 
-  if (trimmed.length > 80) {
+  if ((trimmed.match(/\p{L}/gu) ?? []).length < ZONE_NAME_MIN_LETTERS) {
     return {
       isValid: false,
-      error: 'El nombre de la zona no puede exceder 80 caracteres.',
+      error: `El nombre de la zona debe tener al menos ${ZONE_NAME_MIN_LETTERS} letras.`,
     };
   }
 

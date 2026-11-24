@@ -23,8 +23,9 @@ describe('zonas', () => {
   it('valida el nombre de la zona', () => {
     expect(validateZoneName('Centro').isValid).toBe(true);
     expect(validateZoneName('   ').error).toMatch(/vacío/);
-    expect(validateZoneName('A').error).toMatch(/2 caracteres/);
-    expect(validateZoneName('x'.repeat(81)).error).toMatch(/80/);
+    expect(validateZoneName('Ab').error).toMatch(/entre 3 y 40/);
+    expect(validateZoneName('x'.repeat(41)).error).toMatch(/entre 3 y 40/);
+    expect(validateZoneName('1 2 a b').error).toMatch(/al menos 3 letras/);
   });
 
   it('reconoce identificadores de zona', () => {

@@ -7,6 +7,7 @@ import {
 import {
   MAX_COVERAGE_RADIUS_KM,
   MIN_COVERAGE_RADIUS_KM,
+  parseRadius,
   validateCoverage,
   type Zone,
   type ZoneCoverage,
@@ -22,12 +23,6 @@ export interface ZoneCoverageEditorProps {
 }
 
 const DEFAULT_RADIUS_KM = 3;
-
-/** Convierte el texto del radio (acepta coma decimal) a número; `NaN` si no es válido. */
-export function parseRadius(text: string): number {
-  const normalized = text.trim().replace(',', '.');
-  return normalized.length === 0 ? Number.NaN : Number(normalized);
-}
 
 export const ZoneCoverageEditor: FC<ZoneCoverageEditorProps> = ({ zone, zones, onSave, onClose }) => {
   const [latitude, setLatitude] = useState<number | null>(zone.coverage?.latitude ?? null);

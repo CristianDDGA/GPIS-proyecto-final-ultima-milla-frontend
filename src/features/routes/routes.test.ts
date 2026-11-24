@@ -10,6 +10,7 @@ import {
   ReorderRouteStopsUseCase,
 } from './application/routeUseCases.js';
 import { readLatePlacementResult, readRouteDetail, readRouteSummary } from './infrastructure/http/response.js';
+import { addDaysToIsoDate, validatePlanRoutesInput } from './domain/index.js';
 import { createFakeHttpClient, OTHER_UUID, VALID_UUID } from '../../test/fakeHttpClient.js';
 
 const SUMMARY = {
@@ -76,6 +77,17 @@ describe('HttpRouteGateway y casos de uso', () => {
       { serviceDate: '2026-12-01', capacityLimit: 5 },
       { headers: { 'Idempotency-Key': 'k-1' } },
     );
+  });
+
+  it('aplica los mismos límites que el servidor: capacidad 1-20 y fecha de hoy a 60 días', () => {
+    const today = '2026-11-24';
+    expect(validatePlanRoutesInput({ serviceDate: today, capacityLimit: 20 }, today).isValid).toBe(true);
+    expect(validatePlanRoutesInput({ serviceDate: '2027-01-23', capacityLimit: 1 }, today).isValid).toBe(true);
+    expect(validatePlanRoutesInput({ serviceDate: today, capacityLimit: 21 }, today).errors['capacityLimit']).toMatch(/entre 1 y 20/);
+    expect(validatePlanRoutesInput({ serviceDate: today, capacityLimit: 2147483647 }, today).isValid).toBe(false);
+    expect(validatePlanRoutesInput({ serviceDate: '2026-11-23', capacityLimit: 4 }, today).errors['serviceDate']).toMatch(/pasada/);
+    expect(validatePlanRoutesInput({ serviceDate: '2027-01-24', capacityLimit: 4 }, today).errors['serviceDate']).toMatch(/60 días/);
+    expect(addDaysToIsoDate('2026-12-31', 1)).toBe('2027-01-01');
   });
 
   it('no planifica con datos inválidos', async () => {
