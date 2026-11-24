@@ -17,6 +17,8 @@ import type {
   ManagedUserPage,
   ResetManagedUserPasswordInput,
   SetManagedUserActiveInput,
+  UpdateProfileInput,
+  UserProfile,
 } from './managedUser.js';
 
 export interface AuthGateway {
@@ -42,4 +44,8 @@ export interface AuthGateway {
   getManagedUser(userId: string): Promise<ManagedUser>;
   setManagedUserActive(input: SetManagedUserActiveInput): Promise<ManagedUser>;
   resetManagedUserPassword(input: ResetManagedUserPasswordInput): Promise<void>;
+  /** Perfil propio para "Mi perfil" (GET /auth/me/profile). */
+  getProfile(): Promise<UserProfile>;
+  /** Cambia nombre y/o teléfono propios (PATCH /auth/me/profile). */
+  updateProfile(input: UpdateProfileInput): Promise<UserProfile>;
 }

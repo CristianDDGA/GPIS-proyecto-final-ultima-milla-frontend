@@ -19,6 +19,8 @@ import type {
   ManagedUserPage,
   ResetManagedUserPasswordInput,
   SetManagedUserActiveInput,
+  UpdateProfileInput,
+  UserProfile,
 } from '../../domain/managedUser.js';
 import { clearToken, setToken } from './authTokenStorage.js';
 import {
@@ -27,6 +29,7 @@ import {
   readAuthUser,
   readManagedUser,
   readManagedUserPage,
+  readProfile,
   readRegisterOutcome,
 } from './response.js';
 
@@ -207,6 +210,17 @@ export class HttpAuthGateway implements AuthGateway {
         isActive: input.isActive,
       }),
     );
+  }
+
+  public async getProfile(): Promise<UserProfile> {
+    return readProfile(await this.httpClient.get<unknown>('/auth/me/profile'));
+  }
+
+  public async updateProfile(input: UpdateProfileInput): Promise<UserProfile> {
+    const body: Record<string, string | null> = {};
+    if (input.displayName !== undefined) body['displayName'] = input.displayName;
+    if (input.phone !== undefined) body['phone'] = input.phone;
+    return readProfile(await this.httpClient.patch<unknown>('/auth/me/profile', body));
   }
 
   public async resetManagedUserPassword(input: ResetManagedUserPasswordInput): Promise<void> {

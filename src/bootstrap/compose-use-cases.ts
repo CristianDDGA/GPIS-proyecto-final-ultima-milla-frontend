@@ -18,6 +18,8 @@ import {
   RegisterCustomerUseCase,
   ResendVerificationUseCase,
   ResetManagedUserPasswordUseCase,
+  GetProfileUseCase,
+  UpdateProfileUseCase,
   ResetPasswordUseCase,
   SetManagedUserActiveUseCase,
   VerifyEmailUseCase,
@@ -124,6 +126,8 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       getManagedUser: new GetManagedUserUseCase(authGateway),
       setManagedUserActive: new SetManagedUserActiveUseCase(authGateway),
       resetManagedUserPassword: new ResetManagedUserPasswordUseCase(authGateway),
+      getProfile: new GetProfileUseCase(authGateway),
+      updateProfile: new UpdateProfileUseCase(authGateway),
     },
     courierApplications: {
       getMine: new GetMyApplicationUseCase(applicationGateway),

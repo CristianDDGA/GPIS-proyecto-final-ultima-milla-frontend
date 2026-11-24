@@ -44,6 +44,8 @@ export const CustomerAddressesPanel: FC<CustomerAddressesPanelProps> = ({
   const [label, setLabel] = useState('');
   const [zoneId, setZoneId] = useState('');
   const [address, setAddress] = useState('');
+  // true cuando la persona escribió la dirección a mano: entonces el mapa ya no la reemplaza.
+  const [addressTyped, setAddressTyped] = useState(false);
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [isDefault, setIsDefault] = useState(false);
@@ -76,6 +78,7 @@ export const CustomerAddressesPanel: FC<CustomerAddressesPanelProps> = ({
     setLabel('');
     setZoneId(zones[0]?.id ?? '');
     setAddress('');
+    setAddressTyped(false);
     setRecipientName('');
     setRecipientPhone('');
     setIsDefault(addresses.length === 0);
@@ -90,6 +93,7 @@ export const CustomerAddressesPanel: FC<CustomerAddressesPanelProps> = ({
     setLabel(item.label);
     setZoneId(item.zoneId);
     setAddress(item.address);
+    setAddressTyped(false);
     setRecipientName(item.recipientName ?? '');
     setRecipientPhone(item.recipientPhone ?? '');
     setIsDefault(item.isDefault);
@@ -326,7 +330,10 @@ export const CustomerAddressesPanel: FC<CustomerAddressesPanelProps> = ({
               label="Dirección exacta"
               placeholder="Ej. Av. Amazonas N34-120 y República"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                setAddressTyped(e.target.value.trim().length > 0);
+              }}
               isRequired
               maxLength={200}
             />
@@ -358,7 +365,7 @@ export const CustomerAddressesPanel: FC<CustomerAddressesPanelProps> = ({
                 setLongitude(lng);
               }}
               onAddressSuggested={(suggested) => {
-                if (address.trim().length === 0) setAddress(suggested);
+                if (!addressTyped) setAddress(suggested);
               }}
               disabled={isSaving}
             />

@@ -396,3 +396,10 @@ export function validatePasswordPolicy(password: string, email = ''): string | n
   validateNewPasswordField(password, email, errors, 'newPassword');
   return errors['newPassword'] ?? null;
 }
+
+/** Valida solo el nombre para mostrar (mismas reglas que el registro); null si es válido. */
+export function validateDisplayName(displayName: string): string | null {
+  const errors: ValidationErrors = {};
+  validateDisplayNameField(displayName, errors, true);
+  return errors.displayName ?? null;
+}

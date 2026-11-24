@@ -262,6 +262,15 @@ export interface StoreOrderDetail extends StoreOrderSummary {
   readonly recipientPhone: string | null;
   readonly notes: string | null;
   readonly items?: readonly StoreOrderLine[] | undefined;
+  /** Cada estado con su hora (ISO UTC), desde la migración 015 del backend. */
+  readonly history?: readonly OrderStatusEvent[] | undefined;
+  /** Nombre de pila del repartidor mientras el pedido está en una ruta activa. */
+  readonly courier?: { readonly firstName: string } | null | undefined;
+}
+
+export interface OrderStatusEvent {
+  readonly status: string;
+  readonly at: string;
 }
 
 export interface CancelOrderResponse {
