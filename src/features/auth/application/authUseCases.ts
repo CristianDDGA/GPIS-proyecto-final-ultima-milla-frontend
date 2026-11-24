@@ -11,6 +11,7 @@ import {
   validateResetManagedUserPasswordInput,
   validateVerifyEmailInput,
   validateProfilePhone,
+  validateDisplayName,
   type AuthSession,
   type AuthUser,
   type ChangePasswordInput,
@@ -267,8 +268,8 @@ export class UpdateProfileUseCase {
     }
     const name = typeof input.displayName === 'string' ? input.displayName.trim() : input.displayName;
     if (typeof name === 'string' && name.length > 0) {
-      const nameErrors = validateRegisterCustomerInput({ email: 'perfil@millast.ec', password: 'Perfil-Valido-2026', displayName: name }).errors;
-      if (nameErrors['displayName']) errors['displayName'] = nameErrors['displayName'];
+      const nameError = validateDisplayName(name);
+      if (nameError !== null) errors['displayName'] = nameError;
     }
     assertValid(errors, 'Revisa tus datos.');
 

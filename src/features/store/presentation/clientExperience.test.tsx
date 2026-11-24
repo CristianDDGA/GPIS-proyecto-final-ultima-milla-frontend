@@ -5,9 +5,11 @@ import { describeDelivery, formatMoment, orderCode, statusInfo } from './compone
 import { AccountMenu, greetingName, initialsOf } from '../../auth/presentation/components/AccountMenu.js';
 import { validateProfilePhone } from '../../auth/domain/managedUser.js';
 import { readProfile } from '../../auth/infrastructure/http/response.js';
-import { UpdateProfileUseCase } from '../../auth/application/authUseCases.js';
+import { GetProfileUseCase, UpdateProfileUseCase } from '../../auth/application/authUseCases.js';
+import { HttpAuthGateway } from '../../auth/infrastructure/http/httpAuthGateway.js';
+import { validateDisplayName } from '../../auth/domain/authUser.js';
 import type { AuthGateway } from '../../auth/domain/authGateway.js';
-import { buildAuthUser, VALID_UUID } from '../../../test/fakeHttpClient.js';
+import { buildAuthUser, createFakeHttpClient, VALID_UUID } from '../../../test/fakeHttpClient.js';
 import { shortAddress } from './ClientShopContext.js';
 
 describe('textos del pedido para el cliente', () => {
@@ -90,6 +92,38 @@ describe('perfil', () => {
     await expect(new UpdateProfileUseCase(gateway).execute({ phone: '123' })).rejects.toThrow(/teléfono/);
     await expect(new UpdateProfileUseCase(gateway).execute({ displayName: 'Ana 2' })).rejects.toThrow();
     expect(updateProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('el caso de uso guarda nombre y teléfono limpios', async () => {
+    const updateProfile = vi.fn(() => Promise.resolve(profile as never));
+    const gateway = { updateProfile } as unknown as AuthGateway;
+    await new UpdateProfileUseCase(gateway).execute({ displayName: '  Ana Pérez ', phone: ' 0991234567 ' });
+    expect(updateProfile).toHaveBeenCalledWith({ displayName: 'Ana Pérez', phone: '0991234567' });
+    await new UpdateProfileUseCase(gateway).execute({ phone: null });
+    expect(updateProfile).toHaveBeenLastCalledWith({ phone: null });
+  });
+
+  it('consulta el perfil por el caso de uso', async () => {
+    const getProfile = vi.fn(() => Promise.resolve(profile as never));
+    const result = await new GetProfileUseCase({ getProfile } as unknown as AuthGateway).execute();
+    expect(result.displayName).toBe('Cristian Ango');
+  });
+
+  it('valida el nombre con las reglas del registro', () => {
+    expect(validateDisplayName('Ana Pérez')).toBeNull();
+    expect(validateDisplayName('Ana 2')).not.toBeNull();
+  });
+
+  it('el gateway lee y actualiza el perfil en /auth/me/profile', async () => {
+    const http = createFakeHttpClient({ profile });
+    const gateway = new HttpAuthGateway(http);
+    expect((await gateway.getProfile()).email).toBe('c@millast.ec');
+    expect(http.get).toHaveBeenCalledWith('/auth/me/profile');
+
+    await gateway.updateProfile({ displayName: 'Ana', phone: null });
+    expect(http.patch).toHaveBeenCalledWith('/auth/me/profile', { displayName: 'Ana', phone: null });
+    await gateway.updateProfile({});
+    expect(http.patch).toHaveBeenLastCalledWith('/auth/me/profile', {});
   });
 });
 
