@@ -21,13 +21,13 @@ import {
   generateIdempotencyKey,
   googleMapsDirectionsUrl,
   osmDirectionsUrl,
-  parseDollarsToCents,
   todayInEcuador,
   type CourierCashSummary,
   type CourierStoreOrder,
   type FailureReason,
 } from '../../domain/storeTypes.js';
 import type { HttpStoreGateway } from '../../infrastructure/http/httpStoreGateway.js';
+import { CollectDeliveryModal } from './CollectDeliveryModal.js';
 import '../styles/store.css';
 
 export interface CourierStoreViewProps {
@@ -74,10 +74,6 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
 
   // Modal de entrega con cobro COD
   const [deliverTarget, setDeliverTarget] = useState<CourierStoreOrder | null>(null);
-  const [deliverAmountDollars, setDeliverAmountDollars] = useState('');
-  const [deliverKey, setDeliverKey] = useState('');
-  const [isDelivering, setIsDelivering] = useState(false);
-  const [deliverError, setDeliverError] = useState<string | null>(null);
 
   // Modal de entrega fallida
   const [failTarget, setFailTarget] = useState<CourierStoreOrder | null>(null);
@@ -129,41 +125,17 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
 
   const openDeliverModal = (order: CourierStoreOrder) => {
     setDeliverTarget(order);
-    setDeliverAmountDollars(((order.totalCents ?? 0) / 100).toFixed(2));
-    setDeliverKey(generateIdempotencyKey());
-    setDeliverError(null);
   };
 
-  const handleDeliverSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!deliverTarget || isDelivering) return;
-    const cents = parseDollarsToCents(deliverAmountDollars);
-    if (cents === null) {
-      setDeliverError('Ingresa un monto válido en dólares (ej. 24.50).');
-      return;
-    }
-
-    setIsDelivering(true);
-    setDeliverError(null);
-    try {
-      const outcome = await storeGateway.deliverCourierOrder(
-        deliverTarget.orderId,
-        { expectedVersion: deliverTarget.version, collectedCents: cents },
-        deliverKey,
-      );
-      setDeliverTarget(null);
-      setFeedback({
-        type: 'success',
-        message: `Entrega confirmada (${formatCents(outcome.collectedCents ?? cents)} cobrados contra entrega).`,
-      });
-      await loadOrders();
-      if (tab === 'cash') await loadCash(cashDate);
-      onOrdersChanged?.();
-    } catch (err) {
-      setDeliverError(errorMessage(err, 'No se pudo registrar la entrega con cobro.'));
-    } finally {
-      setIsDelivering(false);
-    }
+  const handleDelivered = async (collectedCents: number) => {
+    setDeliverTarget(null);
+    setFeedback({
+      type: 'success',
+      message: `Entrega confirmada (${formatCents(collectedCents)} cobrados contra entrega).`,
+    });
+    await loadOrders();
+    if (tab === 'cash') await loadCash(cashDate);
+    onOrdersChanged?.();
   };
 
   const openFailModal = (order: CourierStoreOrder) => {
@@ -508,54 +480,12 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
       )}
 
       {deliverTarget && (
-        <Modal
-          title="Confirmar entrega con cobro"
-          description={`Registra el cobro exacto contra entrega para ${deliverTarget.deliveryAddress}.`}
-          onClose={() => !isDelivering && setDeliverTarget(null)}
-          footer={
-            <>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={isDelivering}
-                onClick={() => setDeliverTarget(null)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                form="courier-deliver-form"
-                variant="primary"
-                size="sm"
-                isLoading={isDelivering}
-              >
-                Confirmar entrega
-              </Button>
-            </>
-          }
-        >
-          <form id="courier-deliver-form" className="store-form" onSubmit={handleDeliverSubmit}>
-            {deliverError && (
-              <Alert type="error" title="No se pudo confirmar">
-                {deliverError}
-              </Alert>
-            )}
-            <p className="wf-modal__paragraph">
-              Total exacto a cobrar: <strong>{formatCents(deliverTarget.totalCents ?? 0)}</strong>
-            </p>
-            <TextInput
-              id="courier-deliver-amount"
-              label="Monto recibido en efectivo (USD)"
-              type="text"
-              inputMode="decimal"
-              value={deliverAmountDollars}
-              onChange={(e) => setDeliverAmountDollars(e.target.value)}
-              isRequired
-              disabled={isDelivering}
-            />
-          </form>
-        </Modal>
+        <CollectDeliveryModal
+          storeGateway={storeGateway}
+          order={deliverTarget}
+          onClose={() => setDeliverTarget(null)}
+          onDelivered={handleDelivered}
+        />
       )}
 
       {failTarget && (
