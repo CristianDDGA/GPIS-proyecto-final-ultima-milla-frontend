@@ -1,6 +1,9 @@
 import { useState, type FC, type FormEvent } from 'react';
 import {
+  addDaysToIsoDate,
   getTodayIsoDate,
+  MAX_PLANNING_DAYS_AHEAD,
+  MAX_ROUTE_CAPACITY,
   validatePlanRoutesInput,
   type PlanRoutesInput,
   type PlanRoutesResult,
@@ -60,6 +63,8 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
           <TextInput
             label="Fecha de servicio"
             type="date"
+            min={getTodayIsoDate()}
+            max={addDaysToIsoDate(getTodayIsoDate(), MAX_PLANNING_DAYS_AHEAD)}
             value={serviceDate}
             onChange={(event) => setServiceDate(event.target.value)}
             error={validation.errors['serviceDate']}
@@ -69,7 +74,7 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
             label="Límite de capacidad por ruta"
             type="number"
             min={1}
-            max={2147483647}
+            max={MAX_ROUTE_CAPACITY}
             value={capacityLimit}
             onChange={(event) => setCapacityLimit(event.target.value)}
             error={validation.errors['capacityLimit']}

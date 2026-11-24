@@ -72,25 +72,35 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
     setIsLoadingDetail(false);
   }, []);
 
+  /** Crea la zona y enseguida le fija la cobertura: una zona sin cobertura no recibe pedidos. */
   const createZone = useCallback(
-    async (name: string): Promise<boolean> => {
+    async (name: string, coverage: ZoneCoverage): Promise<boolean> => {
       setIsCreating(true);
       setError(null);
       setSuccessMessage(null);
+      let newZone: Zone;
       try {
-        const newZone = await createZoneUseCase.execute({ name });
-        setZones((prev) => [newZone, ...prev.filter((z) => z.id !== newZone.id)]);
-        setSuccessMessage(`Zona "${newZone.name}" creada exitosamente.`);
+        newZone = await createZoneUseCase.execute({ name });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error al crear la zona');
+        return false;
+      }
+      try {
+        const covered = await setCoverageUseCase.execute(newZone.id, coverage);
+        setZones((prev) => [covered, ...prev.filter((z) => z.id !== covered.id)]);
+        setSuccessMessage(`Zona "${covered.name}" creada con su cobertura.`);
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Error al crear la zona';
-        setError(message);
-        return false;
+        // La zona ya existe: se muestra para que el admin le defina la cobertura con "Cobertura".
+        setZones((prev) => [newZone, ...prev.filter((z) => z.id !== newZone.id)]);
+        const reason = err instanceof Error ? err.message : 'error desconocido';
+        setError(`La zona "${newZone.name}" se creó, pero no se pudo guardar su cobertura (${reason}). Defínela con el botón "Cobertura".`);
+        return true;
       } finally {
         setIsCreating(false);
       }
     },
-    [createZoneUseCase],
+    [createZoneUseCase, setCoverageUseCase],
   );
 
   /** Guarda (o quita con `null`) la cobertura y refresca la zona en la lista y en el detalle. */

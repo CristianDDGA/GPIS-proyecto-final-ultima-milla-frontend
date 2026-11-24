@@ -94,7 +94,10 @@ const UUID_PATTERN =
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-const MAX_CAPACITY_LIMIT = 2147483647;
+/** Mismos límites que el backend: tope por ruta y ventana de planificación. */
+export const MAX_ROUTE_CAPACITY = 20;
+export const MAX_PLANNING_DAYS_AHEAD = 60;
+const MAX_CAPACITY_LIMIT = MAX_ROUTE_CAPACITY;
 
 /**
  * Identificador UUID v1-v5 en su representación canónica de 36 caracteres.
@@ -114,6 +117,13 @@ export function getTodayIsoDate(): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Suma días a una fecha YYYY-MM-DD sin depender de la zona horaria. */
+export function addDaysToIsoDate(date: string, days: number): string {
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + days);
+  return parsed.toISOString().slice(0, 10);
+}
+
 function isCalendarDate(value: string): boolean {
   if (!DATE_ONLY_PATTERN.test(value)) {
     return false;
@@ -130,16 +140,23 @@ function isIntegerInRange(value: number, minimum: number, maximum: number): bool
  * Planificación: la fecha de servicio debe ser una fecha de calendario válida y el
  * límite de capacidad un entero dentro del rango de un entero de PostgreSQL.
  */
-export function validatePlanRoutesInput(input: PlanRoutesInput): RouteValidationResult {
+export function validatePlanRoutesInput(
+  input: PlanRoutesInput,
+  today: string = getTodayIsoDate(),
+): RouteValidationResult {
   const errors: Record<string, string> = {};
 
   const serviceDate = input.serviceDate.trim();
   if (!isCalendarDate(serviceDate)) {
     errors['serviceDate'] = 'La fecha de servicio debe ser una fecha válida con formato AAAA-MM-DD.';
+  } else if (serviceDate < today) {
+    errors['serviceDate'] = 'No se puede planificar una fecha pasada.';
+  } else if (serviceDate > addDaysToIsoDate(today, MAX_PLANNING_DAYS_AHEAD)) {
+    errors['serviceDate'] = `Solo se puede planificar hasta ${MAX_PLANNING_DAYS_AHEAD} días adelante.`;
   }
 
   if (!isIntegerInRange(input.capacityLimit, 1, MAX_CAPACITY_LIMIT)) {
-    errors['capacityLimit'] = 'El límite de capacidad debe ser un número entero entre 1 y 2147483647.';
+    errors['capacityLimit'] = `El límite de capacidad debe ser un número entero entre 1 y ${MAX_ROUTE_CAPACITY}.`;
   }
 
   return { isValid: Object.keys(errors).length === 0, errors };
@@ -195,7 +212,7 @@ export function validateLateOrderPlacementInput(input: LateOrderPlacementInput):
   }
 
   if (!isIntegerInRange(input.capacityLimit, 1, MAX_CAPACITY_LIMIT)) {
-    errors['capacityLimit'] = 'El límite de capacidad debe ser un número entero positivo.';
+    errors['capacityLimit'] = `El límite de capacidad debe ser un número entero entre 1 y ${MAX_ROUTE_CAPACITY}.`;
   }
 
   return { isValid: Object.keys(errors).length === 0, errors };

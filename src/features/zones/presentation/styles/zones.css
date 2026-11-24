@@ -292,3 +292,9 @@
   font-size: 13px;
   color: var(--color-slate, #5a5a5a);
 }
+
+.zones-form__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #5b6472);
+}
