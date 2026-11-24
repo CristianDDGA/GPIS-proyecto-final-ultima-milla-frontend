@@ -78,23 +78,24 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
       setIsCreating(true);
       setError(null);
       setSuccessMessage(null);
-      let newZone: Zone;
       try {
-        newZone = await createZoneUseCase.execute({ name });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al crear la zona');
-        return false;
-      }
-      try {
-        const covered = await setCoverageUseCase.execute(newZone.id, coverage);
-        setZones((prev) => [covered, ...prev.filter((z) => z.id !== covered.id)]);
-        setSuccessMessage(`Zona "${covered.name}" creada con su cobertura.`);
-        return true;
-      } catch (err) {
-        // La zona ya existe: se muestra para que el admin le defina la cobertura con "Cobertura".
-        setZones((prev) => [newZone, ...prev.filter((z) => z.id !== newZone.id)]);
-        const reason = err instanceof Error ? err.message : 'error desconocido';
-        setError(`La zona "${newZone.name}" se creó, pero no se pudo guardar su cobertura (${reason}). Defínela con el botón "Cobertura".`);
+        let newZone: Zone;
+        try {
+          newZone = await createZoneUseCase.execute({ name });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Error al crear la zona');
+          return false;
+        }
+        try {
+          const covered = await setCoverageUseCase.execute(newZone.id, coverage);
+          setZones((prev) => [covered, ...prev.filter((z) => z.id !== covered.id)]);
+          setSuccessMessage(`Zona "${covered.name}" creada con su cobertura.`);
+        } catch (err) {
+          // La zona ya existe: se muestra para que el admin le defina la cobertura con "Cobertura".
+          setZones((prev) => [newZone, ...prev.filter((z) => z.id !== newZone.id)]);
+          const reason = err instanceof Error ? err.message : 'error desconocido';
+          setError(`La zona "${newZone.name}" se creó, pero no se pudo guardar su cobertura (${reason}). Defínela con el botón "Cobertura".`);
+        }
         return true;
       } finally {
         setIsCreating(false);
