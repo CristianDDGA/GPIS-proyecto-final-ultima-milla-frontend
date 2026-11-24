@@ -7,7 +7,6 @@ import {
   type FC,
   type MouseEvent,
   type PointerEvent,
-  type WheelEvent,
 } from 'react';
 import {
   Button,
@@ -85,33 +84,57 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     }
   }, [latitude, longitude]);
 
-  const reverseGeocode = useCallback(
-    async (lat: number, lng: number) => {
-      if (!onAddressSuggested) return;
-      const now = Date.now();
-      if (now - lastNominatimRef.current < 1050) return;
-      lastNominatimRef.current = now;
-      setIsReversing(true);
-      setMapNotice(null);
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=es`,
-        );
-        if (!res.ok) return;
-        const data = (await res.json()) as { display_name?: string };
-        if (typeof data.display_name === 'string') {
-          const clean = sanitizeBackendText(data.display_name, 160);
-          if (clean.length >= 6) {
-            onAddressSuggested(clean);
-          }
-        }
-      } catch {
-        setMapNotice('Pin guardado. Puedes escribir o ajustar la dirección manualmente.');
-      } finally {
-        setIsReversing(false);
-      }
+  // El último punto pedido gana: si el pin se mueve varias veces seguidas, solo se busca la dirección del último
+  // (respetando el límite de 1 consulta por segundo de Nominatim) y nunca se pierde la actualización.
+  const pendingPointRef = useRef<{ lat: number; lng: number } | null>(null);
+  const reverseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestSeqRef = useRef(0);
+
+  useEffect(
+    () => () => {
+      if (reverseTimerRef.current !== null) clearTimeout(reverseTimerRef.current);
     },
-    [onAddressSuggested],
+    [],
+  );
+
+  const runReverseGeocode = useCallback(async () => {
+    const point = pendingPointRef.current;
+    if (!onAddressSuggested || point === null) return;
+    pendingPointRef.current = null;
+    lastNominatimRef.current = Date.now();
+    const seq = ++requestSeqRef.current;
+    setIsReversing(true);
+    setMapNotice(null);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${point.lat}&lon=${point.lng}&accept-language=es`,
+      );
+      if (!res.ok || seq !== requestSeqRef.current) return;
+      const data = (await res.json()) as { display_name?: string };
+      if (seq !== requestSeqRef.current) return;
+      if (typeof data.display_name === 'string') {
+        const clean = sanitizeBackendText(data.display_name, 160);
+        if (clean.length >= 6) onAddressSuggested(clean);
+      }
+    } catch {
+      setMapNotice('Punto guardado. Escribe la dirección o ajústala a mano.');
+    } finally {
+      if (seq === requestSeqRef.current) setIsReversing(false);
+    }
+  }, [onAddressSuggested]);
+
+  const reverseGeocode = useCallback(
+    (lat: number, lng: number) => {
+      if (!onAddressSuggested) return;
+      pendingPointRef.current = { lat, lng };
+      if (reverseTimerRef.current !== null) clearTimeout(reverseTimerRef.current);
+      const wait = Math.max(350, 1050 - (Date.now() - lastNominatimRef.current));
+      reverseTimerRef.current = setTimeout(() => {
+        reverseTimerRef.current = null;
+        void runReverseGeocode();
+      }, wait);
+    },
+    [onAddressSuggested, runReverseGeocode],
   );
 
   const handleSearch = async () => {
@@ -251,17 +274,24 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       const clamped = clampEcuadorLatLng(picked.lat, picked.lng);
       setMapNotice(null);
       onChange({ latitude: clamped.lat, longitude: clamped.lng });
-      void reverseGeocode(clamped.lat, clamped.lng);
+      reverseGeocode(clamped.lat, clamped.lng);
     }
   };
 
-  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (disabled || Math.abs(event.deltaY) < 4) return;
-    event.preventDefault();
-    setZoom((prev) =>
-      event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
-    );
-  };
+  // La rueda hace zoom sin mover la página: el listener nativo no es pasivo (en React onWheel sí lo es).
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return undefined;
+    const onWheel = (event: globalThis.WheelEvent) => {
+      if (disabled || Math.abs(event.deltaY) < 4) return;
+      event.preventDefault();
+      setZoom((prev) =>
+        event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
+      );
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [disabled]);
 
   const stopBtn = (e: MouseEvent<HTMLButtonElement>) => e.stopPropagation();
 
@@ -351,7 +381,6 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        onWheel={handleWheel}
       >
         <div className="wl-map-picker__tiles" aria-hidden="true">
           {tiles.map((tile) => (

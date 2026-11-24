@@ -10,6 +10,7 @@ import {
   validateResetPasswordInput,
   validateResetManagedUserPasswordInput,
   validateVerifyEmailInput,
+  validateProfilePhone,
   type AuthSession,
   type AuthUser,
   type ChangePasswordInput,
@@ -25,6 +26,8 @@ import {
   type ResetManagedUserPasswordInput,
   type ResetPasswordInput,
   type SetManagedUserActiveInput,
+  type UpdateProfileInput,
+  type UserProfile,
   type ValidationErrors,
   type VerifyEmailInput,
 } from '../domain/index.js';
@@ -245,6 +248,37 @@ export class ResetManagedUserPasswordUseCase {
   }
 }
 
+export class GetProfileUseCase {
+  constructor(private readonly authGateway: AuthGateway) {}
+
+  public execute(): Promise<UserProfile> {
+    return this.authGateway.getProfile();
+  }
+}
+
+export class UpdateProfileUseCase {
+  constructor(private readonly authGateway: AuthGateway) {}
+
+  public async execute(input: UpdateProfileInput): Promise<UserProfile> {
+    const errors: ValidationErrors = {};
+    if (input.phone !== undefined && input.phone !== null) {
+      const phoneError = validateProfilePhone(input.phone);
+      if (phoneError !== null) errors['phone'] = phoneError;
+    }
+    const name = typeof input.displayName === 'string' ? input.displayName.trim() : input.displayName;
+    if (typeof name === 'string' && name.length > 0) {
+      const nameErrors = validateRegisterCustomerInput({ email: 'perfil@millast.ec', password: 'Perfil-Valido-2026', displayName: name }).errors;
+      if (nameErrors['displayName']) errors['displayName'] = nameErrors['displayName'];
+    }
+    assertValid(errors, 'Revisa tus datos.');
+
+    const payload: { displayName?: string | null; phone?: string | null } = {};
+    if (input.displayName !== undefined) payload.displayName = typeof name === 'string' && name.length > 0 ? name : null;
+    if (input.phone !== undefined) payload.phone = input.phone === null || input.phone.trim().length === 0 ? null : input.phone.trim();
+    return this.authGateway.updateProfile(payload);
+  }
+}
+
 export interface AuthUseCases {
   checkHealth: Pick<CheckHealthUseCase, 'execute'>;
   login: Pick<LoginUseCase, 'execute'>;
@@ -262,4 +296,6 @@ export interface AuthUseCases {
   getManagedUser: Pick<GetManagedUserUseCase, 'execute'>;
   setManagedUserActive: Pick<SetManagedUserActiveUseCase, 'execute'>;
   resetManagedUserPassword: Pick<ResetManagedUserPasswordUseCase, 'execute'>;
+  getProfile: Pick<GetProfileUseCase, 'execute'>;
+  updateProfile: Pick<UpdateProfileUseCase, 'execute'>;
 }
