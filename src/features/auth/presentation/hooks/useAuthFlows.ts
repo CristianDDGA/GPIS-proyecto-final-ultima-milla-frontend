@@ -262,7 +262,9 @@ export function useAuthFlows({ useCases, onAuthenticated }: UseAuthFlowsParams) 
       setToken(session.token);
 
       if (mountedRef.current) {
-        setLoginPassword('');
+        // No se vacía la contraseña aquí: la pantalla de acceso sigue visible hasta que /auth/me responde y,
+        // con el campo ya tocado, vaciarlo hacía aparecer "La contraseña debe tener entre…" justo antes de entrar.
+        // Al iniciar sesión la vista se desmonta y el estado se descarta; goToLogin ya limpia la clave si se vuelve.
         onAuthenticated?.(session.user);
       }
     } catch (error_) {
