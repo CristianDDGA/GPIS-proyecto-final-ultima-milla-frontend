@@ -1,5 +1,5 @@
 import type { HttpClient } from '../../../../shared/infrastructure/http/index.js';
-import type { Zone, ZoneRepository, CreateZoneInput } from '../../../zones/domain/index.js';
+import type { Zone, ZoneCoverage, ZoneRepository, CreateZoneInput } from '../../../zones/domain/index.js';
 import { HttpZoneRepository } from '../../../zones/infrastructure/http/index.js';
 
 /**
@@ -24,5 +24,9 @@ export class HttpOrderZoneCatalog implements ZoneRepository {
 
   public create(input: CreateZoneInput): Promise<Zone> {
     return this.zoneRepository.create(input);
+  }
+
+  public setCoverage(id: string, coverage: ZoneCoverage | null): Promise<Zone> {
+    return this.zoneRepository.setCoverage(id, coverage);
   }
 }

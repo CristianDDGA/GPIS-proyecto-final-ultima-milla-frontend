@@ -1,10 +1,11 @@
-import { useMemo, type FC } from 'react';
+import { useMemo, useState, type FC } from 'react';
 import type { HttpClient } from '../../../../shared/infrastructure/http/index.js';
-import type { Zone, ZoneRepository } from '../../domain/index.js';
+import { describeCoverage, type Zone, type ZoneRepository } from '../../domain/index.js';
 import { defaultZoneRepository, HttpZoneRepository } from '../../infrastructure/http/index.js';
 import { useZones } from '../hooks/useZones.js';
 import { ZoneForm } from './ZoneForm.js';
 import { ZoneList } from './ZoneList.js';
+import { ZoneCoverageEditor } from './ZoneCoverageEditor.js';
 import {
   Alert,
   Button,
@@ -74,6 +75,10 @@ const ZoneDetailPanel: FC<ZoneDetailPanelProps> = ({
         <dd>{zone.name}</dd>
       </div>
       <div className="zones-detail-item">
+        <dt>Cobertura</dt>
+        <dd>{describeCoverage(zone.coverage)}</dd>
+      </div>
+      <div className="zones-detail-item">
         <dt>Código</dt>
         <dd>
           <ShortIdBadge id={zone.id} prefix="ZON" ariaLabel={`Copiar el identificador de la zona ${zone.name}`} />
@@ -130,10 +135,13 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
     detailError,
     loadZones,
     createZone,
+    setCoverage,
     clearFeedback,
     inspectZone,
     clearSelectedZone,
   } = useZones(repository);
+
+  const [coverageZone, setCoverageZone] = useState<Zone | null>(null);
 
   const isDetailVisible = isLoadingDetail || selectedZone !== null || detailError !== null;
 
@@ -226,9 +234,19 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
             isLoading={isLoading}
             orderCountByZone={orderCountByZone}
             onSelectZone={inspectZone}
+            onEditCoverage={canCreateZone ? setCoverageZone : undefined}
           />
         </Card>
       </div>
+
+      {coverageZone && (
+        <ZoneCoverageEditor
+          zone={zones.find((zone) => zone.id === coverageZone.id) ?? coverageZone}
+          zones={zones}
+          onSave={setCoverage}
+          onClose={() => setCoverageZone(null)}
+        />
+      )}
     </section>
   );
 };

@@ -269,3 +269,26 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Editor de cobertura */
+.zones-coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.zones-coverage__radius {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zones-coverage__radius input[type="range"] {
+  width: 100%;
+}
+
+.zones-coverage__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-slate, #5a5a5a);
+}

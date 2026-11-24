@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { HttpZoneRepository } from './infrastructure/http/httpZoneRepository.js';
 import { ZoneForm } from './presentation/components/ZoneForm.js';
 import { useZones } from './presentation/hooks/useZones.js';
-import type { Zone, ZoneRepository } from './domain/index.js';
+import { SetZoneCoverageUseCase } from './application/index.js';
+import { describeCoverage, validateCoverage } from './domain/index.js';
+import type { Zone, ZoneCoverage, ZoneRepository } from './domain/index.js';
 import { HttpError } from '../../shared/infrastructure/http/httpClient.js';
 import { createFakeHttpClient, VALID_UUID } from '../../test/fakeHttpClient.js';
 
@@ -76,6 +78,7 @@ describe('useZones', () => {
       getAll: vi.fn(() => Promise.resolve([ZONE])),
       getById: vi.fn(() => Promise.resolve(ZONE)),
       create: vi.fn((input: { name: string }) => Promise.resolve({ ...ZONE, id: 'nueva', name: input.name })),
+      setCoverage: vi.fn((id: string, coverage: ZoneCoverage | null) => Promise.resolve({ ...ZONE, id, coverage })),
       ...overrides,
     };
   }
@@ -106,5 +109,78 @@ describe('useZones', () => {
       useZones(repository({ getAll: vi.fn(() => Promise.reject(new Error('API caída'))) })),
     );
     await waitFor(() => expect(result.current.error).toBe('API caída'));
+  });
+});
+
+const COVERAGE: ZoneCoverage = { latitude: -1.2491, longitude: -78.6167, radiusKm: 3 };
+
+describe('cobertura de zonas', () => {
+  it('valida centro dentro de Ecuador y radio entre 0,1 y 50 km', () => {
+    expect(validateCoverage(COVERAGE).isValid).toBe(true);
+    expect(validateCoverage({ ...COVERAGE, latitude: 40 }).error).toMatch(/Ecuador/);
+    expect(validateCoverage({ ...COVERAGE, longitude: Number.NaN }).error).toMatch(/centro/);
+    expect(validateCoverage({ ...COVERAGE, radiusKm: 0.05 }).error).toMatch(/radio/);
+    expect(validateCoverage({ ...COVERAGE, radiusKm: 51 }).isValid).toBe(false);
+  });
+
+  it('describe la cobertura para el listado', () => {
+    expect(describeCoverage(null)).toBe('Sin cobertura');
+    expect(describeCoverage(undefined)).toBe('Sin cobertura');
+    expect(describeCoverage(COVERAGE)).toBe('3 km');
+    expect(describeCoverage({ ...COVERAGE, radiusKm: 2.5 })).toBe('2,5 km');
+  });
+
+  it('el repositorio envía PUT /zones/:id/coverage y lee la zona devuelta', async () => {
+    const zone = { ...ZONE, coverage: COVERAGE };
+    const http = createFakeHttpClient(zone);
+    const repository = new HttpZoneRepository(http);
+    await expect(repository.setCoverage(VALID_UUID, COVERAGE)).resolves.toEqual(zone);
+    expect(http.put).toHaveBeenCalledWith(`/zones/${VALID_UUID}/coverage`, { coverage: COVERAGE });
+    await repository.setCoverage(VALID_UUID, null);
+    expect(http.put).toHaveBeenLastCalledWith(`/zones/${VALID_UUID}/coverage`, { coverage: null });
+  });
+
+  it('el repositorio rechaza una cobertura con forma inválida', async () => {
+    const http = createFakeHttpClient({ ...ZONE, coverage: { latitude: 'x' } });
+    await expect(new HttpZoneRepository(http).setCoverage(VALID_UUID, COVERAGE)).rejects.toThrow(/contrato/);
+  });
+
+  it('el caso de uso valida, redondea el radio y permite quitar la cobertura', async () => {
+    const repo: ZoneRepository = {
+      getAll: vi.fn(),
+      getById: vi.fn(),
+      create: vi.fn(),
+      setCoverage: vi.fn((id: string, coverage: ZoneCoverage | null) => Promise.resolve({ ...ZONE, id, coverage })),
+    };
+    const useCase = new SetZoneCoverageUseCase(repo);
+    await useCase.execute(VALID_UUID, { ...COVERAGE, radiusKm: 2.456 });
+    expect(repo.setCoverage).toHaveBeenCalledWith(VALID_UUID, { ...COVERAGE, radiusKm: 2.46 });
+    await useCase.execute(VALID_UUID, null);
+    expect(repo.setCoverage).toHaveBeenLastCalledWith(VALID_UUID, null);
+    expect(() => useCase.execute('no-es-uuid', COVERAGE)).toThrow(/inválido/);
+    expect(() => useCase.execute(VALID_UUID, { ...COVERAGE, radiusKm: 99 })).toThrow(/radio/);
+  });
+
+  it('useZones.setCoverage actualiza la zona en la lista y avisa', async () => {
+    const repo: ZoneRepository = {
+      getAll: vi.fn(() => Promise.resolve([ZONE])),
+      getById: vi.fn(() => Promise.resolve(ZONE)),
+      create: vi.fn(),
+      setCoverage: vi.fn((id: string, coverage: ZoneCoverage | null) => Promise.resolve({ ...ZONE, id, coverage })),
+    };
+    const { result } = renderHook(() => useZones(repo));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    let saved = false;
+    await act(async () => {
+      saved = await result.current.setCoverage(VALID_UUID, COVERAGE);
+    });
+    expect(saved).toBe(true);
+    expect(result.current.zones[0]?.coverage).toEqual(COVERAGE);
+    expect(result.current.successMessage).toMatch(/guardada/);
+    await act(async () => {
+      saved = await result.current.setCoverage(VALID_UUID, { ...COVERAGE, radiusKm: 99 });
+    });
+    expect(saved).toBe(false);
+    expect(result.current.error).toMatch(/radio/);
   });
 });
