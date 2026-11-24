@@ -118,6 +118,8 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({ storeGateway, zo
   const [notes, setNotes] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  // Detección automática de zona por el pin (solo si el negocio ya definió la cobertura de alguna zona).
+  const [zoneLookup, setZoneLookup] = useState<'idle' | 'loading' | 'found' | 'outside' | 'error'>('idle');
   const [idempotencyKey, setIdempotencyKey] = useState<string>(() => generateIdempotencyKey());
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -161,6 +163,38 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({ storeGateway, zo
     },
     [storeGateway, searchText, categoryId, onSaleOnly, sort],
   );
+
+  const coverageMode = zones.some((zone) => zone.coverage);
+
+  // Con el pin puesto, el sistema decide la zona: el cliente ya no la elige a mano.
+  useEffect(() => {
+    if (!coverageMode || latitude === null || longitude === null) {
+      setZoneLookup('idle');
+      return undefined;
+    }
+    let cancelled = false;
+    setZoneLookup('loading');
+    const timer = setTimeout(() => {
+      storeGateway
+        .lookupZone(latitude, longitude)
+        .then((zone) => {
+          if (cancelled) return;
+          if (zone) {
+            setZoneId(zone.id);
+            setZoneLookup('found');
+          } else {
+            setZoneLookup('outside');
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setZoneLookup('error');
+        });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [coverageMode, latitude, longitude, storeGateway]);
 
   useEffect(() => {
     void loadProducts(page);
@@ -419,7 +453,15 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({ storeGateway, zo
   const chosenAddress = savedAddresses.find((address) => address.id === selectedAddressId) ?? null;
   const zoneName = zones.find((zone) => zone.id === zoneId)?.name ?? '';
   const whenText = deliveryTime ? describeDelivery(deliveryDate, deliveryTime) : '';
-  const addressReady = zoneId.length > 0 && deliveryAddress.trim().length >= 6;
+  // Con cobertura definida, una dirección nueva exige pin y que una zona lo cubra; si la consulta falla se
+  // permite elegir el sector a mano para no frenar la compra.
+  const zoneBlocked =
+    coverageMode &&
+    latitude !== null &&
+    (zoneLookup === 'outside' || zoneLookup === 'loading' || zoneLookup === 'idle');
+  const needsPin = coverageMode && useOtherAddress && latitude === null;
+  const addressReady =
+    zoneId.length > 0 && deliveryAddress.trim().length >= 6 && !zoneBlocked && !needsPin;
   const listTitle = categoryId ? (categories.find((c) => c.id === categoryId)?.name ?? 'Productos') : searchText ? `Resultados para «${searchText}»` : 'Recomendado para ti';
 
   const productTile = (imageUrl: string | null, name: string, size: 'card' | 'large' | 'thumb'): ReactNode => {
@@ -862,18 +904,37 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({ storeGateway, zo
                           isRequired
                           maxLength={200}
                         />
-                        <Select
-                          id="checkout-zone"
-                          label="Sector"
-                          value={zoneId}
-                          onChange={(e) => {
-                            setZoneId(e.target.value);
-                            rotateKey();
-                          }}
-                          options={zones.map((z) => ({ value: z.id, label: z.name }))}
-                          isRequired
-                        />
+                        {coverageMode && zoneLookup !== 'error' ? (
+                          <p
+                            className={`client-muted ${zoneLookup === 'outside' ? 'client-zone-note--bad' : ''}`}
+                            role="status"
+                            data-testid="zone-lookup-status"
+                          >
+                            {latitude === null && 'Marca tu ubicación en el mapa para saber si llegamos a tu dirección.'}
+                            {latitude !== null && zoneLookup === 'loading' && 'Buscando tu sector...'}
+                            {latitude !== null && zoneLookup === 'found' && `Entregamos en tu zona: ${zoneName}.`}
+                            {latitude !== null && zoneLookup === 'outside' && 'Aún no llegamos a esta dirección. Prueba con otro punto del mapa.'}
+                          </p>
+                        ) : (
+                          <Select
+                            id="checkout-zone"
+                            label="Sector"
+                            value={zoneId}
+                            onChange={(e) => {
+                              setZoneId(e.target.value);
+                              rotateKey();
+                            }}
+                            options={zones.map((z) => ({ value: z.id, label: z.name }))}
+                            isRequired
+                          />
+                        )}
                       </div>
+                    )}
+
+                    {!useOtherAddress && coverageMode && zoneLookup === 'outside' && (
+                      <p className="client-muted client-zone-note--bad" role="alert">
+                        Aún no llegamos a esta dirección. Elige otra dirección guardada o marca un punto distinto en el mapa.
+                      </p>
                     )}
 
                     <div className="client-actions" style={{ justifyContent: 'flex-end' }}>

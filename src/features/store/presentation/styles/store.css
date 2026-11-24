@@ -826,3 +826,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.client-zone-note--bad {
+  color: #991b1b;
+  font-weight: 600;
+}
