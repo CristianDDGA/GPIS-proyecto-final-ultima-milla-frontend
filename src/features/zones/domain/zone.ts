@@ -1,8 +1,58 @@
+/** Círculo de cobertura de una zona: centro en el mapa y radio en km. */
+export interface ZoneCoverage {
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+}
+
 export interface Zone {
   id: string;
   name: string;
   createdAt: string;
   updatedAt: string;
+  /** `null` o ausente: la zona no tiene cobertura y se elige a mano. */
+  coverage?: ZoneCoverage | null | undefined;
+}
+
+export const MIN_COVERAGE_RADIUS_KM = 0.1;
+export const MAX_COVERAGE_RADIUS_KM = 50;
+
+/** Límites de Ecuador (incluye Galápagos), iguales a los del backend. */
+const ECUADOR_LAT = { min: -5.1, max: 1.5 } as const;
+const ECUADOR_LNG = { min: -92.5, max: -75.0 } as const;
+
+/** Regla de dominio: centro dentro de Ecuador y radio entre 0,1 y 50 km. */
+export function validateCoverage(coverage: ZoneCoverage): ZoneValidationResult {
+  const { latitude, longitude, radiusKm } = coverage;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return { isValid: false, error: 'Marca el centro de la zona en el mapa.' };
+  }
+  if (
+    latitude < ECUADOR_LAT.min ||
+    latitude > ECUADOR_LAT.max ||
+    longitude < ECUADOR_LNG.min ||
+    longitude > ECUADOR_LNG.max
+  ) {
+    return { isValid: false, error: 'El centro debe estar dentro de Ecuador.' };
+  }
+  if (
+    !Number.isFinite(radiusKm) ||
+    radiusKm < MIN_COVERAGE_RADIUS_KM ||
+    radiusKm > MAX_COVERAGE_RADIUS_KM
+  ) {
+    return {
+      isValid: false,
+      error: `El radio debe estar entre ${MIN_COVERAGE_RADIUS_KM} y ${MAX_COVERAGE_RADIUS_KM} km.`,
+    };
+  }
+  return { isValid: true };
+}
+
+/** Texto corto para listados: "3 km" o "Sin cobertura". */
+export function describeCoverage(coverage: ZoneCoverage | null | undefined): string {
+  if (!coverage) return 'Sin cobertura';
+  const radius = String(Number(coverage.radiusKm.toFixed(2)));
+  return `${radius.replace('.', ',')} km`;
 }
 
 export interface CreateZoneInput {

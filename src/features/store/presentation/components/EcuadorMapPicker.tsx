@@ -33,6 +33,25 @@ export interface EcuadorMapPickerProps {
   readonly onChange: (coords: { readonly latitude: number | null; readonly longitude: number | null }) => void;
   readonly onAddressSuggested?: ((address: string) => void) | undefined;
   readonly disabled?: boolean | undefined;
+  /** Radio en km del círculo de cobertura dibujado alrededor del pin (editor de zonas). */
+  readonly radiusKm?: number | null | undefined;
+  /** Coberturas de otras zonas, dibujadas como referencia. */
+  readonly overlays?: readonly MapCoverageOverlay[] | undefined;
+  /** Alto del mapa en px (por defecto lo fija el CSS: 230). */
+  readonly height?: number | undefined;
+}
+
+export interface MapCoverageOverlay {
+  readonly id: string;
+  readonly name: string;
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly radiusKm: number;
+}
+
+/** Metros que representa un píxel del mapa a esa latitud y zoom (proyección Web Mercator). */
+export function metersPerPixel(latitude: number, zoom: number): number {
+  return (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom);
 }
 
 interface NominatimHit {
@@ -52,6 +71,9 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   onChange,
   onAddressSuggested,
   disabled = false,
+  radiusKm = null,
+  overlays,
+  height,
 }) => {
   const [center, setCenter] = useState<{ lat: number; lng: number }>(() =>
     latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)
@@ -228,6 +250,16 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     };
   }, [centerWorld.x, centerWorld.y, latitude, longitude, zoom]);
 
+  const circleFor = (lat: number, lng: number, km: number) => {
+    const world = latLngToWorld(lat, lng, zoom);
+    const diameter = (2 * km * 1000) / metersPerPixel(lat, zoom);
+    return {
+      dx: world.x - centerWorld.x,
+      dy: world.y - centerWorld.y,
+      diameter: Math.max(2, diameter),
+    };
+  };
+
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (disabled) return;
     const target = event.target as HTMLElement | null;
@@ -375,6 +407,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       <div
         ref={viewportRef}
         className="wl-map-picker__viewport"
+        style={height === undefined ? undefined : { height }}
         role="application"
         aria-label="Mapa de Ecuador para elegir punto de entrega. Haz clic para fijar el pin o arrastra para mover."
         onPointerDown={handlePointerDown}
@@ -402,6 +435,43 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
             />
           ))}
         </div>
+
+        {overlays?.map((zone) => {
+          const circle = circleFor(zone.latitude, zone.longitude, zone.radiusKm);
+          return (
+            <div
+              key={zone.id}
+              className="wl-map-picker__circle wl-map-picker__circle--other"
+              aria-hidden="true"
+              title={zone.name}
+              style={{
+                width: circle.diameter,
+                height: circle.diameter,
+                transform: `translate3d(${Math.round(circle.dx - circle.diameter / 2)}px, ${Math.round(circle.dy - circle.diameter / 2)}px, 0)`,
+              }}
+            >
+              <span className="wl-map-picker__circle-label">{zone.name}</span>
+            </div>
+          );
+        })}
+
+        {latitude !== null && longitude !== null && radiusKm !== null && radiusKm > 0 && (
+          (() => {
+            const circle = circleFor(latitude, longitude, radiusKm);
+            return (
+              <div
+                className="wl-map-picker__circle"
+                aria-hidden="true"
+                data-testid="coverage-circle"
+                style={{
+                  width: circle.diameter,
+                  height: circle.diameter,
+                  transform: `translate3d(${Math.round(circle.dx - circle.diameter / 2)}px, ${Math.round(circle.dy - circle.diameter / 2)}px, 0)`,
+                }}
+              />
+            );
+          })()
+        )}
 
         {pinOffset !== null && (
           <div

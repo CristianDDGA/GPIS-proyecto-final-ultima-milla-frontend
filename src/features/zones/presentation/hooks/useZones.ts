@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Zone, ZoneRepository } from '../../domain/index.js';
-import { CreateZoneUseCase, GetZoneByIdUseCase, GetZonesUseCase } from '../../application/index.js';
+import type { Zone, ZoneCoverage, ZoneRepository } from '../../domain/index.js';
+import {
+  CreateZoneUseCase,
+  GetZoneByIdUseCase,
+  GetZonesUseCase,
+  SetZoneCoverageUseCase,
+} from '../../application/index.js';
 import { defaultZoneRepository } from '../../infrastructure/http/index.js';
 
 export function useZones(repository: ZoneRepository = defaultZoneRepository) {
@@ -17,6 +22,7 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
   const getZonesUseCase = useMemo(() => new GetZonesUseCase(repository), [repository]);
   const getZoneByIdUseCase = useMemo(() => new GetZoneByIdUseCase(repository), [repository]);
   const createZoneUseCase = useMemo(() => new CreateZoneUseCase(repository), [repository]);
+  const setCoverageUseCase = useMemo(() => new SetZoneCoverageUseCase(repository), [repository]);
 
   const loadZones = useCallback(async () => {
     setIsLoading(true);
@@ -87,6 +93,29 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
     [createZoneUseCase],
   );
 
+  /** Guarda (o quita con `null`) la cobertura y refresca la zona en la lista y en el detalle. */
+  const setCoverage = useCallback(
+    async (zoneId: string, coverage: ZoneCoverage | null): Promise<boolean> => {
+      setError(null);
+      setSuccessMessage(null);
+      try {
+        const updated = await setCoverageUseCase.execute(zoneId, coverage);
+        setZones((prev) => prev.map((zone) => (zone.id === updated.id ? updated : zone)));
+        setSelectedZone((prev) => (prev?.id === updated.id ? updated : prev));
+        setSuccessMessage(
+          coverage === null
+            ? `Se quitó la cobertura de "${updated.name}".`
+            : `Cobertura de "${updated.name}" guardada.`,
+        );
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'No se pudo guardar la cobertura.');
+        return false;
+      }
+    },
+    [setCoverageUseCase],
+  );
+
   const clearFeedback = useCallback(() => {
     setError(null);
     setSuccessMessage(null);
@@ -109,6 +138,7 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
     inspectZone,
     clearSelectedZone,
     createZone,
+    setCoverage,
     clearFeedback,
   };
 }

@@ -1,11 +1,13 @@
 import type { FC } from 'react';
-import type { Zone } from '../../domain/index.js';
+import { describeCoverage, type Zone } from '../../domain/index.js';
 import { Button, EmptyState, ShortIdBadge, Spinner } from '../../../../shared/ui/index.js';
 
 export interface ZoneListProps {
   zones: Zone[];
   isLoading: boolean;
   onSelectZone?: ((id: string) => void) | undefined;
+  /** Si se entrega, cada fila muestra el botón para definir la cobertura (solo admin). */
+  onEditCoverage?: ((zone: Zone) => void) | undefined;
   /** Conteo de pedidos por zona; se muestra como señal de demanda. */
   orderCountByZone?: ReadonlyMap<string, number> | undefined;
 }
@@ -28,6 +30,7 @@ export const ZoneList: FC<ZoneListProps> = ({
   zones,
   isLoading,
   onSelectZone,
+  onEditCoverage,
   orderCountByZone,
 }) => {
   if (isLoading && zones.length === 0) {
@@ -55,9 +58,10 @@ export const ZoneList: FC<ZoneListProps> = ({
           <tr>
             <th scope="col">Nombre de zona</th>
             <th scope="col">Código</th>
+            <th scope="col">Cobertura</th>
             <th scope="col">Demanda</th>
             <th scope="col">Registro</th>
-            {onSelectZone && <th scope="col">Detalle</th>}
+            {(onSelectZone || onEditCoverage) && <th scope="col">Acciones</th>}
           </tr>
         </thead>
         <tbody>
@@ -73,6 +77,7 @@ export const ZoneList: FC<ZoneListProps> = ({
                     ariaLabel={`Copiar el identificador de la zona ${zone.name}`}
                   />
                 </td>
+                <td className="zones-table__coverage">{describeCoverage(zone.coverage)}</td>
                 <td className="zones-table__demand">
                   {orderCount === undefined ? (
                     <span className="zones-table__demand-empty">—</span>
@@ -84,17 +89,30 @@ export const ZoneList: FC<ZoneListProps> = ({
                   )}
                 </td>
                 <td className="zones-table__date">{formatDate(zone.createdAt)}</td>
-                {onSelectZone && (
+                {(onSelectZone || onEditCoverage) && (
                   <td className="zones-table__actions">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onSelectZone(zone.id)}
-                      aria-label={`Ver detalle de la zona ${zone.name}`}
-                    >
-                      Ver detalle
-                    </Button>
+                    {onSelectZone && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onSelectZone(zone.id)}
+                        aria-label={`Ver detalle de la zona ${zone.name}`}
+                      >
+                        Ver detalle
+                      </Button>
+                    )}
+                    {onEditCoverage && (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => onEditCoverage(zone)}
+                        aria-label={`Definir la cobertura de la zona ${zone.name}`}
+                      >
+                        Cobertura
+                      </Button>
+                    )}
                   </td>
                 )}
               </tr>
