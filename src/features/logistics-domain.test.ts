@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isZoneId, validateZoneName } from './zones/domain/zone.js';
 import { validateOrder } from './orders/domain/order.js';
-import { validateAssignCourierInput, validateCreateCourierInput } from './couriers/domain/courier.js';
+import { validateAssignCourierInput } from './couriers/domain/courier.js';
 import {
   deliveryActionLabel,
   getNextAllowedDeliveryStatus,
@@ -54,16 +54,6 @@ describe('pedidos', () => {
 });
 
 describe('repartidores', () => {
-  it('valida nombre y capacidad', () => {
-    expect(validateCreateCourierInput({ displayName: 'Luis Andrade', maxOrdersPerTrip: 8 }).isValid).toBe(true);
-    const result = validateCreateCourierInput({ displayName: '7', maxOrdersPerTrip: 0 });
-    expect(result.errors['displayName']).toMatch(/2 letras/);
-    expect(result.errors['maxOrdersPerTrip']).toBeDefined();
-    expect(validateCreateCourierInput({ displayName: '', maxOrdersPerTrip: 1.5 }).errors['displayName']).toMatch(
-      /obligatorio/,
-    );
-  });
-
   it('la asignación exige dos UUID', () => {
     expect(validateAssignCourierInput({ routeId: VALID_UUID, courierId: OTHER_UUID }).isValid).toBe(true);
     expect(Object.keys(validateAssignCourierInput({ routeId: 'r', courierId: 'c' }).errors)).toHaveLength(2);

@@ -2,9 +2,8 @@ import { useState, type FC, type FormEvent } from 'react';
 import {
   evaluatePasswordStrength,
   type ManagedUser,
-  type PublicRole,
 } from '../../../domain/index.js';
-import { Alert, Button, Modal, ShortIdBadge, TextInput } from '../../../../../shared/ui/index.js';
+import { Alert, Button, Modal, ShortIdBadge } from '../../../../../shared/ui/index.js';
 import { AuthPasswordField } from '../auth/AuthPasswordField.js';
 import { PasswordStrengthMeter } from '../auth/PasswordStrengthMeter.js';
 import { formatAdminDate, ROLE_LABELS } from './UserDirectoryTable.js';
@@ -15,139 +14,6 @@ const VERIFIED_VIA_LABELS: Record<string, string> = {
   legacy: 'Cuenta heredada',
   demo: 'Modo demo',
   google: 'Google',
-};
-
-export interface UserCreateModalProps {
-  readonly email: string;
-  readonly password: string;
-  readonly displayName: string;
-  readonly role: PublicRole;
-  readonly errors: Record<string, string>;
-  readonly isCreating: boolean;
-  readonly onEmailChange: (value: string) => void;
-  readonly onPasswordChange: (value: string) => void;
-  readonly onDisplayNameChange: (value: string) => void;
-  readonly onRoleChange: (value: PublicRole) => void;
-  readonly onClearErrors: () => void;
-  readonly onClose: () => void;
-  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-}
-
-export const UserCreateModal: FC<UserCreateModalProps> = ({
-  email,
-  password,
-  displayName,
-  role,
-  errors,
-  isCreating,
-  onEmailChange,
-  onPasswordChange,
-  onDisplayNameChange,
-  onRoleChange,
-  onClearErrors,
-  onClose,
-  onSubmit,
-}) => {
-  const [showPassword, setShowPassword] = useState(false);
-  const strength = evaluatePasswordStrength(password, email);
-
-  return (
-    <Modal
-      title="Nuevo usuario"
-      onClose={onClose}
-      footer={
-        <>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isCreating}>
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            form="wf-create-user-form"
-            variant="primary"
-            isLoading={isCreating}
-            disabled={isCreating}
-          >
-            Crear usuario
-          </Button>
-        </>
-      }
-    >
-      <form id="wf-create-user-form" className="wf-admin-form" onSubmit={onSubmit} noValidate>
-        {errors['form'] !== undefined && (
-          <Alert type="error" title="No se pudo crear" onClose={onClearErrors}>
-            {errors['form']}
-          </Alert>
-        )}
-
-        <div className="wf-role-pills" role="radiogroup" aria-label="Rol del usuario">
-          {(['admin', 'repartidor', 'cliente'] as const).map((itemRole) => (
-            <button
-              key={itemRole}
-              type="button"
-              role="radio"
-              aria-checked={role === itemRole}
-              className={'wf-role-pill ' + (role === itemRole ? 'wf-role-pill--active' : '')}
-              onClick={() => onRoleChange(itemRole)}
-            >
-              {ROLE_LABELS[itemRole]}
-            </button>
-          ))}
-        </div>
-
-        <TextInput
-          id="wf-create-email"
-          label="Correo electrónico"
-          type="email"
-          autoComplete="off"
-          placeholder="equipo@millast.ec"
-          value={email}
-          onChange={(event) => {
-            onEmailChange(event.target.value);
-            onClearErrors();
-          }}
-          error={errors['email']}
-          isRequired
-          maxLength={254}
-          disabled={isCreating}
-        />
-
-        <TextInput
-          id="wf-create-display-name"
-          label="Nombre para mostrar (opcional)"
-          type="text"
-          autoComplete="off"
-          placeholder="Ej. Ana Paredes"
-          value={displayName}
-          onChange={(event) => {
-            onDisplayNameChange(event.target.value);
-            onClearErrors();
-          }}
-          error={errors['displayName']}
-          maxLength={120}
-          disabled={isCreating}
-        />
-
-        <AuthPasswordField
-          id="wf-create-password"
-          name="password"
-          label="Contraseña inicial"
-          value={password}
-          autoComplete="new-password"
-          visible={showPassword}
-          onToggleVisible={() => setShowPassword((prev) => !prev)}
-          onChange={(event) => {
-            onPasswordChange(event.target.value);
-            onClearErrors();
-          }}
-          onBlur={() => undefined}
-          error={errors['password']}
-          disabled={isCreating}
-        />
-
-        {password.length > 0 && <PasswordStrengthMeter strength={strength} />}
-      </form>
-    </Modal>
-  );
 };
 
 export interface UserDetailModalProps {

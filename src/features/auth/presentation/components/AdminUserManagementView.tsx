@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FC, type FormEvent } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import {
-  validateCreateManagedUserInput,
   validateResetManagedUserPasswordInput,
   type ManagedUser,
   type ManagedUserFilters,
@@ -10,7 +9,6 @@ import {
 import { Alert, Button, Select, TextInput } from '../../../../shared/ui/index.js';
 import { UserDirectoryTable } from './admin/UserDirectoryTable.js';
 import {
-  UserCreateModal,
   UserDetailModal,
   UserResetPasswordModal,
   UserToggleModal,
@@ -46,14 +44,6 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
   const [isLoading, setIsLoading] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [createEmail, setCreateEmail] = useState('');
-  const [createPassword, setCreatePassword] = useState('');
-  const [createDisplayName, setCreateDisplayName] = useState('');
-  const [createRole, setCreateRole] = useState<PublicRole>('repartidor');
-  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
-  const [isCreating, setIsCreating] = useState(false);
 
   const [detailUser, setDetailUser] = useState<ManagedUser | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -126,38 +116,6 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
     setRoleFilter('all');
     setStatusFilter('all');
     setAppliedFilters({});
-  };
-
-  const handleCreate = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setCreateErrors({});
-    const input = {
-      email: createEmail,
-      password: createPassword,
-      role: createRole,
-      displayName: createDisplayName.trim().length === 0 ? null : createDisplayName,
-    };
-    const validation = validateCreateManagedUserInput(input);
-    if (!validation.isValid) {
-      setCreateErrors(validation.errors);
-      return;
-    }
-
-    setIsCreating(true);
-    try {
-      const created = await useCases.createManagedUser.execute(input);
-      setIsCreateOpen(false);
-      setCreateEmail('');
-      setCreatePassword('');
-      setCreateDisplayName('');
-      setCreateRole('repartidor');
-      setNotice('Usuario ' + created.email + ' creado correctamente.');
-      await loadPage({ ...appliedFilters, offset: 0 });
-    } catch (error_) {
-      setCreateErrors({ form: toErrorMessage(error_, 'No se pudo crear el usuario.') });
-    } finally {
-      setIsCreating(false);
-    }
   };
 
   const openDetail = async (user: ManagedUser): Promise<void> => {
@@ -277,10 +235,6 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
             </Button>
           </div>
         </form>
-
-        <Button type="button" variant="primary" size="sm" onClick={() => setIsCreateOpen(true)}>
-          Nuevo usuario
-        </Button>
       </div>
 
       {requestError !== null && (
@@ -318,24 +272,6 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
           void loadPage({ ...appliedFilters, offset: nextOffset });
         }}
       />
-
-      {isCreateOpen && (
-        <UserCreateModal
-          email={createEmail}
-          password={createPassword}
-          displayName={createDisplayName}
-          role={createRole}
-          errors={createErrors}
-          isCreating={isCreating}
-          onEmailChange={setCreateEmail}
-          onPasswordChange={setCreatePassword}
-          onDisplayNameChange={setCreateDisplayName}
-          onRoleChange={setCreateRole}
-          onClearErrors={() => setCreateErrors({})}
-          onClose={() => setIsCreateOpen(false)}
-          onSubmit={handleCreate}
-        />
-      )}
 
       {detailUser !== null && (
         <UserDetailModal

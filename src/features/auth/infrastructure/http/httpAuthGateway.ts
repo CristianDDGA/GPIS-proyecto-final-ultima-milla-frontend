@@ -3,7 +3,6 @@ import type { AuthGateway } from '../../domain/authGateway.js';
 import type {
   AuthSession,
   AuthUser,
-  CreateManagedUserInput,
   ForgotPasswordInput,
   HealthStatus,
   LoginInput,
@@ -36,13 +35,6 @@ import {
 interface RegisterRequest {
   email: string;
   password: string;
-  displayName?: string | null | undefined;
-}
-
-interface CreateManagedUserRequest {
-  email: string;
-  password: string;
-  role: string;
   displayName?: string | null | undefined;
 }
 
@@ -146,19 +138,6 @@ export class HttpAuthGateway implements AuthGateway {
     }
   }
 
-  public async createManagedUser(input: CreateManagedUserInput): Promise<AuthUser> {
-    const request: CreateManagedUserRequest = {
-      email: input.email,
-      password: input.password,
-      role: input.role,
-    };
-
-    if (input.displayName !== undefined) {
-      request.displayName = input.displayName;
-    }
-
-    return readAuthUser(await this.httpClient.post<unknown>('/auth/users', request));
-  }
   public async changePassword(input: ChangePasswordInput): Promise<AuthSession> {
     const session = readAuthSession(
       await this.httpClient.post<unknown>('/auth/change-password', {

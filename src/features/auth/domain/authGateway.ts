@@ -1,7 +1,6 @@
 import type {
   AuthSession,
   AuthUser,
-  CreateManagedUserInput,
   ForgotPasswordInput,
   HealthStatus,
   LoginInput,
@@ -38,7 +37,6 @@ export interface AuthGateway {
   /** Autoservicio autenticado: rota la sesión y devuelve un token nuevo. */
   changePassword(input: ChangePasswordInput): Promise<AuthSession>;
   /** Alta administrativa de una cuenta (POST /auth/users). */
-  createManagedUser(input: CreateManagedUserInput): Promise<AuthUser>;
   /** Directorio administrativo real con filtros y paginación. */
   listManagedUsers(filters?: ManagedUserFilters): Promise<ManagedUserPage>;
   getManagedUser(userId: string): Promise<ManagedUser>;

@@ -3,7 +3,6 @@ import {
   firstValidationError,
   isUuidText,
   validateChangePasswordInput,
-  validateCreateManagedUserInput,
   validateForgotPasswordInput,
   validateLoginInput,
   validateRegisterCustomerInput,
@@ -15,7 +14,6 @@ import {
   type AuthSession,
   type AuthUser,
   type ChangePasswordInput,
-  type CreateManagedUserInput,
   type ForgotPasswordInput,
   type HealthStatus,
   type LoginInput,
@@ -169,22 +167,6 @@ export class LogoutUseCase {
   }
 }
 
-export class CreateManagedUserUseCase {
-  constructor(private readonly authGateway: AuthGateway) {}
-
-  public async execute(input: CreateManagedUserInput): Promise<AuthUser> {
-    const validation = validateCreateManagedUserInput(input);
-    assertValid(validation.errors, 'Los datos del nuevo usuario no son válidos.');
-
-    return this.authGateway.createManagedUser({
-      email: normalizeEmail(input.email),
-      password: input.password,
-      role: input.role,
-      displayName: normalizeDisplayName(input.displayName),
-    });
-  }
-}
-
 export class ChangePasswordUseCase {
   constructor(private readonly authGateway: AuthGateway) {}
 
@@ -291,7 +273,6 @@ export interface AuthUseCases {
   resetPassword: Pick<ResetPasswordUseCase, 'execute'>;
   getCurrentUser: Pick<GetCurrentUserUseCase, 'execute'>;
   logout: Pick<LogoutUseCase, 'execute'>;
-  createManagedUser: Pick<CreateManagedUserUseCase, 'execute'>;
   changePassword: Pick<ChangePasswordUseCase, 'execute'>;
   listManagedUsers: Pick<ListManagedUsersUseCase, 'execute'>;
   getManagedUser: Pick<GetManagedUserUseCase, 'execute'>;

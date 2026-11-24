@@ -6,7 +6,6 @@ import {
 import {
   ChangePasswordUseCase,
   CheckHealthUseCase,
-  CreateManagedUserUseCase,
   ForgotPasswordUseCase,
   GetCurrentUserUseCase,
   GetManagedUserUseCase,
@@ -51,7 +50,6 @@ import {
 
 import {
   AssignRouteUseCase,
-  CreateCourierUseCase,
   GetActiveCourierRouteUseCase,
   GetCouriersUseCase,
   HttpCourierGateway,
@@ -120,7 +118,6 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       resetPassword: new ResetPasswordUseCase(authGateway),
       getCurrentUser: new GetCurrentUserUseCase(authGateway),
       logout: new LogoutUseCase(authGateway),
-      createManagedUser: new CreateManagedUserUseCase(authGateway),
       changePassword: new ChangePasswordUseCase(authGateway),
       listManagedUsers: new ListManagedUsersUseCase(authGateway),
       getManagedUser: new GetManagedUserUseCase(authGateway),
@@ -158,7 +155,6 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       placeLateOrder: new PlaceLateOrderUseCase(routeGateway),
     },
     couriers: {
-      createCourier: new CreateCourierUseCase(courierGateway),
       getCouriers: new GetCouriersUseCase(courierGateway),
       updateAvailability: new UpdateCourierAvailabilityUseCase(courierGateway),
       assignRoute: new AssignRouteUseCase(courierGateway),

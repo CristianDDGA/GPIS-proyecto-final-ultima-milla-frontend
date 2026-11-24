@@ -7,7 +7,6 @@ import type {
   CourierFilters,
   CourierGateway,
   CourierPage,
-  CreateCourierInput,
 } from '../../domain/index.js';
 import {
   readActiveRouteEnvelope,
@@ -18,14 +17,6 @@ import {
 
 export class HttpCourierGateway implements CourierGateway {
   constructor(private readonly httpClient: HttpClient) {}
-
-  async createCourier(input: CreateCourierInput): Promise<Courier> {
-    const response = await this.httpClient.post<unknown>('/couriers', {
-      displayName: input.displayName,
-      maxOrdersPerTrip: Number(input.maxOrdersPerTrip),
-    });
-    return readCourier(response);
-  }
 
   async getCouriers(filters: CourierFilters = {}): Promise<CourierPage> {
     const query = new URLSearchParams();
