@@ -117,6 +117,7 @@ export const ZoneCoverageEditor: FC<ZoneCoverageEditorProps> = ({ zone, zones, o
             setLongitude(coords.longitude);
           }}
           radiusKm={Number.isFinite(radiusKm) ? radiusKm : null}
+        emptyHint="Aún no marcas el centro de la zona. Haz clic en el mapa o busca el lugar."
           overlays={overlays}
           height={320}
           disabled={isSaving}

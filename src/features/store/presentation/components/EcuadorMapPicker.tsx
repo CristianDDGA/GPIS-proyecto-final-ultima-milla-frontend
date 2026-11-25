@@ -37,6 +37,8 @@ export interface EcuadorMapPickerProps {
   readonly radiusKm?: number | null | undefined;
   /** Coberturas de otras zonas, dibujadas como referencia. */
   readonly overlays?: readonly MapCoverageOverlay[] | undefined;
+  /** Texto cuando aún no hay pin; por defecto el de dirección de entrega. */
+  readonly emptyHint?: string | undefined;
   /** Alto del mapa en px (por defecto lo fija el CSS: 230). */
   readonly height?: number | undefined;
 }
@@ -72,6 +74,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   onAddressSuggested,
   disabled = false,
   radiusKm = null,
+  emptyHint = 'Sin pin en el mapa (modo dirección manual). Haz clic en el mapa para marcar el destino.',
   overlays,
   height,
 }) => {
@@ -519,7 +522,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         <span className="wl-map-picker__coords">
           {latitude !== null && longitude !== null
             ? `Pin fijado: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}${isReversing ? ' · leyendo dirección...' : ''}`
-            : 'Sin pin en el mapa (modo dirección manual). Haz clic en el mapa para marcar el destino.'}
+            : emptyHint}
         </span>
 
         {latitude !== null && longitude !== null && (
