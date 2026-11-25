@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type FC } from 'react';
-import type { Zone } from '../../../zones/domain/index.js';
+import { isZoneActive, type Zone } from '../../../zones/domain/index.js';
 import {
   validateOrder,
   type CreateOrderInput,
@@ -79,7 +79,8 @@ export const OrderForm: FC<OrderFormProps> = ({
     }
   };
 
-  const zoneOptions = zones.map((z) => ({
+  // Una zona inactiva no recibe pedidos: no se ofrece al crear uno.
+  const zoneOptions = zones.filter(isZoneActive).map((z) => ({
     value: z.id,
     label: z.name,
   }));

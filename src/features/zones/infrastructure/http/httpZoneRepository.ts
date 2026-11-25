@@ -46,7 +46,8 @@ function isZone(value: unknown): value is Zone {
     value.name.trim().length > 0 &&
     isIsoTimestamp(value.createdAt) &&
     isIsoTimestamp(value.updatedAt) &&
-    isCoverageField(value.coverage)
+    isCoverageField(value.coverage) &&
+    (value.isActive === undefined || typeof value.isActive === 'boolean')
   );
 }
 
@@ -133,6 +134,11 @@ export class HttpZoneRepository implements ZoneRepository {
       `/zones/${encodeURIComponent(id)}/coverage`,
       { coverage },
     );
+    return readZonePayload(response);
+  }
+
+  public async setActive(id: string, isActive: boolean): Promise<Zone> {
+    const response = await this.httpClient.patch<unknown>(`/zones/${encodeURIComponent(id)}`, { isActive });
     return readZonePayload(response);
   }
 }

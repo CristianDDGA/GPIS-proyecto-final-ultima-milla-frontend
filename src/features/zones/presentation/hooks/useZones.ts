@@ -5,6 +5,7 @@ import {
   GetZoneByIdUseCase,
   GetZonesUseCase,
   SetZoneCoverageUseCase,
+  SetZoneActiveUseCase,
 } from '../../application/index.js';
 import { defaultZoneRepository } from '../../infrastructure/http/index.js';
 
@@ -23,6 +24,7 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
   const getZoneByIdUseCase = useMemo(() => new GetZoneByIdUseCase(repository), [repository]);
   const createZoneUseCase = useMemo(() => new CreateZoneUseCase(repository), [repository]);
   const setCoverageUseCase = useMemo(() => new SetZoneCoverageUseCase(repository), [repository]);
+  const setActiveUseCase = useMemo(() => new SetZoneActiveUseCase(repository), [repository]);
 
   const loadZones = useCallback(async () => {
     setIsLoading(true);
@@ -127,6 +129,27 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
     [setCoverageUseCase],
   );
 
+  /** Activa o desactiva una zona. El servidor rechaza desactivar con rutas o pedidos abiertos y su mensaje se muestra tal cual. */
+  const setActive = useCallback(
+    async (zone: Zone, isActive: boolean): Promise<boolean> => {
+      setError(null);
+      setSuccessMessage(null);
+      try {
+        const updated = await setActiveUseCase.execute(zone.id, isActive);
+        setZones((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        setSelectedZone((prev) => (prev?.id === updated.id ? updated : prev));
+        setSuccessMessage(
+          isActive ? `La zona "${updated.name}" quedó activa.` : `La zona "${updated.name}" quedó inactiva y ya no recibe pedidos.`,
+        );
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'No se pudo cambiar el estado de la zona.');
+        return false;
+      }
+    },
+    [setActiveUseCase],
+  );
+
   const clearFeedback = useCallback(() => {
     setError(null);
     setSuccessMessage(null);
@@ -150,6 +173,7 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
     clearSelectedZone,
     createZone,
     setCoverage,
+    setActive,
     clearFeedback,
   };
 }

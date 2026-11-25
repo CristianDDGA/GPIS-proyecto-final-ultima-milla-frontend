@@ -3,9 +3,10 @@ import { act, render, renderHook, screen, waitFor } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { HttpZoneRepository } from './infrastructure/http/httpZoneRepository.js';
 import { ZoneForm } from './presentation/components/ZoneForm.js';
+import { ZoneList } from './presentation/components/ZoneList.js';
 import { useZones } from './presentation/hooks/useZones.js';
-import { SetZoneCoverageUseCase } from './application/index.js';
-import { describeCoverage, validateCoverage } from './domain/index.js';
+import { SetZoneActiveUseCase, SetZoneCoverageUseCase } from './application/index.js';
+import { describeCoverage, isZoneActive, validateCoverage } from './domain/index.js';
 import type { Zone, ZoneCoverage, ZoneRepository } from './domain/index.js';
 import { HttpError } from '../../shared/infrastructure/http/httpClient.js';
 import { createFakeHttpClient, OTHER_UUID, VALID_UUID } from '../../test/fakeHttpClient.js';
@@ -128,6 +129,7 @@ describe('useZones', () => {
       getById: vi.fn(() => Promise.resolve(ZONE)),
       create: vi.fn((input: { name: string }) => Promise.resolve({ ...ZONE, id: 'nueva', name: input.name })),
       setCoverage: vi.fn((id: string, coverage: ZoneCoverage | null) => Promise.resolve({ ...ZONE, id, coverage })),
+      setActive: vi.fn((id: string, isActive: boolean) => Promise.resolve({ ...ZONE, id, isActive })),
       ...overrides,
     };
   }
@@ -237,6 +239,7 @@ describe('cobertura de zonas', () => {
       getById: vi.fn(),
       create: vi.fn(),
       setCoverage: vi.fn((id: string, coverage: ZoneCoverage | null) => Promise.resolve({ ...ZONE, id, coverage })),
+      setActive: vi.fn((id: string, isActive: boolean) => Promise.resolve({ ...ZONE, id, isActive })),
     };
     const useCase = new SetZoneCoverageUseCase(repo);
     await useCase.execute(VALID_UUID, { ...COVERAGE, radiusKm: 2.456 });
@@ -253,6 +256,7 @@ describe('cobertura de zonas', () => {
       getById: vi.fn(() => Promise.resolve(ZONE)),
       create: vi.fn(),
       setCoverage: vi.fn((id: string, coverage: ZoneCoverage | null) => Promise.resolve({ ...ZONE, id, coverage })),
+      setActive: vi.fn((id: string, isActive: boolean) => Promise.resolve({ ...ZONE, id, isActive })),
     };
     const { result } = renderHook(() => useZones(repo));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -268,5 +272,89 @@ describe('cobertura de zonas', () => {
     });
     expect(saved).toBe(false);
     expect(result.current.error).toMatch(/radio/);
+  });
+});
+
+describe('activar y desactivar zonas', () => {
+  const ACTIVE: Zone = { ...ZONE, isActive: true };
+  const INACTIVE: Zone = { ...ZONE, id: 'b3d2c1a0-9e8f-4a7b-8c6d-5e4f3a2b1c0d', name: 'Sur', isActive: false };
+
+  function repo(overrides: Partial<ZoneRepository> = {}): ZoneRepository {
+    return {
+      getAll: vi.fn(() => Promise.resolve([ACTIVE, INACTIVE])),
+      getById: vi.fn(() => Promise.resolve(ACTIVE)),
+      create: vi.fn(),
+      setCoverage: vi.fn(),
+      setActive: vi.fn((id: string, isActive: boolean) => Promise.resolve({ ...ACTIVE, id, isActive })),
+      ...overrides,
+    };
+  }
+
+  it('una zona sin el campo isActive (servidor antiguo) cuenta como activa', () => {
+    expect(isZoneActive(ZONE)).toBe(true);
+    expect(isZoneActive(ACTIVE)).toBe(true);
+    expect(isZoneActive(INACTIVE)).toBe(false);
+  });
+
+  it('el repositorio envía PATCH /zones/:id con isActive y lee la zona devuelta', async () => {
+    const http = createFakeHttpClient({ ...ZONE, isActive: false });
+    await expect(new HttpZoneRepository(http).setActive(VALID_UUID, false)).resolves.toEqual({ ...ZONE, isActive: false });
+    expect(http.patch).toHaveBeenCalledWith(`/zones/${VALID_UUID}`, { isActive: false });
+  });
+
+  it('el repositorio rechaza un isActive que no es booleano', async () => {
+    const http = createFakeHttpClient({ ...ZONE, isActive: 'si' });
+    await expect(new HttpZoneRepository(http).setActive(VALID_UUID, false)).rejects.toThrow(/contrato/);
+  });
+
+  it('el caso de uso valida el identificador antes de llamar al servidor', () => {
+    const r = repo();
+    const useCase = new SetZoneActiveUseCase(r);
+    expect(() => useCase.execute('no-es-uuid', false)).toThrow(/inválido/);
+    expect(r.setActive).not.toHaveBeenCalled();
+  });
+
+  it('useZones.setActive actualiza la lista y avisa', async () => {
+    const fake = repo();
+    const { result } = renderHook(() => useZones(fake));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    let done = false;
+    await act(async () => {
+      done = await result.current.setActive(ACTIVE, false);
+    });
+    expect(done).toBe(true);
+    expect(isZoneActive(result.current.zones.find((zone) => zone.id === ACTIVE.id)!)).toBe(false);
+    expect(result.current.successMessage).toMatch(/inactiva y ya no recibe pedidos/);
+  });
+
+  it('si el servidor rechaza (zona con trabajo abierto) se muestra su mensaje y la zona no cambia', async () => {
+    const setActive = vi.fn(() => Promise.reject(new HttpError(409, 'Conflict', { message: 'No se puede desactivar la zona: tiene rutas activas o pedidos sin cerrar.' })));
+    const fake = repo({ setActive });
+    const { result } = renderHook(() => useZones(fake));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    let done = true;
+    await act(async () => {
+      done = await result.current.setActive(ACTIVE, false);
+    });
+    expect(done).toBe(false);
+    expect(result.current.error).toMatch(/tiene rutas activas o pedidos sin cerrar/);
+    expect(isZoneActive(result.current.zones.find((zone) => zone.id === ACTIVE.id)!)).toBe(true);
+  });
+
+  it('la lista muestra el estado y el botón correcto según cada zona', async () => {
+    const onToggleActive = vi.fn();
+    render(<ZoneList zones={[ACTIVE, INACTIVE]} isLoading={false} onToggleActive={onToggleActive} />);
+    expect(screen.getByText('Activa')).toBeInTheDocument();
+    expect(screen.getByText('Inactiva')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: `Desactivar la zona ${ACTIVE.name}` }));
+    expect(onToggleActive).toHaveBeenCalledWith(ACTIVE);
+    await userEvent.click(screen.getByRole('button', { name: `Activar la zona ${INACTIVE.name}` }));
+    expect(onToggleActive).toHaveBeenLastCalledWith(INACTIVE);
+  });
+
+  it('sin permiso de administrador la lista no muestra el botón', () => {
+    render(<ZoneList zones={[ACTIVE]} isLoading={false} />);
+    expect(screen.queryByRole('button', { name: /Desactivar/ })).not.toBeInTheDocument();
   });
 });

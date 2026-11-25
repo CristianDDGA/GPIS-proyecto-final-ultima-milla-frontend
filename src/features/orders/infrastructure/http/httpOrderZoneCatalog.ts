@@ -29,4 +29,8 @@ export class HttpOrderZoneCatalog implements ZoneRepository {
   public setCoverage(id: string, coverage: ZoneCoverage | null): Promise<Zone> {
     return this.zoneRepository.setCoverage(id, coverage);
   }
+
+  public setActive(id: string, isActive: boolean): Promise<Zone> {
+    return this.zoneRepository.setActive(id, isActive);
+  }
 }
