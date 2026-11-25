@@ -12,6 +12,13 @@ export interface Zone {
   updatedAt: string;
   /** `null` o ausente: la zona no tiene cobertura y se elige a mano. */
   coverage?: ZoneCoverage | null | undefined;
+  /** `false`: no recibe pedidos ni entra en la planificación. Ausente cuenta como activa (servidor antiguo). */
+  isActive?: boolean | undefined;
+}
+
+/** Una zona activa recibe pedidos; las inactivas se conservan con su historial y cobertura. */
+export function isZoneActive(zone: Pick<Zone, 'isActive'>): boolean {
+  return zone.isActive !== false;
 }
 
 export const MIN_COVERAGE_RADIUS_KM = 0.1;
