@@ -9,6 +9,7 @@ import { SetZoneActiveUseCase, SetZoneCoverageUseCase } from './application/inde
 import { describeCoverage, isZoneActive, validateCoverage } from './domain/index.js';
 import type { Zone, ZoneCoverage, ZoneRepository } from './domain/index.js';
 import { HttpError } from '../../shared/infrastructure/http/httpClient.js';
+import { HttpOrderZoneCatalog } from '../orders/infrastructure/http/httpOrderZoneCatalog.js';
 import { createFakeHttpClient, OTHER_UUID, VALID_UUID } from '../../test/fakeHttpClient.js';
 
 // El mapa real usa teselas y búsqueda en línea: aquí se sustituye por un botón que marca un punto.
@@ -356,5 +357,28 @@ describe('activar y desactivar zonas', () => {
   it('sin permiso de administrador la lista no muestra el botón', () => {
     render(<ZoneList zones={[ACTIVE]} isLoading={false} />);
     expect(screen.queryByRole('button', { name: /Desactivar/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('HttpOrderZoneCatalog (adaptador de zonas para pedidos)', () => {
+  it('delega en el repositorio HTTP de zonas: lista, detalle, creación, cobertura y estado', async () => {
+    const http = createFakeHttpClient({ ...ZONE, isActive: true });
+    const catalog = new HttpOrderZoneCatalog(http);
+
+    await catalog.getById(VALID_UUID);
+    expect(http.get).toHaveBeenCalledWith(`/zones/${VALID_UUID}`);
+
+    await catalog.create({ name: 'Centro' });
+    expect(http.post).toHaveBeenCalledWith('/zones', { name: 'Centro' });
+
+    await catalog.setCoverage(VALID_UUID, { latitude: -1.25, longitude: -78.61, radiusKm: 3 });
+    expect(http.put).toHaveBeenCalledWith(`/zones/${VALID_UUID}/coverage`, { coverage: { latitude: -1.25, longitude: -78.61, radiusKm: 3 } });
+
+    await catalog.setActive(VALID_UUID, false);
+    expect(http.patch).toHaveBeenCalledWith(`/zones/${VALID_UUID}`, { isActive: false });
+
+    const listHttp = createFakeHttpClient({ items: [ZONE] });
+    await expect(new HttpOrderZoneCatalog(listHttp).getAll()).resolves.toEqual([ZONE]);
+    expect(listHttp.get).toHaveBeenCalledWith('/zones');
   });
 });
