@@ -8,6 +8,7 @@ import {
   MAX_COVERAGE_RADIUS_KM,
   MIN_COVERAGE_RADIUS_KM,
   parseRadius,
+  findOverlappingZones,
   validateCoverage,
   type Zone,
   type ZoneCoverage,
@@ -32,6 +33,11 @@ export const ZoneCoverageEditor: FC<ZoneCoverageEditorProps> = ({ zone, zones, o
   const [error, setError] = useState<string | null>(null);
 
   const radiusKm = parseRadius(radiusText);
+
+  const overlaps =
+    latitude !== null && longitude !== null && Number.isFinite(radiusKm)
+      ? findOverlappingZones({ latitude, longitude, radiusKm }, zones, zone.id)
+      : [];
 
   const overlays = useMemo<readonly MapCoverageOverlay[]>(() => {
     const result: MapCoverageOverlay[] = [];
@@ -122,6 +128,13 @@ export const ZoneCoverageEditor: FC<ZoneCoverageEditorProps> = ({ zone, zones, o
           height={320}
           disabled={isSaving}
         />
+
+        {overlaps.length > 0 && (
+          <Alert type="warning" title="Se solapa con otra zona">
+            Esta área se cruza con {overlaps.map((other) => other.name).join(', ')}. Un punto en la parte compartida se asigna a la
+            zona de centro más cercano.
+          </Alert>
+        )}
 
         <div className="zones-coverage__radius">
           <TextInput

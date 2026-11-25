@@ -11,6 +11,8 @@ import {
   type MoveOrderResult,
   type PlanRoutesInput,
   type PlanRoutesResult,
+  type PreviewPlanInput,
+  type RoutePlanPreview,
   type ReorderStopsInput,
   type ReorderStopsResult,
   type RouteDetail,
@@ -40,6 +42,20 @@ export class PlanRoutesUseCase {
 
     const idempotencyKey = input.idempotencyKey ?? crypto.randomUUID();
     return this.routeGateway.planRoutes({ serviceDate, capacityLimit: input.capacityLimit, idempotencyKey });
+  }
+}
+
+/** Calcula, sin crear nada, cuantas rutas saldrian por zona con esa fecha y capacidad. */
+export class PreviewPlanUseCase {
+  constructor(private readonly routeGateway: RouteGateway) {}
+
+  public async execute(input: PreviewPlanInput): Promise<RoutePlanPreview> {
+    const serviceDate = input.serviceDate.trim();
+    const validation = validatePlanRoutesInput({ serviceDate, capacityLimit: input.capacityLimit });
+    if (!validation.isValid) {
+      throw new Error(firstValidationError(validation.errors));
+    }
+    return this.routeGateway.previewPlan({ serviceDate, capacityLimit: input.capacityLimit });
   }
 }
 
@@ -162,6 +178,7 @@ export class PlaceLateOrderUseCase {
 
 export interface RouteUseCases {
   planRoutes: Pick<PlanRoutesUseCase, 'execute'>;
+  previewPlan: Pick<PreviewPlanUseCase, 'execute'>;
   getRoutes: Pick<GetRoutesUseCase, 'execute'>;
   getRouteById: Pick<GetRouteByIdUseCase, 'execute'>;
   reorderStops: Pick<ReorderRouteStopsUseCase, 'execute'>;

@@ -7,6 +7,8 @@ import type {
   MoveOrderResult,
   PlanRoutesInput,
   PlanRoutesResult,
+  PreviewPlanInput,
+  RoutePlanPreview,
   ReorderStopsInput,
   ReorderStopsResult,
   RouteDetail,
@@ -18,7 +20,7 @@ import {
   readCancelResult,
   readLatePlacementResult,
   readMoveResult,
-  readPlanResult,
+  readPlanPreview, readPlanResult,
   readReorderResult,
   readRouteDetail,
   readRouteSummaryList,
@@ -43,6 +45,11 @@ export class HttpRouteGateway implements RouteGateway {
       idempotencyOptions(input.idempotencyKey),
     );
     return readPlanResult(response);
+  }
+
+  public async previewPlan(input: PreviewPlanInput): Promise<RoutePlanPreview> {
+    const query = new URLSearchParams({ serviceDate: input.serviceDate, capacityLimit: String(Number(input.capacityLimit)) });
+    return readPlanPreview(await this.httpClient.get<unknown>(`/route-plans/preview?${query}`));
   }
 
   public async getRoutes(filters: RouteFilters = {}): Promise<RouteSummary[]> {

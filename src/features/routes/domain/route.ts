@@ -49,6 +49,31 @@ export interface PlanRoutesResult {
   routeIds: string[];
 }
 
+/** Lo que haria el plan con esa fecha y capacidad, sin crear nada (GET /route-plans/preview). */
+export interface RoutePlanPreviewZone {
+  zoneId: string;
+  zoneName: string;
+  orders: number;
+  routes: number;
+  /** Tamano de cada ruta que se crearia, en el orden en que se llenan. */
+  routeSizes: number[];
+}
+
+export interface RoutePlanPreview {
+  serviceDate: string;
+  capacityLimit: number;
+  zones: RoutePlanPreviewZone[];
+  totalOrders: number;
+  totalRoutes: number;
+  /** Repartidores habilitados y disponibles, sin ruta asignada ni en curso. */
+  availableCouriers: number;
+}
+
+export interface PreviewPlanInput {
+  serviceDate: string;
+  capacityLimit: number;
+}
+
 export interface ReorderStopsInput {
   routeId: string;
   orderIds: string[];

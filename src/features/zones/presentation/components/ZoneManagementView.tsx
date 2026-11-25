@@ -241,7 +241,7 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
         {canCreateZone && (
           <Card variant="elevated" className="zones-form-card">
             <h3 className="zones-form-card__title">Registrar nueva zona</h3>
-            <ZoneForm onSubmit={createZone} isSubmitting={isCreating} />
+            <ZoneForm onSubmit={createZone} isSubmitting={isCreating} existingZones={zones} />
           </Card>
         )}
 

@@ -1,3 +1,5 @@
+import { distanceKm, isWithinEcuador } from '../../../shared/geo.js';
+
 /** Círculo de cobertura de una zona: centro en el mapa y radio en km. */
 export interface ZoneCoverage {
   latitude: number;
@@ -24,9 +26,6 @@ export function isZoneActive(zone: Pick<Zone, 'isActive'>): boolean {
 export const MIN_COVERAGE_RADIUS_KM = 0.1;
 export const MAX_COVERAGE_RADIUS_KM = 50;
 
-/** Límites de Ecuador (incluye Galápagos), iguales a los del backend. */
-const ECUADOR_LAT = { min: -5.1, max: 1.5 } as const;
-const ECUADOR_LNG = { min: -92.5, max: -75.0 } as const;
 
 /** Regla de dominio: centro dentro de Ecuador y radio entre 0,1 y 50 km. */
 export function validateCoverage(coverage: ZoneCoverage): ZoneValidationResult {
@@ -34,12 +33,7 @@ export function validateCoverage(coverage: ZoneCoverage): ZoneValidationResult {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return { isValid: false, error: 'Marca el centro de la zona en el mapa.' };
   }
-  if (
-    latitude < ECUADOR_LAT.min ||
-    latitude > ECUADOR_LAT.max ||
-    longitude < ECUADOR_LNG.min ||
-    longitude > ECUADOR_LNG.max
-  ) {
+  if (!isWithinEcuador(latitude, longitude)) {
     return { isValid: false, error: 'El centro debe estar dentro de Ecuador.' };
   }
   if (
@@ -133,4 +127,29 @@ export function validateZoneName(name: string): ZoneValidationResult {
   }
 
   return { isValid: true };
+}
+
+/** true si el punto cae dentro del circulo de cobertura (misma regla que el servidor). */
+export function isPointInCoverage(coverage: ZoneCoverage | null | undefined, latitude: number, longitude: number): boolean {
+  if (!coverage) return false;
+  return distanceKm(coverage.latitude, coverage.longitude, latitude, longitude) <= coverage.radiusKm;
+}
+
+/**
+ * Zonas activas cuyo circulo se cruza con el de `coverage`. Es un aviso, no un bloqueo: un punto en la parte compartida
+ * se asigna a la zona de centro mas cercano.
+ */
+export function findOverlappingZones(
+  coverage: ZoneCoverage,
+  zones: readonly Zone[],
+  excludeId?: string,
+): Zone[] {
+  return zones.filter(
+    (zone) =>
+      zone.id !== excludeId &&
+      isZoneActive(zone) &&
+      zone.coverage != null &&
+      distanceKm(coverage.latitude, coverage.longitude, zone.coverage.latitude, zone.coverage.longitude) <
+        coverage.radiusKm + zone.coverage.radiusKm,
+  );
 }
