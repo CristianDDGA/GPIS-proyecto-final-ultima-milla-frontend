@@ -6,7 +6,7 @@ import { ZoneForm } from './presentation/components/ZoneForm.js';
 import { ZoneList } from './presentation/components/ZoneList.js';
 import { useZones } from './presentation/hooks/useZones.js';
 import { SetZoneActiveUseCase, SetZoneCoverageUseCase } from './application/index.js';
-import { describeCoverage, isZoneActive, validateCoverage } from './domain/index.js';
+import { describeCoverage, findOverlappingZones, isPointInCoverage, isZoneActive, validateCoverage } from './domain/index.js';
 import type { Zone, ZoneCoverage, ZoneRepository } from './domain/index.js';
 import { HttpError } from '../../shared/infrastructure/http/httpClient.js';
 import { HttpOrderZoneCatalog } from '../orders/infrastructure/http/httpOrderZoneCatalog.js';
@@ -380,5 +380,44 @@ describe('HttpOrderZoneCatalog (adaptador de zonas para pedidos)', () => {
     const listHttp = createFakeHttpClient({ items: [ZONE] });
     await expect(new HttpOrderZoneCatalog(listHttp).getAll()).resolves.toEqual([ZONE]);
     expect(listHttp.get).toHaveBeenCalledWith('/zones');
+  });
+});
+
+describe('cobertura: punto dentro y zonas solapadas', () => {
+  const CENTER: ZoneCoverage = { latitude: -1.2491, longitude: -78.6167, radiusKm: 5 };
+  const other = (id: string, name: string, coverage: ZoneCoverage | null, isActive = true): Zone => ({ ...ZONE, id, name, coverage, isActive });
+
+  it('isPointInCoverage compara contra el radio de la zona', () => {
+    expect(isPointInCoverage(CENTER, -1.2491, -78.6167)).toBe(true);
+    expect(isPointInCoverage(CENTER, -1.27, -78.6167)).toBe(true);
+    expect(isPointInCoverage(CENTER, -2.1894, -79.8891)).toBe(false);
+    expect(isPointInCoverage(null, -1.2491, -78.6167)).toBe(false);
+    expect(isPointInCoverage(undefined, -1.2491, -78.6167)).toBe(false);
+  });
+
+  it('findOverlappingZones avisa solo de zonas activas con cobertura que se cruzan, sin contar la propia', () => {
+    const near = other(OTHER_UUID, 'Ficoa', { latitude: -1.23, longitude: -78.62, radiusKm: 3 });
+    const far = other('b3d2c1a0-9e8f-4a7b-8c6d-5e4f3a2b1c0d', 'Quito Norte', { latitude: -0.18, longitude: -78.47, radiusKm: 3 });
+    const inactive = other('c4e3d2b1-0f9a-4b8c-9d7e-6f5a4b3c2d1e', 'Antigua', { latitude: -1.25, longitude: -78.62, radiusKm: 3 }, false);
+    const noCoverage = other('d5f4e3c2-1a0b-4c9d-8e7f-7a6b5c4d3e2f', 'Sin círculo', null);
+    const own = { ...ZONE, coverage: CENTER };
+
+    expect(findOverlappingZones(CENTER, [near, far, inactive, noCoverage, own], own.id).map((zone) => zone.name)).toEqual(['Ficoa']);
+    expect(findOverlappingZones(CENTER, [far])).toEqual([]);
+  });
+
+  it('el formulario de zona avisa (sin bloquear) cuando el área se solapa con otra zona', async () => {
+    const overlapping = other(OTHER_UUID, 'Ficoa', { latitude: -1.2491, longitude: -78.6167, radiusKm: 3 });
+    const onSubmit = vi.fn(() => Promise.resolve(true));
+    render(<ZoneForm onSubmit={onSubmit} existingZones={[overlapping]} />);
+    expect(screen.queryByText(/Se solapa con otra zona/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar punto de prueba' }));
+    expect(screen.getByText(/Se solapa con otra zona/)).toBeInTheDocument();
+    expect(screen.getByText(/Ficoa/)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/Nombre de la Zona/), 'Norte');
+    await userEvent.click(screen.getByRole('button', { name: 'Crear Zona' }));
+    expect(onSubmit).toHaveBeenCalled();
   });
 });

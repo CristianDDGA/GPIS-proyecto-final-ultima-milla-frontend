@@ -3,6 +3,8 @@ import {
   MAX_COVERAGE_RADIUS_KM,
   MIN_COVERAGE_RADIUS_KM,
   parseRadius,
+  findOverlappingZones,
+  type Zone,
   validateCoverage,
   validateZoneName,
   ZONE_NAME_MAX_LENGTH,
@@ -12,6 +14,8 @@ import { Alert, Button, TextInput } from '../../../../shared/ui/index.js';
 import { EcuadorMapPicker } from '../../../store/presentation/components/EcuadorMapPicker.js';
 
 export interface ZoneFormProps {
+  /** Zonas existentes: se usan para avisar si la nueva se solapa con otra. */
+  existingZones?: readonly Zone[] | undefined;
   /** Crea la zona con su cobertura. Devuelve `true` si se guardó. */
   onSubmit: (name: string, coverage: ZoneCoverage) => Promise<boolean>;
   isSubmitting?: boolean | undefined;
@@ -19,7 +23,7 @@ export interface ZoneFormProps {
 
 const DEFAULT_RADIUS_KM = 3;
 
-export const ZoneForm: FC<ZoneFormProps> = ({ onSubmit, isSubmitting = false }) => {
+export const ZoneForm: FC<ZoneFormProps> = ({ onSubmit, isSubmitting = false, existingZones = [] }) => {
   const [name, setName] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -29,6 +33,10 @@ export const ZoneForm: FC<ZoneFormProps> = ({ onSubmit, isSubmitting = false }) 
   const [touched, setTouched] = useState(false);
 
   const radiusKm = parseRadius(radiusText);
+  const overlaps =
+    latitude !== null && longitude !== null && Number.isFinite(radiusKm)
+      ? findOverlappingZones({ latitude, longitude, radiusKm }, existingZones)
+      : [];
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -119,6 +127,13 @@ export const ZoneForm: FC<ZoneFormProps> = ({ onSubmit, isSubmitting = false }) 
         height={280}
         disabled={isSubmitting}
       />
+
+      {overlaps.length > 0 && (
+        <Alert type="warning" title="Se solapa con otra zona">
+          Esta área se cruza con {overlaps.map((zone) => zone.name).join(', ')}. Un punto en la parte compartida se asigna a la zona
+          de centro más cercano.
+        </Alert>
+      )}
 
       <div className="zones-coverage__radius">
         <TextInput

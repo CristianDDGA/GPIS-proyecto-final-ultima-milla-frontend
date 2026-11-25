@@ -6,6 +6,8 @@ import type {
   MoveOrderResult,
   PlanRoutesInput,
   PlanRoutesResult,
+  PreviewPlanInput,
+  RoutePlanPreview,
   ReorderStopsInput,
   ReorderStopsResult,
   RouteDetail,
@@ -19,6 +21,8 @@ import type {
  */
 export interface RouteGateway {
   planRoutes(input: PlanRoutesInput): Promise<PlanRoutesResult>;
+  /** Solo lectura: lo que generaria planRoutes con los mismos datos. */
+  previewPlan(input: PreviewPlanInput): Promise<RoutePlanPreview>;
   getRoutes(filters?: RouteFilters): Promise<RouteSummary[]>;
   getRouteById(id: string): Promise<RouteDetail>;
   reorderStops(input: ReorderStopsInput): Promise<ReorderStopsResult>;

@@ -3,6 +3,7 @@ import type {
   LateOrderPlacementResult,
   MoveOrderResult,
   PlanRoutesResult,
+  RoutePlanPreview,
   ReorderStopsResult,
   RouteDetail,
   RouteStatus,
@@ -143,6 +144,47 @@ export function readPlanResult(value: unknown): PlanRoutesResult {
   ensure(isDateOnly(serviceDate));
 
   return { serviceDate, routeIds: readUuidList(routeIds) };
+}
+
+function readCount(value: unknown): number {
+  ensure(typeof value === 'number' && Number.isInteger(value) && value >= 0);
+  return value;
+}
+
+/** Valida la forma y la coherencia de la vista previa antes de mostrarla. */
+export function readPlanPreview(value: unknown): RoutePlanPreview {
+  ensure(isRecord(value));
+  const { serviceDate, capacityLimit, zones, totalOrders, totalRoutes, availableCouriers } = value;
+  ensure(isDateOnly(serviceDate));
+  ensure(typeof capacityLimit === 'number' && Number.isInteger(capacityLimit) && capacityLimit >= 1);
+  ensure(Array.isArray(zones));
+
+  const readZones = zones.map((item) => {
+    ensure(isRecord(item));
+    ensure(isUuid(item.zoneId) && typeof item.zoneName === 'string');
+    const orders = readCount(item.orders);
+    const routes = readCount(item.routes);
+    ensure(Array.isArray(item.routeSizes) && item.routeSizes.length === routes);
+    const routeSizes = item.routeSizes.map((size: unknown) => {
+      ensure(typeof size === 'number' && Number.isInteger(size) && size >= 1 && size <= capacityLimit);
+      return size;
+    });
+    ensure(routeSizes.reduce((sum, size) => sum + size, 0) === orders);
+    return { zoneId: item.zoneId, zoneName: item.zoneName, orders, routes, routeSizes };
+  });
+
+  const orders = readZones.reduce((sum, zone) => sum + zone.orders, 0);
+  const routes = readZones.reduce((sum, zone) => sum + zone.routes, 0);
+  ensure(readCount(totalOrders) === orders && readCount(totalRoutes) === routes);
+
+  return {
+    serviceDate,
+    capacityLimit,
+    zones: readZones,
+    totalOrders: orders,
+    totalRoutes: routes,
+    availableCouriers: readCount(availableCouriers),
+  };
 }
 
 export function readReorderResult(value: unknown): ReorderStopsResult {

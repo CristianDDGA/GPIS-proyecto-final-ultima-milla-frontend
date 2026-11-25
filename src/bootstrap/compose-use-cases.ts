@@ -44,6 +44,7 @@ import {
   MoveOrderUseCase,
   PlaceLateOrderUseCase,
   PlanRoutesUseCase,
+  PreviewPlanUseCase,
   ReorderRouteStopsUseCase,
   type RouteUseCases,
 } from '../features/routes/index.js';
@@ -147,6 +148,7 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
     },
     routes: {
       planRoutes: new PlanRoutesUseCase(routeGateway),
+      previewPlan: new PreviewPlanUseCase(routeGateway),
       getRoutes: new GetRoutesUseCase(routeGateway),
       getRouteById: new GetRouteByIdUseCase(routeGateway),
       reorderStops: new ReorderRouteStopsUseCase(routeGateway),

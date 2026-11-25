@@ -108,6 +108,11 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
             planError={routes.planError}
             planSuccess={routes.planSuccess}
             planResult={routes.planResult}
+            preview={routes.preview}
+            isPreviewing={routes.isPreviewing}
+            previewError={routes.previewError}
+            onPreview={routes.loadPreview}
+            onClearPreview={routes.clearPreview}
             onPlan={handlePlan}
             onClearFeedback={routes.clearPlanFeedback}
           />
