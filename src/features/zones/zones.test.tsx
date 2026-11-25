@@ -185,6 +185,7 @@ describe('useZones', () => {
     });
 
     expect(created).toBe(false);
+    expect(result.current.isCreating).toBe(false);
     expect(result.current.error).toMatch(/Ya existe/);
     expect(setCoverage).not.toHaveBeenCalled();
   });
