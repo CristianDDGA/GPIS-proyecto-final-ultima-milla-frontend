@@ -324,7 +324,7 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
                   disabled={isLoadingOrders}
                 />
                 <div className="orders-filters__actions">
-                  <Button type="submit" disabled={isLoadingOrders}>
+                  <Button type="submit" size="sm" disabled={isLoadingOrders}>
                     Filtrar
                   </Button>
                   <Button

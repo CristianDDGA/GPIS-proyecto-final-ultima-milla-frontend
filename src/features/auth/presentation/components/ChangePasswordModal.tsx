@@ -74,7 +74,7 @@ export const ChangePasswordModal: FC<ChangePasswordModalProps> = ({
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
           <Button

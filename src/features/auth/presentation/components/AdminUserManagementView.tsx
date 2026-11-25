@@ -227,7 +227,7 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
             onChange={(event) => setStatusFilter(event.target.value)}
           />
           <div className="wf-toolbar__filter-actions">
-            <Button type="submit" variant="secondary" size="sm">
+            <Button type="submit" variant="primary" size="sm">
               Filtrar
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>

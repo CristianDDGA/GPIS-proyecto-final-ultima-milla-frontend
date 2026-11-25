@@ -398,7 +398,7 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
                           size="sm"
                           onClick={() => openDeliverModal(stop)}
                         >
-                          Entregar y cobrar ({formatCents(stop.totalCents ?? 0)})
+                          Cobrar y entregar ({formatCents(stop.totalCents ?? 0)})
                         </Button>
                       )}
                       {canFail && (

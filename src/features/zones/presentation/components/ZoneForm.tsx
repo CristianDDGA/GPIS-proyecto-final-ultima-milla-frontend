@@ -115,6 +115,7 @@ export const ZoneForm: FC<ZoneFormProps> = ({ onSubmit, isSubmitting = false }) 
           }
         }}
         radiusKm={Number.isFinite(radiusKm) ? radiusKm : null}
+        emptyHint="Aún no marcas el centro de la zona. Haz clic en el mapa o busca el lugar."
         height={280}
         disabled={isSubmitting}
       />

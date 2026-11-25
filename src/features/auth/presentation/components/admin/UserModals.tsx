@@ -104,7 +104,7 @@ export const UserToggleModal: FC<UserToggleModalProps> = ({
     onClose={onClose}
     footer={
       <>
-        <Button type="button" variant="ghost" onClick={onClose}>
+        <Button type="button" variant="secondary" onClick={onClose}>
           Cancelar
         </Button>
         <Button
@@ -164,7 +164,7 @@ export const UserResetPasswordModal: FC<UserResetPasswordModalProps> = ({
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isResetting}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isResetting}>
             Cancelar
           </Button>
           <Button

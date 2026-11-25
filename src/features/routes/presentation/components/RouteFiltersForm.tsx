@@ -61,7 +61,7 @@ export const RouteFiltersForm: FC<RouteFiltersFormProps> = ({
         <Button type="submit" variant="primary" size="sm" disabled={isLoading}>
           Filtrar
         </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={onReset} disabled={isLoading}>
+        <Button type="button" variant="ghost" size="sm" onClick={onReset} disabled={isLoading}>
           Limpiar filtros
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onRefresh} isLoading={isLoading}>

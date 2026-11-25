@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toShortCode } from '../../../../shared/ui/ShortIdBadge/ShortIdBadge.js';
 import type {
   ActiveCourierRoute,
   AssignCourierResult,
@@ -224,7 +225,7 @@ export function useCouriers(useCases: CourierUseCases): UseCouriersResult {
       try {
         const result = await assignRoute.execute({ routeId, courierId });
         setSuccessMessage(
-          `Ruta ${result.routeId} asignada al repartidor ${result.courierId} correctamente.`,
+          `Ruta #RUT-${toShortCode(result.routeId)} asignada al repartidor #REP-${toShortCode(result.courierId)} correctamente.`,
         );
         await refreshCouriers();
         await refreshAssignableCouriers();
