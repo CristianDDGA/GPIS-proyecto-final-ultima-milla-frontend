@@ -194,7 +194,18 @@ export function RouteDetailModal({
                 </View>
                 <View style={styles.stopMeta}>
                   <ShortIdChip id={stop.orderId} prefix="PED" />
-                  <StatusBadge label={ORDER_STATUS_LABELS[stop.status]} tone="blue" />
+                  <StatusBadge
+                    label={ORDER_STATUS_LABELS[stop.status]}
+                    tone={
+                      stop.status === 'entregado'
+                        ? 'green'
+                        : stop.status === 'entrega_fallida'
+                          ? 'red'
+                          : stop.status === 'cancelado'
+                            ? 'neutral'
+                            : 'blue'
+                    }
+                  />
                   <Text style={[typography.caption, tabularNumbersStyle]}>
                     {`${stop.deliveryDate} ${stop.deliveryTime}`}
                   </Text>

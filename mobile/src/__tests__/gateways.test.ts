@@ -229,4 +229,94 @@ describe('Domain HTTP Gateways', () => {
     expect(approved.approvedCapacity).toBe(12);
     expect(approved.applicantEmail).toBe('lucia@millast.ec');
   });
+
+  it('parses backend d72058c statuses (entrega_fallida, cancelado) and Google verification', async () => {
+    const {client} = mockClient(call => {
+      if (call.url.includes('/auth/users')) {
+        return {
+          status: 200,
+          payload: {
+            items: [
+              {
+                id: 'u-google',
+                email: 'oauth@millast.ec',
+                role: 'cliente',
+                emailVerified: true,
+                emailVerifiedVia: 'google',
+                createdAt: '2026-11-24T00:00:00Z',
+              },
+            ],
+            total: 1,
+            limit: 15,
+            offset: 0,
+          },
+        };
+      }
+      if (call.url.includes('/orders')) {
+        return {
+          status: 200,
+          payload: {
+            items: [
+              {
+                id: 'o-fail',
+                zoneId: 'z1',
+                deliveryAddress: 'Av. Amazonas 100',
+                deliveryDate: '2026-11-25',
+                deliveryTime: '11:00',
+                status: 'entrega_fallida',
+              },
+              {
+                id: 'o-cancel',
+                zoneId: 'z1',
+                deliveryAddress: 'Av. Shyris 200',
+                deliveryDate: '2026-11-25',
+                deliveryTime: '12:00',
+                status: 'cancelado',
+              },
+            ],
+          },
+        };
+      }
+      if (call.url.includes('/routes/r-mix')) {
+        return {
+          status: 200,
+          payload: {
+            id: 'r-mix',
+            zoneId: 'z1',
+            serviceDate: '2026-11-25',
+            status: 'en_curso',
+            capacityLimit: 4,
+            occupiedSlots: 2,
+            stops: [
+              {orderId: 'o-fail', position: 1, deliveryAddress: 'A', status: 'entrega_fallida'},
+              {orderId: 'o-cancel', position: 2, deliveryAddress: 'B', status: 'cancelado'},
+            ],
+          },
+        };
+      }
+      return {
+        status: 200,
+        payload: {
+          orderId: 'o-fail',
+          routeId: 'r-mix',
+          status: 'entrega_fallida',
+          version: '3',
+          deliveredAt: null,
+          updatedAt: '2026-11-25T12:00:00Z',
+        },
+      };
+    });
+
+    const usersPage = await new HttpAuthGateway(client).listUsers();
+    expect(usersPage.items[0]?.emailVerifiedVia).toBe('google');
+
+    const orders = await new HttpOrderGateway(client).getAll();
+    expect(orders.map(o => o.status)).toEqual(['entrega_fallida', 'cancelado']);
+
+    const route = await new HttpRouteGateway(client).getRouteById('r-mix');
+    expect(route.stops.map(s => s.status)).toEqual(['entrega_fallida', 'cancelado']);
+
+    const delivery = await new HttpDeliveryGateway(client).getDeliveryOrder('o-fail');
+    expect(delivery.status).toBe('entrega_fallida');
+  });
 });

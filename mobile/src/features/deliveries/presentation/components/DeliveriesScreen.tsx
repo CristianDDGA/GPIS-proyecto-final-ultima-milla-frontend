@@ -43,6 +43,8 @@ const BADGE_TONE: Record<OrderStatus, BadgeTone> = {
   recogido: 'neutral',
   en_camino: 'blue',
   entregado: 'green',
+  entrega_fallida: 'red',
+  cancelado: 'neutral',
 };
 
 interface DeliveriesScreenProps {

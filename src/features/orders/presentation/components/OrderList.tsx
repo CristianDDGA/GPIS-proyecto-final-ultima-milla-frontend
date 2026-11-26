@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import type { Zone } from '../../../zones/domain/index.js';
 import type { Order } from '../../domain/index.js';
-import { Button, EmptyState, ShortIdBadge, Spinner } from '../../../../shared/ui/index.js';
+import { Button, EmptyState, ShortIdBadge, TableRowsSkeleton } from '../../../../shared/ui/index.js';
 
 const PAGE_SIZE = 15;
 
@@ -50,12 +50,7 @@ export const OrderList: FC<OrderListProps> = ({
   }, [zones]);
 
   if (isLoading && orders.length === 0) {
-    return (
-      <output className="orders-loading-container">
-        <Spinner size="lg" label="Cargando pedidos..." />
-        <p>Consultando pedidos registrados...</p>
-      </output>
-    );
+    return <TableRowsSkeleton rows={5} label="Consultando pedidos registrados..." />;
   }
 
   if (orders.length === 0) {

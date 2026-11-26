@@ -87,6 +87,7 @@ export function TextInputField({
           <Pressable
             accessibilityLabel={passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             accessibilityRole="button"
+            hitSlop={6}
             onPress={() => setPasswordVisible(prev => !prev)}
             style={styles.toggleBtn}>
             <Text style={styles.toggleText}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</Text>
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 44,
+    minHeight: 48,
     backgroundColor: colors.pureWhite,
     borderColor: colors.ashBorder,
     borderWidth: 1,

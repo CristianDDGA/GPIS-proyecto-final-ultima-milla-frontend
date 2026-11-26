@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import type { ManagedUser, PublicRole } from '../../../domain/index.js';
-import { Button, EmptyState } from '../../../../../shared/ui/index.js';
+import { Button, EmptyState, TableRowsSkeleton } from '../../../../../shared/ui/index.js';
 
 export const ROLE_LABELS: Record<PublicRole, string> = {
   admin: 'Administrador',
@@ -127,9 +127,7 @@ export const UserDirectoryTable: FC<UserDirectoryTableProps> = ({
         )}
 
         {isLoading && items.length === 0 && (
-          <p className="wf-table__loading" role="status">
-            Consultando el directorio de usuarios…
-          </p>
+          <TableRowsSkeleton rows={5} label="Consultando el directorio de usuarios..." />
         )}
       </div>
 

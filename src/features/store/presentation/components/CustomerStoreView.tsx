@@ -13,11 +13,14 @@ import {
   Button,
   Card,
   EmptyState,
+  KpiStrip,
   Modal,
-  SectionHeader,
+  PageHeader,
+  ProductGridSkeleton,
   Select,
   Spinner,
   TextInput,
+  TopRefetchBar,
 } from '../../../../shared/ui/index.js';
 import {
   MAX_LINE_QUANTITY,
@@ -447,8 +450,11 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({
 
   return (
     <section className="store-layout" aria-labelledby="customer-store-title">
-      <SectionHeader
+      <PageHeader
+        id="customer-store-title"
+        eyebrow="Cliente · Tienda Contra Entrega"
         title="Tienda Millast"
+        subtitle="Explora productos disponibles, fija tu punto exacto en el mapa y paga al recibir tu pedido."
         actions={
           <div
             className="segmented store-tabs"
@@ -496,9 +502,17 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({
           </div>
         }
       />
-      <h2 id="customer-store-title" className="sr-only">
-        Tienda Millast para clientes
-      </h2>
+
+      <TopRefetchBar active={isLoadingProducts && products.length > 0} label="Actualizando catálogo" />
+
+      <KpiStrip
+        ariaLabel="Resumen de tu tienda"
+        items={[
+          { label: 'Productos disponibles', value: total, hint: 'Catálogo activo en stock', tone: 'blue' },
+          { label: 'En tu carrito', value: cartUnits, hint: formatCents(cartTotalCents), tone: cartUnits > 0 ? 'green' : 'neutral' },
+          { label: 'Direcciones guardadas', value: savedAddresses.length, hint: 'Listas para envío rápido', tone: 'neutral' },
+        ]}
+      />
 
       {tab === 'catalog' && (
         <Card className="store-card">
@@ -598,9 +612,7 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({
           )}
 
           {isLoadingProducts && products.length === 0 ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '36px' }}>
-              <Spinner size="lg" label="Cargando catálogo..." />
-            </div>
+            <ProductGridSkeleton count={6} />
           ) : products.length === 0 ? (
             <EmptyState
               title="No se encontraron productos"
@@ -623,6 +635,7 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({
                             alt={product.name}
                             className="store-product-card__img"
                             loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <span className="store-product-card__placeholder">{product.category.name}</span>

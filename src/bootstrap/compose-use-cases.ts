@@ -10,7 +10,6 @@ import {
   ForgotPasswordUseCase,
   GetCurrentUserUseCase,
   GetManagedUserUseCase,
-  HttpAuthGateway,
   ListManagedUsersUseCase,
   LoginUseCase,
   LoginWithGoogleUseCase,
@@ -22,48 +21,51 @@ import {
   SetManagedUserActiveUseCase,
   VerifyEmailUseCase,
   type AuthUseCases,
-} from '../features/auth/index.js';
+} from '../features/auth/application/index.js';
+import { HttpAuthGateway } from '../features/auth/infrastructure/http/index.js';
 
 import {
   CreateOrderUseCase,
   GetOrderByIdUseCase,
   GetOrdersUseCase,
+  type OrderUseCases,
+} from '../features/orders/application/index.js';
+import {
   HttpOrderGateway,
   HttpOrderZoneCatalog,
-  type OrderUseCases,
-} from '../features/orders/index.js';
+} from '../features/orders/infrastructure/http/index.js';
 
-import { GetZonesUseCase } from '../features/zones/index.js';
+import { GetZonesUseCase } from '../features/zones/application/index.js';
 
 import {
   CancelRouteUseCase,
   GetRouteByIdUseCase,
   GetRoutesUseCase,
-  HttpRouteGateway,
   MoveOrderUseCase,
   PlaceLateOrderUseCase,
   PlanRoutesUseCase,
   ReorderRouteStopsUseCase,
   type RouteUseCases,
-} from '../features/routes/index.js';
+} from '../features/routes/application/index.js';
+import { HttpRouteGateway } from '../features/routes/infrastructure/http/index.js';
 
 import {
   AssignRouteUseCase,
   CreateCourierUseCase,
   GetActiveCourierRouteUseCase,
   GetCouriersUseCase,
-  HttpCourierGateway,
   UpdateCourierAvailabilityUseCase,
   type CourierUseCases,
-} from '../features/couriers/index.js';
+} from '../features/couriers/application/index.js';
+import { HttpCourierGateway } from '../features/couriers/infrastructure/http/index.js';
 
 import {
   ChangeDeliveryStatusUseCase,
   CompleteRouteUseCase,
   GetDeliveryOrderUseCase,
-  HttpDeliveryGateway,
   type DeliveryUseCases,
-} from '../features/deliveries/index.js';
+} from '../features/deliveries/application/index.js';
+import { HttpDeliveryGateway } from '../features/deliveries/infrastructure/http/index.js';
 
 import {
   ApproveApplicationUseCase,
@@ -72,15 +74,15 @@ import {
   GetApplicationUseCase,
   GetMyApplicationFileUseCase,
   GetMyApplicationUseCase,
-  HttpCourierApplicationGateway,
   ListApplicationsUseCase,
   RejectApplicationUseCase,
   SaveApplicationDraftUseCase,
   SubmitApplicationUseCase,
   UploadApplicationFileUseCase,
   type CourierApplicationUseCases,
-} from '../features/courier-applications/index.js';
-import { HttpStoreGateway } from '../features/store/index.js';
+} from '../features/courier-applications/application/index.js';
+import { HttpCourierApplicationGateway } from '../features/courier-applications/infrastructure/http/index.js';
+import { HttpStoreGateway } from '../features/store/infrastructure/http/httpStoreGateway.js';
 
 export interface AppUseCases {
   readonly auth: AuthUseCases;

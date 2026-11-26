@@ -47,6 +47,8 @@ const STATUS_TONE: Record<OrderStatus, BadgeTone> = {
   recogido: 'neutral',
   en_camino: 'blue',
   entregado: 'green',
+  entrega_fallida: 'red',
+  cancelado: 'neutral',
 };
 
 interface OrdersScreenProps {
@@ -270,6 +272,7 @@ export function OrdersScreen({
                   <Pressable
                     key={item.label}
                     accessibilityRole="button"
+                    hitSlop={4}
                     onPress={() => setDeliveryDate(item.iso)}
                     style={[
                       styles.dateChip,
@@ -322,6 +325,7 @@ export function OrdersScreen({
             <Pressable
               key={item.label}
               accessibilityRole="button"
+              hitSlop={4}
               onPress={() => setFilterDate(item.iso)}
               style={[
                 styles.dateChip,
@@ -455,28 +459,38 @@ export function OrdersScreen({
 
             <Card>
               <Text style={typography.cardTitle}>Progreso operativo</Text>
-              <View style={styles.timeline}>
-                {ORDER_TIMELINE.map(step => {
-                  const activeIdx = ORDER_TIMELINE.findIndex(c => c.status === detailOrder.status);
-                  const stepIdx = ORDER_TIMELINE.findIndex(c => c.status === step.status);
-                  const done = stepIdx < activeIdx;
-                  const current = stepIdx === activeIdx;
-                  return (
-                    <View key={step.status} style={styles.timelineRow}>
-                      <View
-                        style={[
-                          styles.dot,
-                          done && styles.dotDone,
-                          current && styles.dotCurrent,
-                        ]}
-                      />
-                      <Text style={[styles.timelineLabel, current && styles.timelineLabelActive]}>
-                        {step.label}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
+              {detailOrder.status === 'entrega_fallida' || detailOrder.status === 'cancelado' ? (
+                <AlertBanner
+                  title={ORDER_STATUS_LABELS[detailOrder.status]}
+                  type={detailOrder.status === 'entrega_fallida' ? 'error' : 'info'}>
+                  {detailOrder.status === 'entrega_fallida'
+                    ? 'La entrega no pudo completarse en ruta.'
+                    : 'Este pedido fue cancelado y ya no avanza en la línea operativa.'}
+                </AlertBanner>
+              ) : (
+                <View style={styles.timeline}>
+                  {ORDER_TIMELINE.map(step => {
+                    const activeIdx = ORDER_TIMELINE.findIndex(c => c.status === detailOrder.status);
+                    const stepIdx = ORDER_TIMELINE.findIndex(c => c.status === step.status);
+                    const done = stepIdx < activeIdx;
+                    const current = stepIdx === activeIdx;
+                    return (
+                      <View key={step.status} style={styles.timelineRow}>
+                        <View
+                          style={[
+                            styles.dot,
+                            done && styles.dotDone,
+                            current && styles.dotCurrent,
+                          ]}
+                        />
+                        <Text style={[styles.timelineLabel, current && styles.timelineLabelActive]}>
+                          {step.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </Card>
 
             {onNavigateToRoutes ? (
@@ -515,14 +529,16 @@ const styles = StyleSheet.create({
   filterActions: {flexDirection: 'row', gap: spacing.sm},
   quickDateRow: {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs},
   dateChip: {
-    minHeight: 34,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 6,
+    minHeight: 40,
+    minWidth: 48,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
     borderRadius: radii.control,
     borderWidth: 1,
     borderColor: colors.ashBorder,
     backgroundColor: colors.pureWhite,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   dateChipActive: {borderColor: colors.webflowBlue, backgroundColor: colors.blueTintBg},
   dateChipText: {fontFamily: fontFamilySans, fontSize: 12, fontWeight: '500', color: colors.slate},

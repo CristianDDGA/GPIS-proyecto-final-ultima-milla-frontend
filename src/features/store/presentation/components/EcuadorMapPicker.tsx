@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type FC,
+  type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
   type WheelEvent,
@@ -42,10 +43,14 @@ interface NominatimHit {
   readonly lon: string;
 }
 
+const DRAG_COMMIT_THRESHOLD_PX = 128;
+
 /**
- * Selector interactivo de coordenadas en mapa real de calles de Ecuador (cero dependencias).
- * Soporta selector de ciudad, capas Calles HD / OpenStreetMap, zoom con rueda/doble clic,
- * clic para fijar pin, arrastre para desplazar, búsqueda Nominatim y geocodificación inversa.
+ * Selector interactivo de coordenadas estilo Uber Pickup en Ecuador (cero dependencias).
+ * - Capas [Uber | Calles | Satélite] con grading Uber Minimal sin API key
+ * - Arrastre GPU 60-120fps con translate3d + física de elevación del pin al arrastrar
+ * - Geolocalización GPS ("Mi ubicación") validada dentro de Ecuador
+ * - Búsqueda en vivo (debounce 450ms) + botón Buscar + geocodificación inversa Nominatim
  */
 export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   latitude,
@@ -60,15 +65,17 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       : DEFAULT_ECUADOR_CENTER,
   );
   const [zoom, setZoom] = useState(14);
-  const [layer, setLayer] = useState<MapLayerStyle>('osm');
+  const [layer, setLayer] = useState<MapLayerStyle>('uber');
   const [failedSatellite, setFailedSatellite] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<readonly NominatimHit[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [mapNotice, setMapNotice] = useState<string | null>(null);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const panStageRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{
     active: boolean;
     moved: boolean;
@@ -76,7 +83,20 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     startY: number;
     startWorldX: number;
     startWorldY: number;
-  }>({ active: false, moved: false, startX: 0, startY: 0, startWorldX: 0, startWorldY: 0 });
+    dx: number;
+    dy: number;
+    rafId: number;
+  }>({
+    active: false,
+    moved: false,
+    startX: 0,
+    startY: 0,
+    startWorldX: 0,
+    startWorldY: 0,
+    dx: 0,
+    dy: 0,
+    rafId: 0,
+  });
   const lastNominatimRef = useRef(0);
 
   useEffect(() => {
@@ -84,6 +104,14 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       setCenter({ lat: latitude, lng: longitude });
     }
   }, [latitude, longitude]);
+
+  useEffect(() => {
+    return () => {
+      if (dragRef.current.rafId) {
+        cancelAnimationFrame(dragRef.current.rafId);
+      }
+    };
+  }, []);
 
   const reverseGeocode = useCallback(
     async (lat: number, lng: number) => {
@@ -114,36 +142,54 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     [onAddressSuggested],
   );
 
-  const handleSearch = async () => {
-    const q = searchQuery.trim();
-    if (q.length < 3 || isSearching) return;
-    const now = Date.now();
-    if (now - lastNominatimRef.current < 1050) {
-      setMapNotice('Espera un segundo antes de buscar de nuevo.');
-      return;
-    }
-    lastNominatimRef.current = now;
-    setIsSearching(true);
-    setMapNotice(null);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=ec&limit=4&accept-language=es&q=${encodeURIComponent(q)}`,
-      );
-      if (!res.ok) {
-        setSearchResults([]);
+  const runSearch = useCallback(
+    async (queryText: string, silentThrottle = false) => {
+      const q = queryText.trim();
+      if (q.length < 3) return;
+      const now = Date.now();
+      if (now - lastNominatimRef.current < 1050) {
+        if (!silentThrottle) {
+          setMapNotice('Espera un segundo antes de buscar de nuevo.');
+        }
         return;
       }
-      const hits = (await res.json()) as NominatimHit[];
-      setSearchResults(Array.isArray(hits) ? hits : []);
-      if (!Array.isArray(hits) || hits.length === 0) {
-        setMapNotice('No se encontraron direcciones en Ecuador para esa búsqueda.');
+      lastNominatimRef.current = now;
+      setIsSearching(true);
+      setMapNotice(null);
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=ec&limit=4&accept-language=es&q=${encodeURIComponent(q)}`,
+        );
+        if (!res.ok) {
+          setSearchResults([]);
+          return;
+        }
+        const hits = (await res.json()) as NominatimHit[];
+        setSearchResults(Array.isArray(hits) ? hits : []);
+        if (!Array.isArray(hits) || hits.length === 0) {
+          setMapNotice('No se encontraron direcciones en Ecuador para esa búsqueda.');
+        }
+      } catch {
+        setMapNotice('No se pudo consultar el buscador del mapa. Puedes fijar el pin manualmente.');
+      } finally {
+        setIsSearching(false);
       }
-    } catch {
-      setMapNotice('No se pudo consultar el buscador del mapa. Puedes fijar el pin manualmente.');
-    } finally {
-      setIsSearching(false);
+    },
+    [],
+  );
+
+  // Búsqueda automática con debounce de 450ms para >= 4 caracteres
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (disabled || q.length < 4) {
+      if (q.length === 0) setSearchResults([]);
+      return;
     }
-  };
+    const timer = window.setTimeout(() => {
+      void runSearch(q, true);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [disabled, runSearch, searchQuery]);
 
   const applySearchHit = (hit: NominatimHit) => {
     const lat = Number.parseFloat(hit.lat);
@@ -163,12 +209,41 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     }
   };
 
+  const handleLocateMe = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (disabled) return;
+    setMapNotice(null);
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setMapNotice('Tu navegador no soporta geolocalización.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (!isWithinEcuador(lat, lng)) {
+          setMapNotice('Tu ubicación GPS actual queda fuera de Ecuador.');
+          return;
+        }
+        const clamped = clampEcuadorLatLng(lat, lng);
+        setCenter(clamped);
+        setZoom(16);
+        onChange({ latitude: clamped.lat, longitude: clamped.lng });
+        void reverseGeocode(clamped.lat, clamped.lng);
+      },
+      () => {
+        setMapNotice('No se pudo obtener tu ubicación GPS. Fija el pin manualmente.');
+      },
+      { enableHighAccuracy: true, timeout: 6000 },
+    );
+  };
+
   const centerWorld = useMemo(
     () => latLngToWorld(center.lat, center.lng, zoom),
     [center.lat, center.lng, zoom],
   );
 
-  const activeLayer: MapLayerStyle = failedSatellite ? 'osm' : layer;
+  const activeLayer: MapLayerStyle = failedSatellite && layer === 'satellite' ? 'uber' : layer;
 
   const tiles = useMemo(() => {
     const maxIndex = Math.pow(2, zoom);
@@ -184,8 +259,9 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         const wrappedX = ((tx % maxIndex) + maxIndex) % maxIndex;
         const pixelLeft = tx * MAP_TILE_SIZE - centerWorld.x;
         const pixelTop = ty * MAP_TILE_SIZE - centerWorld.y;
+        const cacheLayer = activeLayer === 'satellite' ? 'sat' : 'osm';
         result.push({
-          key: `${activeLayer}-${zoom}-${wrappedX}-${ty}`,
+          key: `${cacheLayer}-${zoom}-${wrappedX}-${ty}`,
           url: tileUrlFor(activeLayer, zoom, wrappedX, ty),
           fallbackUrl: tileUrlFor('osm', zoom, wrappedX, ty),
           left: pixelLeft,
@@ -205,11 +281,18 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     };
   }, [centerWorld.x, centerWorld.y, latitude, longitude, zoom]);
 
+  const resetStageTransform = () => {
+    if (panStageRef.current) {
+      panStageRef.current.style.transform = 'translate3d(0px, 0px, 0px)';
+    }
+  };
+
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (disabled) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest('button')) return;
     event.currentTarget.setPointerCapture(event.pointerId);
+    setIsDragging(true);
     dragRef.current = {
       active: true,
       moved: false,
@@ -217,29 +300,73 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       startY: event.clientY,
       startWorldX: centerWorld.x,
       startWorldY: centerWorld.y,
+      dx: 0,
+      dy: 0,
+      rafId: dragRef.current.rafId,
     };
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragRef.current.active || disabled) return;
-    const dx = event.clientX - dragRef.current.startX;
-    const dy = event.clientY - dragRef.current.startY;
+    const d = dragRef.current;
+    if (!d.active || disabled) return;
+    const dx = event.clientX - d.startX;
+    const dy = event.clientY - d.startY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-      dragRef.current.moved = true;
+      d.moved = true;
     }
-    const next = worldToLatLng(
-      dragRef.current.startWorldX - dx,
-      dragRef.current.startWorldY - dy,
-      zoom,
-    );
-    setCenter(clampEcuadorLatLng(next.lat, next.lng));
+    d.dx = dx;
+    d.dy = dy;
+
+    if (Math.hypot(dx, dy) >= DRAG_COMMIT_THRESHOLD_PX) {
+      const next = worldToLatLng(d.startWorldX - dx, d.startWorldY - dy, zoom);
+      const clamped = clampEcuadorLatLng(next.lat, next.lng);
+      const nextWorld = latLngToWorld(clamped.lat, clamped.lng, zoom);
+      d.startX = event.clientX;
+      d.startY = event.clientY;
+      d.startWorldX = nextWorld.x;
+      d.startWorldY = nextWorld.y;
+      d.dx = 0;
+      d.dy = 0;
+      resetStageTransform();
+      setCenter(clamped);
+      return;
+    }
+
+    if (!d.rafId) {
+      d.rafId = requestAnimationFrame(() => {
+        d.rafId = 0;
+        if (panStageRef.current && d.active) {
+          panStageRef.current.style.transform = `translate3d(${d.dx}px, ${d.dy}px, 0px)`;
+        }
+      });
+    }
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragRef.current.active) return;
-    const wasDrag = dragRef.current.moved;
-    dragRef.current.active = false;
-    if (!wasDrag && viewportRef.current && !disabled) {
+    const d = dragRef.current;
+    if (!d.active) return;
+    const wasDrag = d.moved;
+    const finalDx = d.dx;
+    const finalDy = d.dy;
+    d.active = false;
+    d.dx = 0;
+    d.dy = 0;
+    setIsDragging(false);
+    if (d.rafId) {
+      cancelAnimationFrame(d.rafId);
+      d.rafId = 0;
+    }
+    resetStageTransform();
+
+    if (wasDrag) {
+      if (Math.abs(finalDx) > 1 || Math.abs(finalDy) > 1) {
+        const next = worldToLatLng(d.startWorldX - finalDx, d.startWorldY - finalDy, zoom);
+        setCenter(clampEcuadorLatLng(next.lat, next.lng));
+      }
+      return;
+    }
+
+    if (viewportRef.current && !disabled) {
       const rect = viewportRef.current.getBoundingClientRect();
       const offsetX = event.clientX - rect.left - rect.width / 2;
       const offsetY = event.clientY - rect.top - rect.height / 2;
@@ -263,10 +390,44 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     );
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    const stepPx = 64;
+    if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1));
+    } else if (event.key === '-' || event.key === '_') {
+      event.preventDefault();
+      setZoom((z) => Math.max(MAP_MIN_ZOOM, z - 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      const next = worldToLatLng(centerWorld.x, centerWorld.y - stepPx, zoom);
+      setCenter(clampEcuadorLatLng(next.lat, next.lng));
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      const next = worldToLatLng(centerWorld.x, centerWorld.y + stepPx, zoom);
+      setCenter(clampEcuadorLatLng(next.lat, next.lng));
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      const next = worldToLatLng(centerWorld.x - stepPx, centerWorld.y, zoom);
+      setCenter(clampEcuadorLatLng(next.lat, next.lng));
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      const next = worldToLatLng(centerWorld.x + stepPx, centerWorld.y, zoom);
+      setCenter(clampEcuadorLatLng(next.lat, next.lng));
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      const clamped = clampEcuadorLatLng(center.lat, center.lng);
+      setMapNotice(null);
+      onChange({ latitude: clamped.lat, longitude: clamped.lng });
+      void reverseGeocode(clamped.lat, clamped.lng);
+    }
+  };
+
   const stopBtn = (e: MouseEvent<HTMLButtonElement>) => e.stopPropagation();
 
   return (
-    <div className="wl-map-picker">
+    <div className="wl-map-picker" data-map-layer={activeLayer}>
       <div className="wl-map-picker__search">
         <TextInput
           id="map-search-ecuador"
@@ -280,7 +441,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() => void handleSearch()}
+          onClick={() => void runSearch(searchQuery, false)}
           isLoading={isSearching}
           disabled={disabled || searchQuery.trim().length < 3}
         >
@@ -306,6 +467,13 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
           ))}
         </div>
         <div className="route-map-tools-right">
+          <button
+            type="button"
+            className={'route-map-chip' + (activeLayer === 'uber' ? ' route-map-chip--active' : '')}
+            onClick={() => setLayer('uber')}
+          >
+            Uber
+          </button>
           <button
             type="button"
             className={'route-map-chip' + (activeLayer === 'osm' ? ' route-map-chip--active' : '')}
@@ -344,47 +512,65 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
 
       <div
         ref={viewportRef}
-        className="wl-map-picker__viewport"
-        role="application"
-        aria-label="Mapa de Ecuador para elegir punto de entrega. Haz clic para fijar el pin o arrastra para mover."
+        className={'wl-map-picker__viewport' + (isDragging ? ' wl-map-picker__viewport--dragging' : '')}
+        role="region"
+        tabIndex={disabled ? -1 : 0}
+        aria-label="Mapa de Ecuador para elegir punto de entrega. Haz clic o pulsa Enter para fijar el pin, usa flechas para mover y + o - para zoom."
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onWheel={handleWheel}
+        onKeyDown={handleKeyDown}
       >
-        <div className="wl-map-picker__tiles" aria-hidden="true">
-          {tiles.map((tile) => (
-            <img
-              key={tile.key}
-              src={tile.url}
-              alt=""
-              draggable={false}
-              className="wl-map-picker__tile"
-              style={{
-                transform: `translate3d(${Math.round(tile.left)}px, ${Math.round(tile.top)}px, 0)`,
-              }}
-              onError={(event) => {
-                if (activeLayer === 'satellite') {
-                  setFailedSatellite(true);
-                  event.currentTarget.src = tile.fallbackUrl;
-                }
-              }}
-            />
-          ))}
-        </div>
-
-        {pinOffset !== null && (
+        <div ref={panStageRef} className="wl-map-picker__stage">
           <div
-            className="wl-map-picker__pin"
+            className={
+              'wl-map-picker__tiles' + (activeLayer === 'uber' ? ' wl-map-picker__tiles--uber' : '')
+            }
             aria-hidden="true"
-            style={{
-              transform: `translate3d(${Math.round(pinOffset.dx)}px, ${Math.round(pinOffset.dy)}px, 0)`,
-            }}
           >
-            <span className="wl-map-picker__pin-dot" />
+            {tiles.map((tile) => (
+              <img
+                key={tile.key}
+                src={tile.url}
+                alt=""
+                draggable={false}
+                className="wl-map-picker__tile"
+                style={{
+                  transform: `translate3d(${Math.round(tile.left)}px, ${Math.round(tile.top)}px, 0)`,
+                }}
+                onLoad={(event) => {
+                  event.currentTarget.classList.add('wl-map-picker__tile--loaded');
+                }}
+                onError={(event) => {
+                  if (activeLayer === 'satellite') {
+                    setFailedSatellite(true);
+                    event.currentTarget.src = tile.fallbackUrl;
+                  } else {
+                    event.currentTarget.classList.add('wl-map-picker__tile--loaded');
+                  }
+                }}
+              />
+            ))}
           </div>
-        )}
+
+          {pinOffset !== null && (
+            <div
+              className={'wl-map-picker__pin' + (isDragging ? ' wl-map-picker__pin--lifted' : '')}
+              aria-hidden="true"
+              style={{
+                transform: `translate3d(${Math.round(pinOffset.dx)}px, ${Math.round(pinOffset.dy)}px, 0)`,
+              }}
+            >
+              <span className="wl-map-picker__pin-head">
+                <span className="wl-map-picker__pin-core" />
+              </span>
+              <span className="wl-map-picker__pin-stem" />
+              <span className="wl-map-picker__pin-shadow" />
+            </div>
+          )}
+        </div>
 
         <div className="wl-map-picker__zoom">
           <button
@@ -408,6 +594,23 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
             }}
           >
             −
+          </button>
+          <button
+            type="button"
+            className="wl-map-picker__zoom-btn"
+            aria-label="Usar mi ubicación GPS"
+            title="Usar mi ubicación GPS"
+            onClick={handleLocateMe}
+          >
+            <svg viewBox="0 0 18 18" width="14" height="14" fill="none" aria-hidden="true">
+              <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.7" />
+              <path
+                d="M9 2.2v2.2M9 13.6v2.2M2.2 9h2.2M13.6 9h2.2"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
         </div>
 

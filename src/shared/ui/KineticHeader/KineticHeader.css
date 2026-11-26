@@ -37,24 +37,18 @@
 }
 
 h1.kinetic-header__title {
-  font-size: clamp(32px, 3.6vw, 48px);
-  line-height: 1.04;
-}
-
-.kinetic-header__word {
-  display: inline-block;
-  animation: kinetic-word-rise 220ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  font-size: 36px;
+  line-height: 1.08;
 }
 
 .kinetic-header__description {
   margin: 4px 0 0;
-  max-width: 42rem;
-  color: var(--color-slate, #5a5a5a);
-  font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
+  max-width: 65ch;
+  color: var(--color-slate, #334155);
+  font-family: var(--font-wf-visual-sans-variable, 'Plus Jakarta Sans', 'Inter', sans-serif);
   font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
-  animation: kinetic-fade 480ms var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 .kinetic-header__actions {

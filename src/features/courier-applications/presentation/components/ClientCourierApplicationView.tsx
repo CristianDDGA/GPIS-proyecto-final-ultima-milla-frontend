@@ -6,7 +6,13 @@ import {
   FILE_KIND_LABELS,
   VEHICLE_TYPE_LABELS,
 } from '../../domain/index.js';
-import { Alert, Button, Card, KineticHeader, Spinner } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  Card,
+  PageHeader,
+  StopCardsSkeleton,
+} from '../../../../shared/ui/index.js';
 import { useMyCourierApplication } from '../hooks/useMyCourierApplication.js';
 import { ClientApplicationDocumentsCard } from './ClientApplicationDocumentsCard.js';
 import { ClientApplicationFormCard } from './ClientApplicationFormCard.js';
@@ -68,27 +74,28 @@ export const ClientCourierApplicationView: FC<ClientCourierApplicationViewProps>
 
   return (
     <section className="wf-client-layout" aria-labelledby="client-application-title">
-      <KineticHeader
+      <PageHeader
         id="client-application-title"
-        level="h2"
+        eyebrow="Cliente · Postulación"
         title="Postulación a repartidor"
+        subtitle="Completa tus datos, sube tu licencia y fotografía, y envía tu solicitud para operar en flota."
+        badge={
+          status !== null ? (
+            <span className={`wf-client-status wf-client-status--${status}`}>
+              {APPLICATION_STATUS_LABELS[status]}
+            </span>
+          ) : undefined
+        }
         actions={
-          <div className="wf-client-header-actions">
-            {status !== null && (
-              <span className={`wf-client-status wf-client-status--${status}`}>
-                {APPLICATION_STATUS_LABELS[status]}
-              </span>
-            )}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              isLoading={isLoading}
-              onClick={() => void reload()}
-            >
-              {isLoading ? 'Actualizando...' : '↻ Actualizar'}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            isLoading={isLoading}
+            onClick={() => void reload()}
+          >
+            {isLoading ? 'Actualizando...' : '↻ Actualizar'}
+          </Button>
         }
       />
 
@@ -105,10 +112,7 @@ export const ClientCourierApplicationView: FC<ClientCourierApplicationViewProps>
       )}
 
       {isLoading && application === null ? (
-        <Card variant="outlined" className="wf-client-loading">
-          <Spinner size="md" label="Consultando solicitud..." />
-          <p role="status">Consultando el estado de tu solicitud...</p>
-        </Card>
+        <StopCardsSkeleton count={2} label="Consultando el estado de tu solicitud..." />
       ) : isReadOnlyStatus && application !== null ? (
         <div className="wf-client-grid">
           <Card variant="elevated" className="wf-client-card">

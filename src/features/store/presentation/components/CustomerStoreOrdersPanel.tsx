@@ -9,8 +9,11 @@ import {
   RouteStopsMap,
   Select,
   ShortIdBadge,
-  Spinner,
+  Skeleton,
+  TableRowsSkeleton,
   TextInput,
+  TopRefetchBar,
+  wazeDirectionsUrl,
 } from '../../../../shared/ui/index.js';
 import {
   CANCEL_REASONS,
@@ -211,10 +214,10 @@ export const CustomerStoreOrdersPanel: FC<CustomerStoreOrdersPanelProps> = ({
         </Alert>
       )}
 
+      <TopRefetchBar active={isLoading && orders.length > 0} label="Actualizando tus pedidos" />
+
       {isLoading && orders.length === 0 ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '28px' }}>
-          <Spinner size="md" label="Cargando pedidos de tienda..." />
-        </div>
+        <TableRowsSkeleton rows={4} label="Cargando tus pedidos de tienda" />
       ) : orders.length === 0 ? (
         <EmptyState
           title="Aún no tienes compras en la tienda"
@@ -383,13 +386,57 @@ export const CustomerStoreOrdersPanel: FC<CustomerStoreOrdersPanelProps> = ({
               ) : null}
             </p>
 
+            {/* Barra de progreso de entrega estilo Uber Eats */}
+            {(() => {
+              const stages = [
+                { key: 'pendiente', label: 'Recibido' },
+                { key: 'asignado_a_ruta', label: 'En ruta' },
+                { key: 'en_camino', label: 'En camino' },
+                { key: 'entregado', label: 'Entregado' },
+              ] as const;
+              const isAlert = detail.status === 'entrega_fallida' || detail.status === 'cancelado';
+              const stageIdx =
+                detail.status === 'entregado'
+                  ? 3
+                  : detail.status === 'en_camino'
+                    ? 2
+                    : detail.status === 'asignado_a_ruta'
+                      ? 1
+                      : 0;
+              return (
+                <div className="store-track-steps" aria-label="Progreso de tu entrega">
+                  {stages.map((st, idx) => {
+                    const cls = isAlert
+                      ? idx === 0
+                        ? 'store-track-step store-track-step--alert'
+                        : 'store-track-step'
+                      : idx < stageIdx
+                        ? 'store-track-step store-track-step--done'
+                        : idx === stageIdx
+                          ? 'store-track-step store-track-step--current'
+                          : 'store-track-step';
+                    return (
+                      <div key={st.key} className={cls}>
+                        <span className="store-track-step__bar" />
+                        <span className="store-track-step__label">
+                          {isAlert && idx === 0
+                            ? (STORE_ORDER_STATUS_LABELS[detail.status] ?? detail.status)
+                            : st.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {detail.deliveryLatitude !== null && detail.deliveryLongitude !== null && (
               <>
                 <RouteStopsMap
-                  title="Ubicación de entrega"
+                  title="Seguimiento en mapa"
                   subtitle={detail.deliveryAddress}
                   compact
-                  height={240}
+                  height={250}
                   showRoutePolyline={false}
                   selectedOrderId={detail.id}
                   stops={[
@@ -410,20 +457,28 @@ export const CustomerStoreOrdersPanel: FC<CustomerStoreOrdersPanelProps> = ({
                 />
                 <div className="store-map-links">
                   <a
+                    href={googleMapsDirectionsUrl(detail.deliveryLatitude, detail.deliveryLongitude)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="store-map-link"
+                  >
+                    Abrir en Google Maps ↗
+                  </a>
+                  <a
+                    href={wazeDirectionsUrl(detail.deliveryLatitude, detail.deliveryLongitude)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="store-map-link"
+                  >
+                    Abrir en Waze ↗
+                  </a>
+                  <a
                     href={osmDirectionsUrl(detail.deliveryLatitude, detail.deliveryLongitude)}
                     target="_blank"
                     rel="noreferrer"
                     className="store-map-link"
                   >
                     Ver pin en OpenStreetMap
-                  </a>
-                  <a
-                    href={googleMapsDirectionsUrl(detail.deliveryLatitude, detail.deliveryLongitude)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="store-map-link"
-                  >
-                    Abrir en Google Maps
                   </a>
                 </div>
               </>
@@ -532,7 +587,12 @@ export const CustomerStoreOrdersPanel: FC<CustomerStoreOrdersPanelProps> = ({
               isRequired
             />
             {isLoadingSlots ? (
-              <Spinner size="sm" label="Consultando franjas..." />
+              <div className="store-slots-grid" role="status" aria-busy="true" aria-label="Consultando franjas">
+                <Skeleton height={52} radius={16} />
+                <Skeleton height={52} radius={16} />
+                <Skeleton height={52} radius={16} />
+                <Skeleton height={52} radius={16} />
+              </div>
             ) : reschedSlots.length === 0 ? (
               <p className="wf-modal__paragraph">No hay franjas disponibles para la fecha seleccionada.</p>
             ) : (

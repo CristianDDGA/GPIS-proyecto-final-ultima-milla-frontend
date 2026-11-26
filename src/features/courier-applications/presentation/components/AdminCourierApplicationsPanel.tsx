@@ -9,7 +9,15 @@ import {
   type ApplicationStatus,
   type FileKind,
 } from '../../domain/index.js';
-import { Alert, Button, EmptyState, Select, TextInput } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  EmptyState,
+  Select,
+  TableRowsSkeleton,
+  TextInput,
+  TopRefetchBar,
+} from '../../../../shared/ui/index.js';
 import {
   ApplicationReviewInspector,
   formatApplicationDate,
@@ -267,6 +275,7 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
         }
       >
         <div className="wf-table-wrap">
+          <TopRefetchBar active={isLoading && items.length > 0} label="Actualizando solicitudes" />
           <table className="wf-table" aria-label="Solicitudes de repartidor">
             <thead>
               <tr>
@@ -328,9 +337,9 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
             />
           )}
           {isLoading && items.length === 0 && (
-            <p className="wf-table__loading" role="status">
-              Consultando solicitudes…
-            </p>
+            <div style={{ padding: '14px' }}>
+              <TableRowsSkeleton rows={5} label="Cargando solicitudes de repartidor" />
+            </div>
           )}
         </div>
 

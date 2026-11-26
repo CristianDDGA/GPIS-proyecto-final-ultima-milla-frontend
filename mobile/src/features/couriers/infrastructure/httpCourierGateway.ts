@@ -36,7 +36,9 @@ function asActiveStopStatus(value: unknown): ActiveStopStatus {
     value === 'asignado_a_ruta' ||
     value === 'recogido' ||
     value === 'en_camino' ||
-    value === 'entregado'
+    value === 'entregado' ||
+    value === 'entrega_fallida' ||
+    value === 'cancelado'
   ) {
     return value;
   }

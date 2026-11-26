@@ -274,6 +274,7 @@ export function RoutesScreen({
                     <Pressable
                       key={item.label}
                       accessibilityRole="button"
+                      hitSlop={4}
                       onPress={() => setPlanDate(item.iso)}
                       style={[
                         styles.dateChip,
@@ -375,6 +376,7 @@ export function RoutesScreen({
             <Pressable
               key={item.label}
               accessibilityRole="button"
+              hitSlop={4}
               onPress={() => setFilterDate(item.iso)}
               style={[
                 styles.dateChip,
@@ -553,14 +555,16 @@ const styles = StyleSheet.create({
   rowActions: {flexDirection: 'row', gap: spacing.sm},
   quickDateRow: {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs},
   dateChip: {
-    minHeight: 34,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 6,
+    minHeight: 40,
+    minWidth: 48,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
     borderRadius: radii.control,
     borderWidth: 1,
     borderColor: colors.ashBorder,
     backgroundColor: colors.pureWhite,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   dateChipActive: {borderColor: colors.webflowBlue, backgroundColor: colors.blueTintBg},
   dateChipText: {fontFamily: fontFamilySans, fontSize: 12, fontWeight: '500', color: colors.slate},

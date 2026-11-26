@@ -4,13 +4,16 @@ import {
   Button,
   Card,
   EmptyState,
+  KpiStrip,
   Modal,
+  PageHeader,
   RouteStopsMap,
-  SectionHeader,
   Select,
   ShortIdBadge,
   Spinner,
+  StopCardsSkeleton,
   TextInput,
+  TopRefetchBar,
 } from '../../../../shared/ui/index.js';
 import {
   FAILURE_REASONS,
@@ -204,10 +207,18 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
     '--seg-count': 2,
   } as CSSProperties;
 
+  const pendingCodCents = orders
+    .filter((o) => o.isStoreOrder && o.status !== 'entregado' && o.status !== 'cancelado')
+    .reduce((acc, o) => acc + (o.totalCents ?? 0), 0);
+  const onRoadCount = orders.filter((o) => o.status === 'en_camino').length;
+
   return (
     <section className="store-layout" aria-labelledby="courier-store-title">
-      <SectionHeader
+      <PageHeader
+        id="courier-store-title"
+        eyebrow="Reparto · Contra Entrega"
         title="Cobros contra entrega y caja"
+        subtitle="Mapa interactivo de tus paradas COD, registro de cobro exacto y cuadre diario de efectivo."
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <div
@@ -248,9 +259,20 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
           </div>
         }
       />
-      <h2 id="courier-store-title" className="sr-only">
-        Cobros contra entrega y caja del repartidor
-      </h2>
+
+      <TopRefetchBar
+        active={(isLoadingOrders && orders.length > 0) || isLoadingCash}
+        label="Actualizando paradas y caja"
+      />
+
+      <KpiStrip
+        ariaLabel="Resumen de cobros del repartidor"
+        items={[
+          { label: 'Paradas activas', value: orders.length, hint: 'Con detalle de tienda', tone: 'blue' },
+          { label: 'En camino ahora', value: onRoadCount, hint: 'Listas para entregar/cobrar', tone: onRoadCount > 0 ? 'green' : 'neutral' },
+          { label: 'Por cobrar (COD)', value: formatCents(pendingCodCents), hint: 'Pendiente en paradas abiertas', tone: 'amber' },
+        ]}
+      />
 
       {feedback && (
         <Alert
@@ -281,9 +303,7 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
           )}
 
           {isLoadingOrders && orders.length === 0 ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
-              <Spinner size="md" label="Cargando paradas de tienda..." />
-            </div>
+            <StopCardsSkeleton count={3} label="Cargando paradas de tienda..." />
           ) : orders.length === 0 ? (
             <EmptyState
               title="Sin paradas activas"
@@ -321,12 +341,7 @@ export const CourierStoreView: FC<CourierStoreViewProps> = ({ storeGateway, onOr
                   return (
                     <li
                       key={stop.orderId}
-                      className="store-stop-card"
-                      style={
-                        isFocused
-                          ? { borderColor: 'rgba(22, 104, 243, 0.52)', backgroundColor: 'rgba(238, 245, 255, 0.90)' }
-                          : undefined
-                      }
+                      className={'store-stop-card' + (isFocused ? ' store-stop-card--focused' : '')}
                     >
                       <div className="store-stop-card__head">
                         <div>

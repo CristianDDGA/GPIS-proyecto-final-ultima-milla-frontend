@@ -8,10 +8,12 @@ import {
   Alert,
   Button,
   Card,
-  KineticHeader,
+  KpiStrip,
+  PageHeader,
   Select,
   ShortIdBadge,
   TextInput,
+  TopRefetchBar,
 } from '../../../../shared/ui/index.js';
 import '../styles/orders.css';
 
@@ -134,13 +136,19 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
 
   const isRefreshing = isLoadingZones || isLoadingOrders;
   const activeFilters = Boolean(location.deliveryDate || location.zoneId);
+  const pendingCount = orders.filter((o) => o.status === 'pendiente').length;
+  const activeRouteCount = orders.filter(
+    (o) => o.status === 'asignado_a_ruta' || o.status === 'recogido' || o.status === 'en_camino',
+  ).length;
+  const deliveredCount = orders.filter((o) => o.status === 'entregado').length;
 
   return (
     <section className="orders-layout" aria-labelledby="orders-view-title">
-      <KineticHeader
+      <PageHeader
         id="orders-view-title"
-        level="h2"
+        eyebrow="Operación · Pedidos"
         title="Gestión de pedidos"
+        subtitle="Seguimiento de estado, programación por zona y ventana horaria de entrega."
         actions={
           <Button
             type="button"
@@ -153,6 +161,18 @@ export const OrderManagementView: FC<OrderManagementViewProps> = ({
             {isRefreshing ? 'Actualizando...' : '↻ Actualizar'}
           </Button>
         }
+      />
+
+      <TopRefetchBar active={isRefreshing && orders.length > 0} label="Actualizando pedidos" />
+
+      <KpiStrip
+        ariaLabel="Resumen de pedidos"
+        items={[
+          { label: 'Total pedidos', value: orders.length, hint: activeFilters ? 'Con filtros activos' : 'Registrados', tone: 'neutral' },
+          { label: 'Pendientes', value: pendingCount, hint: 'Listos para planificar', tone: pendingCount > 0 ? 'amber' : 'neutral' },
+          { label: 'En operación', value: activeRouteCount, hint: 'Asignados o en camino', tone: 'blue' },
+          { label: 'Entregados', value: deliveredCount, hint: 'Completados con éxito', tone: 'green' },
+        ]}
       />
 
       {error && (

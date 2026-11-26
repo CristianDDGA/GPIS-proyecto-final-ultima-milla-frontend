@@ -15,7 +15,15 @@ import { RouteDetailPanel } from './RouteDetailPanel.js';
 import { RouteFiltersForm } from './RouteFiltersForm.js';
 import { RoutePlannerCard } from './RoutePlannerCard.js';
 import { RouteTable } from './RouteTable.js';
-import { Alert, Button, Card, KineticHeader, Spinner } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  Card,
+  KpiStrip,
+  PageHeader,
+  Spinner,
+  TopRefetchBar,
+} from '../../../../shared/ui/index.js';
 import '../styles/routes.css';
 
 export interface RouteManagementViewProps {
@@ -69,12 +77,20 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
     return result;
   };
 
+  const activeRoutesCount = routes.routes.filter(
+    (r) => r.status === 'asignada' || r.status === 'en_curso',
+  ).length;
+  const totalOccupied = routes.routes.reduce((sum, r) => sum + r.occupiedSlots, 0);
+  const totalCapacity = routes.routes.reduce((sum, r) => sum + r.capacityLimit, 0);
+  const unassignedPendingCount = pending.filter((o) => o.status === 'pendiente').length;
+
   return (
     <section className="routes-layout" aria-labelledby="routes-view-title">
-      <KineticHeader
+      <PageHeader
         id="routes-view-title"
-        level="h2"
+        eyebrow="Despacho · Planificación"
         title="Planificación y operaciones de ruta"
+        subtitle="Genera rutas por fecha de servicio, reordena paradas e inspecciona el trazado vial."
         actions={
           <Button
             type="button"
@@ -87,6 +103,28 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
             ↻ Actualizar
           </Button>
         }
+      />
+
+      <TopRefetchBar active={routes.isLoadingRoutes && routes.routes.length > 0} label="Actualizando rutas" />
+
+      <KpiStrip
+        ariaLabel="Resumen de planificación de rutas"
+        items={[
+          { label: 'Rutas listadas', value: routes.routes.length, hint: 'Según filtros actuales', tone: 'neutral' },
+          { label: 'Activas / Asignadas', value: activeRoutesCount, hint: 'En curso o listas', tone: 'blue' },
+          {
+            label: 'Ocupación',
+            value: totalCapacity > 0 ? `${totalOccupied}/${totalCapacity}` : '0/0',
+            hint: 'Cupos asignados vs límite',
+            tone: 'green',
+          },
+          {
+            label: 'Pendientes sin ruta',
+            value: unassignedPendingCount,
+            hint: 'Disponibles para planificar',
+            tone: unassignedPendingCount > 0 ? 'amber' : 'neutral',
+          },
+        ]}
       />
 
       {routes.error && (

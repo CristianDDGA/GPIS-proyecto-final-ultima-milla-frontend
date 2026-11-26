@@ -15,7 +15,7 @@ import {
   Card,
   EmptyState,
   ShortIdBadge,
-  Spinner,
+  StopCardsSkeleton,
 } from '../../../../shared/ui/index.js';
 
 export interface DeliveryStopListProps {
@@ -140,10 +140,7 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
       ) : null}
 
       {isLoadingRoute && (
-        <div className="deliveries-loading" role="status">
-          <Spinner size="md" label="Cargando hoja de ruta activa..." />
-          <p>Consultando la hoja de ruta asignada...</p>
-        </div>
+        <StopCardsSkeleton count={3} label="Consultando la hoja de ruta asignada..." />
       )}
 
       {!isLoadingRoute && routeError && (
@@ -220,7 +217,7 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
                 className={`deliveries-progress__fill ${
                   allClosed ? 'deliveries-progress__fill--complete' : ''
                 }`.trim()}
-                style={{ width: `${progressPercent}%` }}
+                style={{ transform: `scaleX(${Math.max(0, Math.min(1, progressPercent / 100))})` }}
               />
             </div>
           </div>

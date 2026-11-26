@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -147,6 +148,27 @@ function MillastMobileShell() {
     }
   }, [currentRole]);
 
+  useEffect(() => {
+    if (!currentRole) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (moreSheetOpen) {
+        setMoreSheetOpen(false);
+        return true;
+      }
+      if (passwordModalOpen) {
+        setPasswordModalOpen(false);
+        return true;
+      }
+      const defaultTab = DEFAULT_TAB_BY_ROLE[currentRole];
+      if (activeTab !== defaultTab) {
+        setActiveTab(defaultTab);
+        return true;
+      }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [activeTab, currentRole, moreSheetOpen, passwordModalOpen]);
+
   const loadSharedCatalog = useCallback(async () => {
     if (!currentRole) return;
     setIsLoadingCatalog(true);
@@ -272,6 +294,8 @@ function MillastMobileShell() {
           <Pressable
             accessibilityLabel="Cambiar contraseña"
             accessibilityRole="button"
+            android_ripple={{color: 'rgba(22, 104, 243, 0.14)'}}
+            hitSlop={6}
             onPress={() => setPasswordModalOpen(true)}
             style={styles.headerBtn}>
             <Text style={styles.headerBtnText}>Clave</Text>
@@ -279,6 +303,8 @@ function MillastMobileShell() {
           <Pressable
             accessibilityLabel="Cerrar sesión"
             accessibilityRole="button"
+            android_ripple={{color: 'rgba(22, 104, 243, 0.14)'}}
+            hitSlop={6}
             onPress={handleLogout}
             style={styles.headerBtn}>
             <Text style={styles.headerBtnText}>Salir</Text>
@@ -546,7 +572,8 @@ const styles = StyleSheet.create({
     color: colors.pureWhite,
   },
   headerBtn: {
-    minHeight: 34,
+    minHeight: 40,
+    minWidth: 44,
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -554,6 +581,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.ashBorder,
     backgroundColor: colors.pureWhite,
+    overflow: 'hidden',
   },
   headerBtnText: {
     fontFamily: fontFamilySans,

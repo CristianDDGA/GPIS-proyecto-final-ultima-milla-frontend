@@ -9,7 +9,9 @@ export type StopOrderStatus =
   | 'asignado_a_ruta'
   | 'recogido'
   | 'en_camino'
-  | 'entregado';
+  | 'entregado'
+  | 'entrega_fallida'
+  | 'cancelado';
 
 export interface RouteSummary {
   readonly id: string;

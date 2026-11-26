@@ -4,11 +4,17 @@ export const MAP_TILE_SIZE = 256;
 export const MAP_MIN_ZOOM = 6;
 export const MAP_MAX_ZOOM = 18;
 
-export type MapLayerStyle = 'osm' | 'satellite';
+export type MapLayerStyle = 'uber' | 'osm' | 'satellite';
 
 export interface LatLng {
   readonly lat: number;
   readonly lng: number;
+}
+
+export interface RouteChevron {
+  readonly x: number;
+  readonly y: number;
+  readonly angleDeg: number;
 }
 
 export interface EcuadorCityPreset {
@@ -60,6 +66,10 @@ export function tileUrlFor(layer: MapLayerStyle, z: number, x: number, y: number
   return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
 }
 
+export function wazeDirectionsUrl(lat: number, lng: number): string {
+  return `https://waze.com/ul?ll=${lat.toFixed(6)},${lng.toFixed(6)}&navigate=yes`;
+}
+
 export function computeFitView(
   points: readonly LatLng[],
   viewportWidth: number,
@@ -93,7 +103,7 @@ export function computeFitView(
   };
 
   const usableW = Math.max(160, viewportWidth - 110);
-  const usableH = Math.max(120, viewportHeight - 110);
+  const usableH = Math.max(120, viewportHeight - 130);
 
   for (let z = 16; z >= MAP_MIN_ZOOM; z -= 1) {
     const sw = latLngToWorld(minLat, minLng, z);
@@ -106,6 +116,50 @@ export function computeFitView(
   }
 
   return { center, zoom: MAP_MIN_ZOOM };
+}
+
+export function sampleRouteChevrons(
+  screenPoints: readonly { readonly x: number; readonly y: number }[],
+  maxCount = 6,
+): readonly RouteChevron[] {
+  if (screenPoints.length < 2 || maxCount <= 0) return [];
+
+  const segLengths: number[] = [];
+  let totalLen = 0;
+  for (let i = 1; i < screenPoints.length; i += 1) {
+    const a = screenPoints[i - 1]!;
+    const b = screenPoints[i]!;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    segLengths.push(len);
+    totalLen += len;
+  }
+
+  if (totalLen < 96) return [];
+
+  const count = Math.min(maxCount, Math.max(1, Math.floor(totalLen / 110)));
+  const step = totalLen / (count + 1);
+  const chevrons: RouteChevron[] = [];
+
+  let segIdx = 0;
+  let walked = 0;
+  for (let c = 1; c <= count; c += 1) {
+    const target = step * c;
+    while (segIdx < segLengths.length - 1 && walked + segLengths[segIdx]! < target) {
+      walked += segLengths[segIdx]!;
+      segIdx += 1;
+    }
+    const segLen = segLengths[segIdx] ?? 0;
+    if (segLen < 1) continue;
+    const t = Math.min(1, Math.max(0, (target - walked) / segLen));
+    const a = screenPoints[segIdx]!;
+    const b = screenPoints[segIdx + 1]!;
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    const angleDeg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+    chevrons.push({ x, y, angleDeg });
+  }
+
+  return chevrons;
 }
 
 export function googleMapsMultiStopUrl(points: readonly LatLng[]): string | null {
@@ -137,7 +191,20 @@ export interface DrivingRouteGeometry {
   readonly isRoadGeometry: boolean;
 }
 
+const MAX_ROUTE_CACHE_ENTRIES = 40;
 const routeGeometryCache = new Map<string, DrivingRouteGeometry>();
+
+function cacheSetRouteGeometry(key: string, value: DrivingRouteGeometry): void {
+  if (routeGeometryCache.has(key)) {
+    routeGeometryCache.delete(key);
+  } else if (routeGeometryCache.size >= MAX_ROUTE_CACHE_ENTRIES) {
+    const oldestKey = routeGeometryCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      routeGeometryCache.delete(oldestKey);
+    }
+  }
+  routeGeometryCache.set(key, value);
+}
 
 function haversineMeters(a: LatLng, b: LatLng): number {
   const R = 6371000;
@@ -183,7 +250,11 @@ export async function fetchDrivingRouteGeometry(
 
   const cacheKey = waypoints.map((w) => `${w.lat.toFixed(5)},${w.lng.toFixed(5)}`).join(';');
   const cached = routeGeometryCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    // Promoción LRU
+    cacheSetRouteGeometry(cacheKey, cached);
+    return cached;
+  }
 
   const coordString = waypoints.map((w) => `${w.lng.toFixed(6)},${w.lat.toFixed(6)}`).join(';');
   const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
@@ -210,7 +281,7 @@ export async function fetchDrivingRouteGeometry(
       durationSeconds: typeof first?.duration === 'number' ? Math.round(first.duration) : null,
       isRoadGeometry: true,
     };
-    routeGeometryCache.set(cacheKey, geometry);
+    cacheSetRouteGeometry(cacheKey, geometry);
     return geometry;
   } catch {
     return directFallbackGeometry(waypoints);

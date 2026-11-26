@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {
+  AccessibilityInfo,
   Animated,
   Pressable,
   StyleSheet,
@@ -21,31 +22,48 @@ interface SegmentedControlProps<T extends string> {
   readonly onChange: (value: T) => void;
 }
 
-/** Control segmentado deslizante estilo Webflow (`#F0F0F0` pista, indicador `#FFFFFF` con borde). */
+/** Control segmentado deslizante Waterline (`#F3F7FC` pista, indicador `#FFFFFF` con borde). */
 export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
 }: SegmentedControlProps<T>) {
   const [trackWidth, setTrackWidth] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const selectedIndex = Math.max(
     0,
     options.findIndex(option => option.value === value),
   );
   const translateX = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(enabled => {
+        if (active) setReduceMotion(enabled);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const itemWidth = options.length > 0 && trackWidth > 0 ? (trackWidth - 6) / options.length : 0;
 
   useEffect(() => {
     if (itemWidth <= 0) return;
+    if (reduceMotion) {
+      translateX.setValue(selectedIndex * itemWidth);
+      return;
+    }
     Animated.spring(translateX, {
       toValue: selectedIndex * itemWidth,
-      damping: 22,
-      stiffness: 240,
+      damping: 26,
+      stiffness: 260,
       mass: 0.7,
       useNativeDriver: true,
     }).start();
-  }, [itemWidth, selectedIndex, translateX]);
+  }, [itemWidth, reduceMotion, selectedIndex, translateX]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     setTrackWidth(event.nativeEvent.layout.width);
@@ -107,7 +125,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,

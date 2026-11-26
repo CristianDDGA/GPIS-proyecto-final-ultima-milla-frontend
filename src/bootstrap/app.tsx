@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FetchHttpClient } from '../shared/infrastructure/http/index.js';
 import {
   Alert,
+  AppBootSkeleton,
   Button,
   ClipboardCheckIcon,
   LiquidLavaBackground,
   MapPinIcon,
   MillastEmblemGlyph,
   Modal,
+  ModuleFallbackSkeleton,
   PackageIcon,
   RouteIcon,
   ShoppingBagIcon,
-  Spinner,
+  TopRefetchBar,
   TruckIcon,
   UnifiedWaterlineNavbar,
   UserCheckIcon,
@@ -21,29 +23,74 @@ import {
   type WaterlineNavItem,
 } from '../shared/ui/index.js';
 
-import {
-  AdminAccessView,
-  AuthView,
-  ChangePasswordModal,
-  HttpAuthGateway,
-  SessionBar,
-  clearToken,
-  getToken,
-  useAuth,
-  type AuthRole,
-} from '../features/auth/index.js';
-import { ZoneManagementView, type Zone } from '../features/zones/index.js';
-import { OrderManagementView, type Order } from '../features/orders/index.js';
-import { RouteManagementView } from '../features/routes/index.js';
-import { CourierFleetDispatchView, type Courier } from '../features/couriers/index.js';
-import { DeliveryExecutionView, type DeliveryActor } from '../features/deliveries/index.js';
-import { ClientCourierApplicationView } from '../features/courier-applications/index.js';
-import {
-  AdminStoreView,
-  CourierStoreView,
-  CustomerStoreView,
-} from '../features/store/index.js';
+import type { AuthRole } from '../features/auth/domain/index.js';
+import { HttpAuthGateway, clearToken, getToken } from '../features/auth/infrastructure/http/index.js';
+import { useAuth } from '../features/auth/presentation/hooks/useAuth.js';
+import { ChangePasswordModal } from '../features/auth/presentation/components/ChangePasswordModal.js';
+import { SessionBar } from '../features/auth/presentation/components/SessionBar.js';
+import type { Zone } from '../features/zones/domain/index.js';
+import type { Order } from '../features/orders/domain/index.js';
+import type { Courier } from '../features/couriers/domain/index.js';
+import type { DeliveryActor } from '../features/deliveries/presentation/components/DeliveryExecutionView.js';
 import { composeUseCases } from './compose-use-cases.js';
+
+const AuthView = lazy(() =>
+  import('../features/auth/presentation/components/AuthView.js').then((m) => ({
+    default: m.AuthView,
+  })),
+);
+const AdminAccessView = lazy(() =>
+  import('../features/auth/presentation/components/AdminAccessView.js').then((m) => ({
+    default: m.AdminAccessView,
+  })),
+);
+const ZoneManagementView = lazy(() =>
+  import('../features/zones/presentation/components/ZoneManagementView.js').then((m) => ({
+    default: m.ZoneManagementView,
+  })),
+);
+const OrderManagementView = lazy(() =>
+  import('../features/orders/presentation/components/OrderManagementView.js').then((m) => ({
+    default: m.OrderManagementView,
+  })),
+);
+const RouteManagementView = lazy(() =>
+  import('../features/routes/presentation/components/RouteManagementView.js').then((m) => ({
+    default: m.RouteManagementView,
+  })),
+);
+const CourierFleetDispatchView = lazy(() =>
+  import('../features/couriers/presentation/components/CourierFleetDispatchView.js').then((m) => ({
+    default: m.CourierFleetDispatchView,
+  })),
+);
+const DeliveryExecutionView = lazy(() =>
+  import('../features/deliveries/presentation/components/DeliveryExecutionView.js').then((m) => ({
+    default: m.DeliveryExecutionView,
+  })),
+);
+const ClientCourierApplicationView = lazy(() =>
+  import(
+    '../features/courier-applications/presentation/components/ClientCourierApplicationView.js'
+  ).then((m) => ({
+    default: m.ClientCourierApplicationView,
+  })),
+);
+const AdminStoreView = lazy(() =>
+  import('../features/store/presentation/components/AdminStoreView.js').then((m) => ({
+    default: m.AdminStoreView,
+  })),
+);
+const CourierStoreView = lazy(() =>
+  import('../features/store/presentation/components/CourierStoreView.js').then((m) => ({
+    default: m.CourierStoreView,
+  })),
+);
+const CustomerStoreView = lazy(() =>
+  import('../features/store/presentation/components/CustomerStoreView.js').then((m) => ({
+    default: m.CustomerStoreView,
+  })),
+);
 
 type AppTab =
   | 'store'
@@ -192,7 +239,8 @@ export function App() {
 
   useEffect(() => {
     const handleScroll = (): void => {
-      setIsScrolled(window.scrollY > 6);
+      const next = window.scrollY > 6;
+      setIsScrolled((prev) => (prev === next ? prev : next));
     };
     handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -356,12 +404,7 @@ export function App() {
       <div className="app-frame wl-dashboard">
         <LiquidLavaBackground />
         <div className="wl-dashboard-content">
-          <main className="app-shell app-shell--centered">
-            <div className="wf-loading-card">
-              <Spinner size="lg" label="Restaurando la sesión activa" />
-              <p role="status">Restaurando la sesión activa...</p>
-            </div>
-          </main>
+          <AppBootSkeleton />
         </div>
       </div>
     );
@@ -376,7 +419,13 @@ export function App() {
               {auth.error}
             </Alert>
           )}
-          <AuthView useCases={useCases.auth} onAuthenticated={handleAuthenticated} />
+          <Suspense fallback={<AppBootSkeleton />}>
+            <AuthView
+              useCases={useCases.auth}
+              healthStatus={auth.healthStatus}
+              onAuthenticated={handleAuthenticated}
+            />
+          </Suspense>
         </main>
       </div>
     );
@@ -435,12 +484,7 @@ export function App() {
             </Alert>
           )}
 
-          {isLoadingCatalog && zones.length === 0 && (
-            <div className="wf-loading-card wf-loading-card--inline">
-              <Spinner size="md" label="Cargando zonas y pedidos" />
-              <p role="status">Sincronizando catálogo operativo...</p>
-            </div>
-          )}
+          <TopRefetchBar active={isLoadingCatalog} label="Sincronizando catálogo operativo" />
 
           <div
             key={activeTab}
@@ -450,102 +494,104 @@ export function App() {
             aria-labelledby={`tab-${activeTab}`}
             tabIndex={-1}
           >
-            {activeTab === 'store' && currentUser.role === 'cliente' && (
-              <CustomerStoreView
-                storeGateway={useCases.store}
-                zones={zones}
-                onOrderPlaced={() => {
-                  void loadSharedCatalog();
-                }}
-              />
-            )}
+            <Suspense fallback={<ModuleFallbackSkeleton />}>
+              {activeTab === 'store' && currentUser.role === 'cliente' && (
+                <CustomerStoreView
+                  storeGateway={useCases.store}
+                  zones={zones}
+                  onOrderPlaced={() => {
+                    void loadSharedCatalog();
+                  }}
+                />
+              )}
 
-            {activeTab === 'store' && currentUser.role === 'personal' && (
-              <AdminStoreView storeGateway={useCases.store} zones={zones} />
-            )}
+              {activeTab === 'store' && currentUser.role === 'personal' && (
+                <AdminStoreView storeGateway={useCases.store} zones={zones} />
+              )}
 
-            {activeTab === 'courier-cash' && currentUser.role === 'repartidor' && (
-              <CourierStoreView
-                storeGateway={useCases.store}
-                onOrdersChanged={() => {
-                  void loadSharedCatalog();
-                }}
-              />
-            )}
+              {activeTab === 'courier-cash' && currentUser.role === 'repartidor' && (
+                <CourierStoreView
+                  storeGateway={useCases.store}
+                  onOrdersChanged={() => {
+                    void loadSharedCatalog();
+                  }}
+                />
+              )}
 
-            {activeTab === 'zones' && (
-              <ZoneManagementView
-                httpClient={httpClient}
-                canCreateZone={currentUser.role === 'personal'}
-                orders={orders}
-                onNavigateToOrders={(zoneId) => selectTab('orders', { zoneId })}
-              />
-            )}
+              {activeTab === 'zones' && (
+                <ZoneManagementView
+                  httpClient={httpClient}
+                  canCreateZone={currentUser.role === 'personal'}
+                  orders={orders}
+                  onNavigateToOrders={(zoneId) => selectTab('orders', { zoneId })}
+                />
+              )}
 
-            {activeTab === 'orders' && (
-              <OrderManagementView
-                useCases={useCases.orders}
-                canCreateOrder={currentUser.role !== 'repartidor'}
-                onNavigateToRoutes={
-                  currentUser.role === 'personal'
-                    ? (deliveryDate) => selectTab('routes', { deliveryDate })
-                    : undefined
-                }
-              />
-            )}
+              {activeTab === 'orders' && (
+                <OrderManagementView
+                  useCases={useCases.orders}
+                  canCreateOrder={currentUser.role !== 'repartidor'}
+                  onNavigateToRoutes={
+                    currentUser.role === 'personal'
+                      ? (deliveryDate) => selectTab('routes', { deliveryDate })
+                      : undefined
+                  }
+                />
+              )}
 
-            {activeTab === 'routes' && (
-              <RouteManagementView
-                useCases={useCases.routes}
-                zones={zones}
-                pendingOrders={orders}
-                couriers={routeCouriers}
-                storeGateway={useCases.store}
-                isAdmin={currentUser.role === 'personal'}
-                onCatalogChanged={() => {
-                  void loadSharedCatalog();
-                }}
-                onNavigateToFleet={
-                  currentUser.role === 'personal' ? () => selectTab('dispatch') : undefined
-                }
-              />
-            )}
+              {activeTab === 'routes' && (
+                <RouteManagementView
+                  useCases={useCases.routes}
+                  zones={zones}
+                  pendingOrders={orders}
+                  couriers={routeCouriers}
+                  storeGateway={useCases.store}
+                  isAdmin={currentUser.role === 'personal'}
+                  onCatalogChanged={() => {
+                    void loadSharedCatalog();
+                  }}
+                  onNavigateToFleet={
+                    currentUser.role === 'personal' ? () => selectTab('dispatch') : undefined
+                  }
+                />
+              )}
 
-            {activeTab === 'dispatch' && (
-              <CourierFleetDispatchView
-                useCases={useCases.couriers}
-                listPlanifiedRoutes={listPlanifiedRoutes}
-                zones={zones}
-                onNavigateToDeliveries={() => selectTab('deliveries')}
-              />
-            )}
+              {activeTab === 'dispatch' && (
+                <CourierFleetDispatchView
+                  useCases={useCases.couriers}
+                  listPlanifiedRoutes={listPlanifiedRoutes}
+                  zones={zones}
+                  onNavigateToDeliveries={() => selectTab('deliveries')}
+                />
+              )}
 
-            {activeTab === 'deliveries' && (
-              <DeliveryExecutionView
-                useCases={useCases.deliveries}
-                courierUseCases={useCases.couriers}
-                actor={deliveryActor}
-                zones={zones}
-                storeGateway={useCases.store}
-                onDeliveryChanged={() => {
-                  void loadSharedCatalog();
-                }}
-              />
-            )}
+              {activeTab === 'deliveries' && (
+                <DeliveryExecutionView
+                  useCases={useCases.deliveries}
+                  courierUseCases={useCases.couriers}
+                  actor={deliveryActor}
+                  zones={zones}
+                  storeGateway={useCases.store}
+                  onDeliveryChanged={() => {
+                    void loadSharedCatalog();
+                  }}
+                />
+              )}
 
-            {activeTab === 'users' && (
-              <AdminAccessView
-                authUseCases={useCases.auth}
-                applicationUseCases={useCases.courierApplications}
-              />
-            )}
+              {activeTab === 'users' && (
+                <AdminAccessView
+                  authUseCases={useCases.auth}
+                  applicationUseCases={useCases.courierApplications}
+                />
+              )}
 
-            {activeTab === 'application' && (
-              <ClientCourierApplicationView
-                useCases={useCases.courierApplications}
-                defaultFullName={currentUser.displayName ?? ''}
-              />
-            )}
+              {activeTab === 'application' && (
+                <ClientCourierApplicationView
+                  useCases={useCases.courierApplications}
+                  defaultFullName={currentUser.displayName ?? ''}
+                />
+              )}
+            </Suspense>
           </div>
         </main>
       </div>
