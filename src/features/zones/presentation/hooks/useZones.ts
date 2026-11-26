@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Zone, ZoneRepository } from '../../domain/index.js';
-import { CreateZoneUseCase, GetZoneByIdUseCase, GetZonesUseCase } from '../../application/index.js';
+import type { Zone, ZoneCoverage, ZoneRepository } from '../../domain/index.js';
+import {
+  CreateZoneUseCase,
+  GetZoneByIdUseCase,
+  GetZonesUseCase,
+  SetZoneCoverageUseCase,
+  SetZoneActiveUseCase,
+} from '../../application/index.js';
 import { defaultZoneRepository } from '../../infrastructure/http/index.js';
 
 export function useZones(repository: ZoneRepository = defaultZoneRepository) {
@@ -17,6 +23,8 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
   const getZonesUseCase = useMemo(() => new GetZonesUseCase(repository), [repository]);
   const getZoneByIdUseCase = useMemo(() => new GetZoneByIdUseCase(repository), [repository]);
   const createZoneUseCase = useMemo(() => new CreateZoneUseCase(repository), [repository]);
+  const setCoverageUseCase = useMemo(() => new SetZoneCoverageUseCase(repository), [repository]);
+  const setActiveUseCase = useMemo(() => new SetZoneActiveUseCase(repository), [repository]);
 
   const loadZones = useCallback(async () => {
     setIsLoading(true);
@@ -66,25 +74,80 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
     setIsLoadingDetail(false);
   }, []);
 
+  /** Crea la zona y enseguida le fija la cobertura: una zona sin cobertura no recibe pedidos. */
   const createZone = useCallback(
-    async (name: string): Promise<boolean> => {
+    async (name: string, coverage: ZoneCoverage): Promise<boolean> => {
       setIsCreating(true);
       setError(null);
       setSuccessMessage(null);
       try {
-        const newZone = await createZoneUseCase.execute({ name });
-        setZones((prev) => [newZone, ...prev.filter((z) => z.id !== newZone.id)]);
-        setSuccessMessage(`Zona "${newZone.name}" creada exitosamente.`);
+        let newZone: Zone;
+        try {
+          newZone = await createZoneUseCase.execute({ name });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Error al crear la zona');
+          return false;
+        }
+        try {
+          const covered = await setCoverageUseCase.execute(newZone.id, coverage);
+          setZones((prev) => [covered, ...prev.filter((z) => z.id !== covered.id)]);
+          setSuccessMessage(`Zona "${covered.name}" creada con su cobertura.`);
+        } catch (err) {
+          // La zona ya existe: se muestra para que el admin le defina la cobertura con "Cobertura".
+          setZones((prev) => [newZone, ...prev.filter((z) => z.id !== newZone.id)]);
+          const reason = err instanceof Error ? err.message : 'error desconocido';
+          setError(`La zona "${newZone.name}" se creó, pero no se pudo guardar su cobertura (${reason}). Defínela con el botón "Cobertura".`);
+        }
         return true;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Error al crear la zona';
-        setError(message);
-        return false;
       } finally {
         setIsCreating(false);
       }
     },
-    [createZoneUseCase],
+    [createZoneUseCase, setCoverageUseCase],
+  );
+
+  /** Guarda (o quita con `null`) la cobertura y refresca la zona en la lista y en el detalle. */
+  const setCoverage = useCallback(
+    async (zoneId: string, coverage: ZoneCoverage | null): Promise<boolean> => {
+      setError(null);
+      setSuccessMessage(null);
+      try {
+        const updated = await setCoverageUseCase.execute(zoneId, coverage);
+        setZones((prev) => prev.map((zone) => (zone.id === updated.id ? updated : zone)));
+        setSelectedZone((prev) => (prev?.id === updated.id ? updated : prev));
+        setSuccessMessage(
+          coverage === null
+            ? `Se quitó la cobertura de "${updated.name}".`
+            : `Cobertura de "${updated.name}" guardada.`,
+        );
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'No se pudo guardar la cobertura.');
+        return false;
+      }
+    },
+    [setCoverageUseCase],
+  );
+
+  /** Activa o desactiva una zona. El servidor rechaza desactivar con rutas o pedidos abiertos y su mensaje se muestra tal cual. */
+  const setActive = useCallback(
+    async (zone: Zone, isActive: boolean): Promise<boolean> => {
+      setError(null);
+      setSuccessMessage(null);
+      try {
+        const updated = await setActiveUseCase.execute(zone.id, isActive);
+        setZones((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        setSelectedZone((prev) => (prev?.id === updated.id ? updated : prev));
+        setSuccessMessage(
+          isActive ? `La zona "${updated.name}" quedó activa.` : `La zona "${updated.name}" quedó inactiva y ya no recibe pedidos.`,
+        );
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'No se pudo cambiar el estado de la zona.');
+        return false;
+      }
+    },
+    [setActiveUseCase],
   );
 
   const clearFeedback = useCallback(() => {
@@ -109,6 +172,8 @@ export function useZones(repository: ZoneRepository = defaultZoneRepository) {
     inspectZone,
     clearSelectedZone,
     createZone,
+    setCoverage,
+    setActive,
     clearFeedback,
   };
 }

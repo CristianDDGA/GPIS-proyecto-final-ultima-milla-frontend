@@ -44,13 +44,6 @@ export interface RegisterCustomerInput {
   displayName?: string | null | undefined;
 }
 
-export interface CreateManagedUserInput {
-  email: string;
-  password: string;
-  role: PublicRole;
-  displayName?: string | null | undefined;
-}
-
 export interface VerifyEmailInput {
   email: string;
   code: string;
@@ -73,7 +66,20 @@ export interface ValidationResult {
   errors: ValidationErrors;
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Forma básica usuario@dominio.tld sin espacios (sin regex con retroceso). */
+function isBasicEmail(value: string): boolean {
+  if (/\s/.test(value)) {
+    return false;
+  }
+  const parts = value.split('@');
+  if (parts.length !== 2) {
+    return false;
+  }
+  const [local = '', domain = ''] = parts;
+  const lastDot = domain.lastIndexOf('.');
+  return local.length > 0 && lastDot > 0 && lastDot < domain.length - 1;
+}
+
 const ROLE_VALUES: ReadonlySet<string> = new Set(PUBLIC_ROLES);
 
 const EMAIL_MAX_LENGTH = 254;
@@ -142,7 +148,7 @@ function validateEmailField(email: string, errors: ValidationErrors, strict: boo
   }
 
   if (!strict) {
-    if (!EMAIL_PATTERN.test(trimmedEmail)) {
+    if (!isBasicEmail(trimmedEmail)) {
       errors.email = 'El formato del correo electrónico no es válido.';
     }
     return;
@@ -304,26 +310,6 @@ export function validateRegisterCustomerInput(input: {
   return buildResult(errors);
 }
 
-export function validateCreateManagedUserInput(input: {
-  email: string;
-  password: string;
-  role: string;
-  displayName?: string | null | undefined;
-}): ValidationResult {
-  const errors: ValidationErrors = {};
-
-  validateEmailField(input.email, errors, true);
-  validateNewPasswordField(input.password, input.email, errors);
-
-  if (!ROLE_VALUES.has(input.role)) {
-    errors.role = 'Selecciona un rol válido: administrador, repartidor o cliente.';
-  }
-
-  validateDisplayNameField(input.displayName, errors, true);
-
-  return buildResult(errors);
-}
-
 export function validateVerifyEmailInput(input: VerifyEmailInput): ValidationResult {
   const errors: ValidationErrors = {};
 
@@ -382,4 +368,11 @@ export function validatePasswordPolicy(password: string, email = ''): string | n
   const errors: ValidationErrors = {};
   validateNewPasswordField(password, email, errors, 'newPassword');
   return errors['newPassword'] ?? null;
+}
+
+/** Valida solo el nombre para mostrar (mismas reglas que el registro); null si es válido. */
+export function validateDisplayName(displayName: string): string | null {
+  const errors: ValidationErrors = {};
+  validateDisplayNameField(displayName, errors, true);
+  return errors.displayName ?? null;
 }

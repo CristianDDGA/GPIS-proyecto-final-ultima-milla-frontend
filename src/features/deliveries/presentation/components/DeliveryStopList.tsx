@@ -35,6 +35,9 @@ export interface DeliveryStopListProps {
   readonly onLoadActiveRoute: () => void;
   readonly onInspectStop: (orderId: string) => void;
   readonly onAdvanceStop: (orderId: string) => void;
+  /** Pedidos de tienda: se entregan cobrando, no con "Marcar entregado". */
+  readonly collectableOrderIds?: ReadonlySet<string> | undefined;
+  readonly onCollectStop?: ((orderId: string) => void) | undefined;
   readonly onCompleteRoute: () => void;
 }
 
@@ -72,6 +75,8 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
   onLoadActiveRoute,
   onInspectStop,
   onAdvanceStop,
+  collectableOrderIds,
+  onCollectStop,
   onCompleteRoute,
 }) => {
   const stops: readonly ActiveCourierRouteStop[] = activeRoute?.stops ?? [];
@@ -235,6 +240,10 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
                 const isAdvancing = advancingOrderId === stop.orderId;
                 const isInspecting = inspectorOrderId === stop.orderId && isLoadingInspector;
                 const currentStageIndex = stageIndexOf(currentStatus);
+                const needsCollection =
+                  next === 'entregado' &&
+                  onCollectStop !== undefined &&
+                  collectableOrderIds?.has(stop.orderId) === true;
 
                 return (
                   <li
@@ -308,9 +317,11 @@ export const DeliveryStopList: FC<DeliveryStopListProps> = ({
                             variant="primary"
                             isLoading={isAdvancing}
                             disabled={isAdvancing || isSyncing}
-                            onClick={() => onAdvanceStop(stop.orderId)}
+                            onClick={() =>
+                              needsCollection ? onCollectStop?.(stop.orderId) : onAdvanceStop(stop.orderId)
+                            }
                           >
-                            {deliveryActionLabel(next)}
+                            {needsCollection ? 'Cobrar y entregar' : deliveryActionLabel(next)}
                           </Button>
                         ) : (
                           <span className="deliveries-stop__done" role="status">

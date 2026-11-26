@@ -3,6 +3,8 @@ import type {
   LateOrderPlacementResult,
   PlanRoutesInput,
   PlanRoutesResult,
+  PreviewPlanInput,
+  RoutePlanPreview,
   RouteDetail,
   RouteFilters,
   RouteSummary,
@@ -48,6 +50,12 @@ export interface UseRoutesResult {
   readonly planError: string | null;
   readonly planSuccess: string | null;
   readonly planResult: PlanRoutesResult | null;
+  /** Vista previa del plan con la fecha y capacidad del formulario (solo lectura). */
+  readonly preview: RoutePlanPreview | null;
+  readonly isPreviewing: boolean;
+  readonly previewError: string | null;
+  readonly loadPreview: (input: PreviewPlanInput) => Promise<void>;
+  readonly clearPreview: () => void;
   readonly clearPlanFeedback: () => void;
   readonly reorderStops: (orderIds: string[]) => Promise<boolean>;
   readonly isReordering: boolean;
@@ -75,6 +83,7 @@ export function useRoutes(
   const getRoutes = useCases.getRoutes;
   const getRouteById = useCases.getRouteById;
   const planRoutesUseCase = useCases.planRoutes;
+  const previewPlanUseCase = useCases.previewPlan;
   const reorderStopsUseCase = useCases.reorderStops;
   const cancelRouteUseCase = useCases.cancelRoute;
   const moveOrderUseCase = useCases.moveOrder;
@@ -94,6 +103,10 @@ export function useRoutes(
   const [planError, setPlanError] = useState<string | null>(null);
   const [planSuccess, setPlanSuccess] = useState<string | null>(null);
   const [planResult, setPlanResult] = useState<PlanRoutesResult | null>(null);
+  const [preview, setPreview] = useState<RoutePlanPreview | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewRequest = useRef(0);
 
   const [isReordering, setIsReordering] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -235,6 +248,35 @@ export function useRoutes(
     },
     [clearPlanFeedback, isAdmin, loadRoutes, planRoutesUseCase],
   );
+
+  /** Pide la vista previa; si llegan varias seguidas, solo cuenta la ultima. */
+  const loadPreview = useCallback(
+    async (input: PreviewPlanInput): Promise<void> => {
+      if (!isAdmin) return;
+      const request = ++previewRequest.current;
+      setIsPreviewing(true);
+      setPreviewError(null);
+      try {
+        const result = await previewPlanUseCase.execute(input);
+        if (mounted.current && request === previewRequest.current) setPreview(result);
+      } catch (error_) {
+        if (mounted.current && request === previewRequest.current) {
+          setPreview(null);
+          setPreviewError(describeError(error_, 'No se pudo calcular la vista previa.'));
+        }
+      } finally {
+        if (mounted.current && request === previewRequest.current) setIsPreviewing(false);
+      }
+    },
+    [isAdmin, previewPlanUseCase],
+  );
+
+  const clearPreview = useCallback(() => {
+    previewRequest.current += 1;
+    setPreview(null);
+    setPreviewError(null);
+    setIsPreviewing(false);
+  }, []);
 
   const reorderStops = useCallback(
     async (orderIds: string[]): Promise<boolean> => {
@@ -415,6 +457,11 @@ export function useRoutes(
     planError,
     planSuccess,
     planResult,
+    preview,
+    isPreviewing,
+    previewError,
+    loadPreview,
+    clearPreview,
     clearPlanFeedback,
     reorderStops,
     isReordering,

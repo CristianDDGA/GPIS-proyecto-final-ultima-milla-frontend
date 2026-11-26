@@ -6,7 +6,6 @@ import {
 import {
   ChangePasswordUseCase,
   CheckHealthUseCase,
-  CreateManagedUserUseCase,
   ForgotPasswordUseCase,
   GetCurrentUserUseCase,
   GetManagedUserUseCase,
@@ -17,6 +16,8 @@ import {
   RegisterCustomerUseCase,
   ResendVerificationUseCase,
   ResetManagedUserPasswordUseCase,
+  GetProfileUseCase,
+  UpdateProfileUseCase,
   ResetPasswordUseCase,
   SetManagedUserActiveUseCase,
   VerifyEmailUseCase,
@@ -44,6 +45,7 @@ import {
   MoveOrderUseCase,
   PlaceLateOrderUseCase,
   PlanRoutesUseCase,
+  PreviewPlanUseCase,
   ReorderRouteStopsUseCase,
   type RouteUseCases,
 } from '../features/routes/application/index.js';
@@ -51,7 +53,6 @@ import { HttpRouteGateway } from '../features/routes/infrastructure/http/index.j
 
 import {
   AssignRouteUseCase,
-  CreateCourierUseCase,
   GetActiveCourierRouteUseCase,
   GetCouriersUseCase,
   UpdateCourierAvailabilityUseCase,
@@ -120,12 +121,13 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       resetPassword: new ResetPasswordUseCase(authGateway),
       getCurrentUser: new GetCurrentUserUseCase(authGateway),
       logout: new LogoutUseCase(authGateway),
-      createManagedUser: new CreateManagedUserUseCase(authGateway),
       changePassword: new ChangePasswordUseCase(authGateway),
       listManagedUsers: new ListManagedUsersUseCase(authGateway),
       getManagedUser: new GetManagedUserUseCase(authGateway),
       setManagedUserActive: new SetManagedUserActiveUseCase(authGateway),
       resetManagedUserPassword: new ResetManagedUserPasswordUseCase(authGateway),
+      getProfile: new GetProfileUseCase(authGateway),
+      updateProfile: new UpdateProfileUseCase(authGateway),
     },
     courierApplications: {
       getMine: new GetMyApplicationUseCase(applicationGateway),
@@ -148,6 +150,7 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
     },
     routes: {
       planRoutes: new PlanRoutesUseCase(routeGateway),
+      previewPlan: new PreviewPlanUseCase(routeGateway),
       getRoutes: new GetRoutesUseCase(routeGateway),
       getRouteById: new GetRouteByIdUseCase(routeGateway),
       reorderStops: new ReorderRouteStopsUseCase(routeGateway),
@@ -156,7 +159,6 @@ export function composeUseCases(httpClient: HttpClient = defaultHttpClient): App
       placeLateOrder: new PlaceLateOrderUseCase(routeGateway),
     },
     couriers: {
-      createCourier: new CreateCourierUseCase(courierGateway),
       getCouriers: new GetCouriersUseCase(courierGateway),
       updateAvailability: new UpdateCourierAvailabilityUseCase(courierGateway),
       assignRoute: new AssignRouteUseCase(courierGateway),

@@ -503,3 +503,38 @@
   padding: 32px 16px;
   color: var(--color-slate, #5a5a5a);
 }
+
+.routes-preview {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(11, 19, 43, 0.08);
+  font-size: 13px;
+}
+
+.routes-preview__title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.routes-preview__summary,
+.routes-preview__hint,
+.routes-preview__warn,
+.routes-preview__error {
+  margin: 4px 0;
+}
+
+.routes-preview__zones {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+
+.routes-preview__warn {
+  color: #b45309;
+}
+
+.routes-preview__error {
+  color: #b42318;
+}

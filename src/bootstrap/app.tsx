@@ -27,11 +27,13 @@ import type { AuthRole } from '../features/auth/domain/index.js';
 import { HttpAuthGateway, clearToken, getToken } from '../features/auth/infrastructure/http/index.js';
 import { useAuth } from '../features/auth/presentation/hooks/useAuth.js';
 import { ChangePasswordModal } from '../features/auth/presentation/components/ChangePasswordModal.js';
-import { SessionBar } from '../features/auth/presentation/components/SessionBar.js';
+import { AccountMenu } from '../features/auth/presentation/components/AccountMenu.js';
 import type { Zone } from '../features/zones/domain/index.js';
 import type { Order } from '../features/orders/domain/index.js';
 import type { Courier } from '../features/couriers/domain/index.js';
 import type { DeliveryActor } from '../features/deliveries/presentation/components/DeliveryExecutionView.js';
+import { ClientTopBar } from '../features/store/presentation/components/ClientTopBar.js';
+import { ClientShopProvider } from '../features/store/presentation/ClientShopContext.js';
 import { composeUseCases } from './compose-use-cases.js';
 
 const AuthView = lazy(() =>
@@ -81,6 +83,16 @@ const AdminStoreView = lazy(() =>
     default: m.AdminStoreView,
   })),
 );
+const ClientOrdersView = lazy(() =>
+  import('../features/store/presentation/components/ClientOrdersView.js').then((m) => ({
+    default: m.ClientOrdersView,
+  })),
+);
+const ClientProfileView = lazy(() =>
+  import('../features/store/presentation/components/ClientProfileView.js').then((m) => ({
+    default: m.ClientProfileView,
+  })),
+);
 const CourierStoreView = lazy(() =>
   import('../features/store/presentation/components/CourierStoreView.js').then((m) => ({
     default: m.CourierStoreView,
@@ -101,7 +113,9 @@ type AppTab =
   | 'dispatch'
   | 'deliveries'
   | 'users'
-  | 'application';
+  | 'application'
+  | 'my-orders'
+  | 'profile';
 
 const TAB_CONFIG: Readonly<Record<AppTab, { readonly label: string; readonly anim: WaterlineIconAnim }>> = {
   store: { label: 'Tienda', anim: 'pop' },
@@ -113,6 +127,8 @@ const TAB_CONFIG: Readonly<Record<AppTab, { readonly label: string; readonly ani
   deliveries: { label: 'Entregas', anim: 'glow' },
   users: { label: 'Accesos', anim: 'spin' },
   application: { label: 'Ser repartidor', anim: 'glow' },
+  'my-orders': { label: 'Mis pedidos', anim: 'pop' },
+  profile: { label: 'Mi perfil', anim: 'glow' },
 };
 
 function renderTabIcon(tab: AppTab) {
@@ -135,13 +151,24 @@ function renderTabIcon(tab: AppTab) {
       return <UsersIcon size={15} />;
     case 'application':
       return <UserCheckIcon size={15} />;
+    case 'my-orders':
+      return <PackageIcon size={15} />;
+    case 'profile':
+      return <UserCheckIcon size={15} />;
   }
 }
 
 const TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
   personal: ['zones', 'orders', 'routes', 'dispatch', 'deliveries', 'store', 'users'],
   repartidor: ['deliveries', 'courier-cash', 'routes', 'orders', 'zones'],
-  cliente: ['store', 'orders', 'zones', 'application'],
+  cliente: ['store'],
+};
+
+/** Pantallas a las que se llega desde el menú de la cuenta, sin pestaña propia en la barra. */
+const HIDDEN_TABS_BY_ROLE: Readonly<Record<AuthRole, readonly AppTab[]>> = {
+  personal: [],
+  repartidor: [],
+  cliente: ['my-orders', 'profile', 'application'],
 };
 
 const DEFAULT_TAB_BY_ROLE: Readonly<Record<AuthRole, AppTab>> = {
@@ -160,6 +187,8 @@ const APP_TABS: readonly AppTab[] = [
   'deliveries',
   'users',
   'application',
+  'my-orders',
+  'profile',
 ];
 const ORDER_QUERY_PARAMS = ['orderId', 'deliveryDate', 'zoneId'] as const;
 
@@ -179,7 +208,7 @@ function resolveTab(requested: string | null, role: AuthRole | null): AppTab {
     return fallback;
   }
 
-  return TABS_BY_ROLE[role].includes(normalized) ? normalized : fallback;
+  return TABS_BY_ROLE[role].includes(normalized) || HIDDEN_TABS_BY_ROLE[role].includes(normalized) ? normalized : fallback;
 }
 
 export function App() {
@@ -261,7 +290,7 @@ export function App() {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
 
-    if (tab !== 'orders' && tab !== 'routes') {
+    if (tab !== 'orders' && tab !== 'routes' && tab !== 'my-orders') {
       for (const key of ORDER_QUERY_PARAMS) {
         url.searchParams.delete(key);
       }
@@ -433,43 +462,55 @@ export function App() {
 
   const defaultRoleTab = DEFAULT_TAB_BY_ROLE[currentUser.role];
 
-  return (
-    <div className="app-frame wl-dashboard">
+  const shell = (
+    <div className={`app-frame wl-dashboard ${currentUser.role === 'cliente' ? 'wl-dashboard--client' : ''}`}>
       <LiquidLavaBackground />
 
       <div className="wl-dashboard-content">
-        <header className={`wl-sticky-header ${isScrolled ? 'wl-sticky-header--scrolled' : ''}`}>
-          <UnifiedWaterlineNavbar
-            items={navItems}
-            activeId={activeTab}
-            onSelect={(tab) => selectTab(tab)}
-            ariaLabel="Navegación principal del sistema"
-            leadingSlot={
-              <>
-                <button
-                  type="button"
-                  className="wl-brand-btn"
-                  onClick={() => selectTab(defaultRoleTab)}
-                  aria-label="Ir al inicio de Millast"
-                >
-                  <span className="wl-brand-badge" aria-hidden="true">
-                    <MillastEmblemGlyph size={17} />
-                  </span>
-                  <span className="wl-brand-wordmark">Millast</span>
-                </button>
-                <span className="wl-header-divider" aria-hidden="true" />
-              </>
-            }
-            trailingSlot={
-              <SessionBar
-                user={currentUser}
-                isLoading={auth.isSubmitting}
-                onOpenPassword={() => setPasswordModalOpen(true)}
-                onLogout={() => setLogoutModalOpen(true)}
-              />
-            }
+        {currentUser.role === 'cliente' ? (
+          <ClientTopBar
+            user={currentUser}
+            isLoading={auth.isSubmitting}
+            onGoStore={() => selectTab('store')}
+            onOpenOrders={() => selectTab('my-orders', { orderId: '' })}
+            onOpenProfile={() => selectTab('profile')}
+            onOpenCourierApplication={() => selectTab('application')}
+            onLogout={() => setLogoutModalOpen(true)}
           />
-        </header>
+        ) : (
+          <header className={`wl-sticky-header ${isScrolled ? 'wl-sticky-header--scrolled' : ''}`}>
+            <UnifiedWaterlineNavbar
+              items={navItems}
+              activeId={activeTab}
+              onSelect={(tab) => selectTab(tab)}
+              ariaLabel="Navegación principal del sistema"
+              leadingSlot={
+                <>
+                  <button
+                    type="button"
+                    className="wl-brand-btn"
+                    onClick={() => selectTab(defaultRoleTab)}
+                    aria-label="Ir al inicio de Millast"
+                  >
+                    <span className="wl-brand-badge" aria-hidden="true">
+                      <MillastEmblemGlyph size={17} />
+                    </span>
+                    <span className="wl-brand-wordmark">Millast</span>
+                  </button>
+                  <span className="wl-header-divider" aria-hidden="true" />
+                </>
+              }
+              trailingSlot={
+                <AccountMenu
+                  user={currentUser}
+                  isLoading={auth.isSubmitting}
+                  onOpenPassword={() => setPasswordModalOpen(true)}
+                  onLogout={() => setLogoutModalOpen(true)}
+                />
+              }
+            />
+          </header>
+        )}
 
         <main className="wf-app-main">
           {auth.error !== null && (
@@ -501,6 +542,32 @@ export function App() {
                   zones={zones}
                   onOrderPlaced={() => {
                     void loadSharedCatalog();
+                  }}
+                  onViewOrder={(orderId) => selectTab('my-orders', { orderId })}
+                />
+              )}
+
+              {activeTab === 'my-orders' && currentUser.role === 'cliente' && (
+                <ClientOrdersView
+                  storeGateway={useCases.store}
+                  zones={zones}
+                  initialOrderId={new URLSearchParams(window.location.search).get('orderId')}
+                  onTrackingChange={(orderId) => selectTab('my-orders', { orderId: orderId ?? '' })}
+                  onShop={() => selectTab('store')}
+                />
+              )}
+
+              {activeTab === 'profile' && currentUser.role === 'cliente' && (
+                <ClientProfileView
+                  authUseCases={useCases.auth}
+                  storeGateway={useCases.store}
+                  zones={zones}
+                  onOpenOrders={() => selectTab('my-orders', { orderId: '' })}
+                  onOpenPassword={() => setPasswordModalOpen(true)}
+                  onOpenCourierApplication={() => selectTab('application')}
+                  onLogout={() => setLogoutModalOpen(true)}
+                  onProfileUpdated={() => {
+                    void auth.refreshMe();
                   }}
                 />
               )}
@@ -609,8 +676,12 @@ export function App() {
 
       {isLogoutModalOpen && (
         <Modal
-          title="Cerrar sesión"
-          description={`¿Deseas cerrar la sesión activa de ${currentUser.displayName || currentUser.email}?`}
+          title="¿Seguro que quieres salir?"
+          description={
+            currentUser.role === 'cliente'
+              ? 'Tu carrito se guarda para la próxima vez.'
+              : 'Podrás volver a entrar cuando quieras.'
+          }
           size="sm"
           onClose={() => setLogoutModalOpen(false)}
           footer={
@@ -622,7 +693,7 @@ export function App() {
                 onClick={() => setLogoutModalOpen(false)}
                 disabled={auth.isSubmitting}
               >
-                Cancelar
+                Quedarme
               </Button>
               <Button
                 type="button"
@@ -631,16 +702,20 @@ export function App() {
                 onClick={confirmLogout}
                 isLoading={auth.isSubmitting}
               >
-                Cerrar sesión
+                Sí, salir
               </Button>
             </>
           }
         >
-          <p className="wf-modal__paragraph">
-            Tu token de acceso será revocado y volverás a la pantalla de inicio de sesión.
-          </p>
+          {null}
         </Modal>
       )}
     </div>
+  );
+
+  return currentUser.role === 'cliente' ? (
+    <ClientShopProvider storeGateway={useCases.store}>{shell}</ClientShopProvider>
+  ) : (
+    shell
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FC, type FormEvent } from 'react';
 import type { Order } from '../../../orders/domain/index.js';
 import {
+  MAX_ROUTE_CAPACITY,
   validateLateOrderPlacementInput,
   type LateOrderPlacementResult,
 } from '../../domain/index.js';
@@ -132,7 +133,7 @@ export const LateOrderPlacementCard: FC<LateOrderPlacementCardProps> = ({
           label="Límite de capacidad de la ruta"
           type="number"
           min={1}
-          max={2147483647}
+          max={MAX_ROUTE_CAPACITY}
           value={capacityLimit}
           onChange={(event) => setCapacityLimit(event.target.value)}
           error={capacityLimitError}

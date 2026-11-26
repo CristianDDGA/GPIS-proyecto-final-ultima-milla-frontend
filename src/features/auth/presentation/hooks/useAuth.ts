@@ -3,7 +3,6 @@ import type { AuthGateway } from '../../domain/authGateway.js';
 import type {
   AuthStatus,
   AuthUser,
-  CreateManagedUserInput,
   HealthStatus,
   LoginInput,
   RegisterCustomerInput,
@@ -11,13 +10,11 @@ import type {
 } from '../../domain/authUser.js';
 import {
   firstValidationError,
-  validateCreateManagedUserInput,
   validateLoginInput,
   validateRegisterCustomerInput,
 } from '../../domain/index.js';
 import {
   CheckHealthUseCase,
-  CreateManagedUserUseCase,
   GetCurrentUserUseCase,
   LoginUseCase,
   LogoutUseCase,
@@ -34,7 +31,6 @@ export interface UseAuthResult {
   isSubmitting: boolean;
   login: (input: LoginInput) => Promise<boolean>;
   registerCustomer: (input: RegisterCustomerInput) => Promise<RegisterCustomerOutcome | null>;
-  createManagedUser: (input: CreateManagedUserInput) => Promise<AuthUser | null>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<AuthUser | null>;
   retryHealth: () => void;
@@ -60,7 +56,6 @@ export function useAuth(gateway: AuthGateway): UseAuthResult {
       registerCustomer: new RegisterCustomerUseCase(gateway),
       getCurrentUser: new GetCurrentUserUseCase(gateway),
       logout: new LogoutUseCase(gateway),
-      createManagedUser: new CreateManagedUserUseCase(gateway),
     }),
     [gateway],
   );
@@ -218,35 +213,6 @@ export function useAuth(gateway: AuthGateway): UseAuthResult {
     [useCases],
   );
 
-  const createManagedUser = useCallback(
-    async (input: CreateManagedUserInput): Promise<AuthUser | null> => {
-      setError(null);
-
-      const validation = validateCreateManagedUserInput(input);
-      if (!validation.isValid) {
-        setError(firstValidationError(validation.errors) ?? 'Revisa los datos del nuevo usuario.');
-        return null;
-      }
-
-      setIsSubmitting(true);
-
-      try {
-        return await useCases.createManagedUser.execute(input);
-      } catch (error_) {
-        if (mountedRef.current) {
-          setError(toErrorMessage(error_, 'No se pudo crear el usuario.'));
-        }
-
-        return null;
-      } finally {
-        if (mountedRef.current) {
-          setIsSubmitting(false);
-        }
-      }
-    },
-    [useCases],
-  );
-
   const logout = useCallback(async (): Promise<void> => {
     setIsSubmitting(true);
     setError(null);
@@ -323,7 +289,6 @@ export function useAuth(gateway: AuthGateway): UseAuthResult {
     isSubmitting,
     login,
     registerCustomer,
-    createManagedUser,
     logout,
     refreshMe,
     retryHealth,

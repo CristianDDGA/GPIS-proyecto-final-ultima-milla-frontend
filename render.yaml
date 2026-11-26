@@ -1,0 +1,29 @@
+# Render Blueprint del frontend (sitio estático). Los valores con sync: false se piden al crear el servicio.
+services:
+  - type: web
+    name: logistica-web
+    runtime: static
+    # NODE_ENV=production haría que npm ci omitiera las devDependencies (typescript, vite) y el build fallara.
+    buildCommand: npm ci --include=dev && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: "off"
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.2
+      # Se leen al compilar (Vite las incrusta). Ninguna es secreta: el Client ID de Google es público.
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+    routes:
+      # La app es de una sola página; los archivos reales (privacidad.html, terminos.html, assets) tienen prioridad.
+      - type: rewrite
+        source: /*
+        destination: /index.html

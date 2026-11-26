@@ -1,7 +1,6 @@
 import type {
   AuthSession,
   AuthUser,
-  CreateManagedUserInput,
   ForgotPasswordInput,
   HealthStatus,
   LoginInput,
@@ -17,6 +16,8 @@ import type {
   ManagedUserPage,
   ResetManagedUserPasswordInput,
   SetManagedUserActiveInput,
+  UpdateProfileInput,
+  UserProfile,
 } from './managedUser.js';
 
 export interface AuthGateway {
@@ -36,10 +37,13 @@ export interface AuthGateway {
   /** Autoservicio autenticado: rota la sesión y devuelve un token nuevo. */
   changePassword(input: ChangePasswordInput): Promise<AuthSession>;
   /** Alta administrativa de una cuenta (POST /auth/users). */
-  createManagedUser(input: CreateManagedUserInput): Promise<AuthUser>;
   /** Directorio administrativo real con filtros y paginación. */
   listManagedUsers(filters?: ManagedUserFilters): Promise<ManagedUserPage>;
   getManagedUser(userId: string): Promise<ManagedUser>;
   setManagedUserActive(input: SetManagedUserActiveInput): Promise<ManagedUser>;
   resetManagedUserPassword(input: ResetManagedUserPasswordInput): Promise<void>;
+  /** Perfil propio para "Mi perfil" (GET /auth/me/profile). */
+  getProfile(): Promise<UserProfile>;
+  /** Cambia nombre y/o teléfono propios (PATCH /auth/me/profile). */
+  updateProfile(input: UpdateProfileInput): Promise<UserProfile>;
 }

@@ -3,7 +3,7 @@ import {
   HttpError,
   type HttpClient,
 } from '../../../../shared/infrastructure/http/index.js';
-import type { Zone, CreateZoneInput, ZoneRepository } from '../../domain/index.js';
+import type { Zone, ZoneCoverage, CreateZoneInput, ZoneRepository } from '../../domain/index.js';
 
 const CONTRACT_ERROR_MESSAGE = 'La respuesta del servidor no cumple el contrato de la API.';
 
@@ -25,6 +25,17 @@ function isIsoTimestamp(value: unknown): value is string {
   );
 }
 
+/** `coverage` es opcional (zonas viejas) pero, si viene, debe ser nulo o un círculo válido. */
+function isCoverageField(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  return (
+    isRecord(value) &&
+    typeof value.latitude === 'number' &&
+    typeof value.longitude === 'number' &&
+    typeof value.radiusKm === 'number'
+  );
+}
+
 /** Guarda de contrato para una `Zone` individual (ZoneDto del backend). */
 function isZone(value: unknown): value is Zone {
   return (
@@ -34,7 +45,9 @@ function isZone(value: unknown): value is Zone {
     typeof value.name === 'string' &&
     value.name.trim().length > 0 &&
     isIsoTimestamp(value.createdAt) &&
-    isIsoTimestamp(value.updatedAt)
+    isIsoTimestamp(value.updatedAt) &&
+    isCoverageField(value.coverage) &&
+    (value.isActive === undefined || typeof value.isActive === 'boolean')
   );
 }
 
@@ -113,6 +126,19 @@ export class HttpZoneRepository implements ZoneRepository {
     };
 
     const response = await this.httpClient.post<unknown>('/zones', payload);
+    return readZonePayload(response);
+  }
+
+  public async setCoverage(id: string, coverage: ZoneCoverage | null): Promise<Zone> {
+    const response = await this.httpClient.put<unknown>(
+      `/zones/${encodeURIComponent(id)}/coverage`,
+      { coverage },
+    );
+    return readZonePayload(response);
+  }
+
+  public async setActive(id: string, isActive: boolean): Promise<Zone> {
+    const response = await this.httpClient.patch<unknown>(`/zones/${encodeURIComponent(id)}`, { isActive });
     return readZonePayload(response);
   }
 }

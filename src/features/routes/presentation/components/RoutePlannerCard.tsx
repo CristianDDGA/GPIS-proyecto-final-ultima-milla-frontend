@@ -1,9 +1,14 @@
-import { useState, type FC, type FormEvent } from 'react';
+import { useEffect, useState, type FC, type FormEvent } from 'react';
 import {
+  addDaysToIsoDate,
   getTodayIsoDate,
+  MAX_PLANNING_DAYS_AHEAD,
+  MAX_ROUTE_CAPACITY,
   validatePlanRoutesInput,
   type PlanRoutesInput,
   type PlanRoutesResult,
+  type PreviewPlanInput,
+  type RoutePlanPreview,
 } from '../../domain/index.js';
 import { Alert, Button, Card, ShortIdBadge, TextInput } from '../../../../shared/ui/index.js';
 
@@ -12,6 +17,11 @@ export interface RoutePlannerCardProps {
   planError: string | null;
   planSuccess: string | null;
   planResult: PlanRoutesResult | null;
+  preview: RoutePlanPreview | null;
+  isPreviewing: boolean;
+  previewError: string | null;
+  onPreview: (input: PreviewPlanInput) => Promise<void>;
+  onClearPreview: () => void;
   onPlan: (input: PlanRoutesInput) => Promise<PlanRoutesResult | null>;
   onClearFeedback: () => void;
 }
@@ -33,6 +43,11 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
   planError,
   planSuccess,
   planResult,
+  preview,
+  isPreviewing,
+  previewError,
+  onPreview,
+  onClearPreview,
   onPlan,
   onClearFeedback,
 }) => {
@@ -40,6 +55,19 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
   const [capacityLimit, setCapacityLimit] = useState(DEFAULT_CAPACITY_LIMIT);
 
   const validation = validatePlanRoutesInput({ serviceDate, capacityLimit: Number(capacityLimit) });
+
+  // La vista previa se actualiza sola cuando fecha y capacidad son validas (y despues de generar el plan).
+  const isValid = validation.isValid;
+  useEffect(() => {
+    if (!isValid) {
+      onClearPreview();
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      void onPreview({ serviceDate, capacityLimit: Number(capacityLimit) });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [isValid, serviceDate, capacityLimit, planResult, onPreview, onClearPreview]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -60,6 +88,8 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
           <TextInput
             label="Fecha de servicio"
             type="date"
+            min={getTodayIsoDate()}
+            max={addDaysToIsoDate(getTodayIsoDate(), MAX_PLANNING_DAYS_AHEAD)}
             value={serviceDate}
             onChange={(event) => setServiceDate(event.target.value)}
             error={validation.errors['serviceDate']}
@@ -69,7 +99,7 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
             label="Límite de capacidad por ruta"
             type="number"
             min={1}
-            max={2147483647}
+            max={MAX_ROUTE_CAPACITY}
             value={capacityLimit}
             onChange={(event) => setCapacityLimit(event.target.value)}
             error={validation.errors['capacityLimit']}
@@ -83,6 +113,36 @@ export const RoutePlannerCard: FC<RoutePlannerCardProps> = ({
           </Button>
         </div>
       </form>
+
+      <section className="routes-preview" aria-label="Vista previa de la planificación" aria-live="polite">
+        <h4 className="routes-preview__title">Vista previa</h4>
+        {isPreviewing && preview === null && <p className="routes-preview__hint">Calculando...</p>}
+        {previewError && <p className="routes-preview__error" role="alert">{previewError}</p>}
+        {preview !== null && preview.totalOrders === 0 && (
+          <p className="routes-preview__hint">No hay pedidos pendientes para el {preview.serviceDate}: no se crearía ninguna ruta.</p>
+        )}
+        {preview !== null && preview.totalOrders > 0 && (
+          <>
+            <p className="routes-preview__summary">
+              Se crearían <strong>{preview.totalRoutes}</strong> {preview.totalRoutes === 1 ? 'ruta' : 'rutas'} con{' '}
+              <strong>{preview.totalOrders}</strong> {preview.totalOrders === 1 ? 'pedido' : 'pedidos'}.
+            </p>
+            <ul className="routes-preview__zones">
+              {preview.zones.map((zone) => (
+                <li key={zone.zoneId}>
+                  <strong>{zone.zoneName}</strong>: {zone.orders} {zone.orders === 1 ? 'pedido' : 'pedidos'} en {zone.routes}{' '}
+                  {zone.routes === 1 ? 'ruta' : 'rutas'} ({zone.routeSizes.join(' + ')})
+                </li>
+              ))}
+            </ul>
+            <p className={preview.availableCouriers < preview.totalRoutes ? 'routes-preview__warn' : 'routes-preview__hint'}>
+              Repartidores disponibles ahora: {preview.availableCouriers}.
+              {preview.availableCouriers < preview.totalRoutes &&
+                ' Hay menos que rutas: las rutas se crean igual y las asignas en Despacho cuando haya repartidores.'}
+            </p>
+          </>
+        )}
+      </section>
 
       {planError && (
         <Alert type="error" title="No se pudo planificar" onClose={onClearFeedback}>

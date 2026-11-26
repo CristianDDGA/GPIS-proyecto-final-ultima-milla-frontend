@@ -7,7 +7,6 @@ import {
   type FC,
   type KeyboardEvent,
   type PointerEvent,
-  type WheelEvent,
 } from 'react';
 import { ShortIdBadge } from '../ShortIdBadge/ShortIdBadge.js';
 import {
@@ -396,13 +395,20 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
     }
   };
 
-  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(event.deltaY) < 4) return;
-    event.preventDefault();
-    setZoom((prev) =>
-      event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
-    );
-  };
+  // La rueda hace zoom sin mover la página: el listener nativo no es pasivo (en React onWheel sí lo es).
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return undefined;
+    const onWheel = (event: globalThis.WheelEvent) => {
+      if (Math.abs(event.deltaY) < 4) return;
+      event.preventDefault();
+      setZoom((prev) =>
+        event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
+      );
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const stepPx = 64;
@@ -601,7 +607,6 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={commitDragEnd}
         onPointerCancel={commitDragEnd}
-        onWheel={handleWheel}
         onKeyDown={handleKeyDown}
         onDoubleClick={() => setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1))}
       >

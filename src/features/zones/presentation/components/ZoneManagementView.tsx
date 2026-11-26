@@ -1,16 +1,18 @@
-import { useMemo, type FC } from 'react';
+import { useMemo, useState, type FC } from 'react';
 import type { HttpClient } from '../../../../shared/infrastructure/http/index.js';
-import type { Zone, ZoneRepository } from '../../domain/index.js';
+import { describeCoverage, isZoneActive, type Zone, type ZoneRepository } from '../../domain/index.js';
 import { defaultZoneRepository, HttpZoneRepository } from '../../infrastructure/http/index.js';
 import { useZones } from '../hooks/useZones.js';
 import { ZoneForm } from './ZoneForm.js';
 import { ZoneList } from './ZoneList.js';
+import { ZoneCoverageEditor } from './ZoneCoverageEditor.js';
 import {
   Alert,
   Button,
   Card,
   KpiStrip,
   PageHeader,
+  Modal,
   ShortIdBadge,
   Spinner,
   TopRefetchBar,
@@ -28,7 +30,7 @@ export interface ZoneManagementViewProps {
 
 function formatUtcTimestamp(isoDateString: string): string {
   const date = new Date(isoDateString);
-  if (isNaN(date.getTime())) return isoDateString;
+  if (Number.isNaN(date.getTime())) return isoDateString;
   const formatted = new Intl.DateTimeFormat('es-ES', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -74,6 +76,10 @@ const ZoneDetailPanel: FC<ZoneDetailPanelProps> = ({
       <div className="zones-detail-item">
         <dt>Nombre</dt>
         <dd>{zone.name}</dd>
+      </div>
+      <div className="zones-detail-item">
+        <dt>Cobertura</dt>
+        <dd>{describeCoverage(zone.coverage)}</dd>
       </div>
       <div className="zones-detail-item">
         <dt>Código</dt>
@@ -132,10 +138,36 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
     detailError,
     loadZones,
     createZone,
+    setCoverage,
+    setActive,
     clearFeedback,
     inspectZone,
     clearSelectedZone,
   } = useZones(repository);
+
+  const [coverageZone, setCoverageZone] = useState<Zone | null>(null);
+  const [zoneToDeactivate, setZoneToDeactivate] = useState<Zone | null>(null);
+  const [isChangingState, setIsChangingState] = useState(false);
+
+  /** Reactivar es inmediato; desactivar pide confirmación porque la zona deja de recibir pedidos. */
+  const handleToggleActive = (zone: Zone) => {
+    if (isZoneActive(zone)) {
+      setZoneToDeactivate(zone);
+      return;
+    }
+    void setActive(zone, true);
+  };
+
+  const confirmDeactivate = async () => {
+    if (zoneToDeactivate === null) return;
+    setIsChangingState(true);
+    try {
+      await setActive(zoneToDeactivate, false);
+    } finally {
+      setIsChangingState(false);
+      setZoneToDeactivate(null);
+    }
+  };
 
   const isDetailVisible = isLoadingDetail || selectedZone !== null || detailError !== null;
 
@@ -252,7 +284,7 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
         {canCreateZone && (
           <Card variant="elevated" className="zones-form-card">
             <h3 className="zones-form-card__title">Registrar nueva zona</h3>
-            <ZoneForm onSubmit={createZone} isSubmitting={isCreating} />
+            <ZoneForm onSubmit={createZone} isSubmitting={isCreating} existingZones={zones} />
           </Card>
         )}
 
@@ -269,9 +301,41 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
             isLoading={isLoading}
             orderCountByZone={orderCountByZone}
             onSelectZone={inspectZone}
+            onEditCoverage={canCreateZone ? setCoverageZone : undefined}
+            onToggleActive={canCreateZone ? handleToggleActive : undefined}
           />
         </Card>
       </div>
+
+      {zoneToDeactivate && (
+        <Modal
+          title={`Desactivar ${zoneToDeactivate.name}`}
+          description="La zona dejará de recibir pedidos y de entrar en la planificación. Conserva su cobertura y su historial, y puedes activarla de nuevo. Si tiene rutas o pedidos abiertos, el sistema no lo permitirá."
+          size="sm"
+          onClose={() => !isChangingState && setZoneToDeactivate(null)}
+          footer={
+            <>
+              <Button type="button" variant="secondary" size="sm" disabled={isChangingState} onClick={() => setZoneToDeactivate(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" variant="danger" size="sm" isLoading={isChangingState} onClick={() => void confirmDeactivate()}>
+                Desactivar zona
+              </Button>
+            </>
+          }
+        >
+          <p className="zones-form__hint">¿Seguro que quieres desactivar la zona &quot;{zoneToDeactivate.name}&quot;?</p>
+        </Modal>
+      )}
+
+      {coverageZone && (
+        <ZoneCoverageEditor
+          zone={zones.find((zone) => zone.id === coverageZone.id) ?? coverageZone}
+          zones={zones}
+          onSave={setCoverage}
+          onClose={() => setCoverageZone(null)}
+        />
+      )}
     </section>
   );
 };
