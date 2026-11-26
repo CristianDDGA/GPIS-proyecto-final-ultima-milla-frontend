@@ -1,0 +1,354 @@
+/* ============================================================================
+   EcuadorMapPicker · Selector interactivo de ubicaciones y cobertura en Ecuador
+   Importado directamente por EcuadorMapPicker.tsx para garantizar estilos en
+   cualquier módulo (Zonas, Pedidos, Tienda, Modales) sin depender de store.css.
+   ========================================================================== */
+
+.wl-map-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 19, 43, 0.10);
+  box-shadow:
+    0 10px 24px -18px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.wl-map-picker__search {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.wl-map-picker__search > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.wl-map-picker__results {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(11, 19, 43, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transform-origin: top center;
+  transition: opacity 150ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)),
+    transform 150ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+@starting-style {
+  .wl-map-picker__results {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+.wl-map-picker__result-btn {
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--wl-ink, #0b132b);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, transform var(--duration-press, 110ms) var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wl-map-picker__result-btn:hover {
+    background-color: rgba(22, 104, 243, 0.10);
+    color: #0b49c6;
+  }
+}
+
+.wl-map-picker__result-btn:active {
+  transform: scale(0.98);
+}
+
+.wl-map-picker__viewport {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 360px;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #dce4ee;
+  border: 1px solid rgba(11, 19, 43, 0.14);
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+
+.wl-map-picker__viewport--dragging {
+  cursor: grabbing;
+}
+
+.wl-map-picker__kbd {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wl-map-picker__viewport:has(.wl-map-picker__kbd:focus-visible) {
+  outline: 2px solid #1668f3;
+  outline-offset: 2px;
+}
+
+.wl-map-picker__stage {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  transform: translate3d(0px, 0px, 0px);
+}
+
+.wl-map-picker__tiles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.wl-map-picker__tiles--uber {
+  filter: grayscale(0.76) contrast(1.08) brightness(1.04) saturate(0.85);
+}
+
+.wl-map-picker__tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.wl-map-picker__tile--loaded {
+  opacity: 1;
+}
+
+.wl-map-picker__bounds-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: rgba(11, 19, 43, 0.86);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.wl-map-picker__pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: -13px;
+  margin-top: -36px;
+}
+
+.wl-map-picker__pin-head {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background-color: #0b132b;
+  border: 3px solid #ffffff;
+  box-shadow: 0 8px 16px rgba(11, 19, 43, 0.42);
+  display: grid;
+  place-items: center;
+  transition: transform 180ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+.wl-map-picker__pin-core {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background-color: #38bdf8;
+}
+
+.wl-map-picker__pin-stem {
+  width: 3px;
+  height: 9px;
+  margin-top: -1px;
+  border-radius: 999px;
+  background-color: #0b132b;
+  transition: transform 180ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+.wl-map-picker__pin-shadow {
+  width: 12px;
+  height: 4px;
+  margin-top: -1px;
+  border-radius: 999px;
+  background-color: rgba(11, 19, 43, 0.30);
+  transition: transform 180ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)), opacity 180ms ease;
+}
+
+.wl-map-picker__pin--lifted .wl-map-picker__pin-head,
+.wl-map-picker__pin--lifted .wl-map-picker__pin-stem {
+  transform: translate3d(0, -10px, 0) scale(1.06);
+}
+
+.wl-map-picker__pin--lifted .wl-map-picker__pin-shadow {
+  transform: scale(0.65);
+  opacity: 0.45;
+}
+
+.wl-map-picker__zoom {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.wl-map-picker__zoom-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 19, 43, 0.14);
+  background-color: rgba(255, 255, 255, 0.96);
+  color: #0b132b;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.22);
+  transition: background-color 140ms ease, transform var(--duration-press, 110ms) var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wl-map-picker__zoom-btn:hover {
+    background-color: #ffffff;
+  }
+}
+
+.wl-map-picker__zoom-btn:active {
+  transform: scale(0.94);
+}
+
+@media (pointer: coarse) {
+  .wl-map-picker__zoom-btn {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+.wl-map-picker__attribution {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 4;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.88);
+  font-size: 10.5px;
+  color: #334155;
+  pointer-events: none;
+}
+
+.wl-map-picker__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wl-map-picker__coords {
+  font-size: 12px;
+  color: var(--wl-ink-soft, #334155);
+  font-variant-numeric: tabular-nums;
+}
+
+.wl-map-picker__notice {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background-color: rgba(254, 242, 242, 0.92);
+  border: 1px solid rgba(220, 38, 38, 0.28);
+  font-size: 12px;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+/* Círculos de cobertura de zonas sobre el mapa */
+.wl-map-picker__circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid #1668f3;
+  background-color: rgba(22, 104, 243, 0.16);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.wl-map-picker__circle--other {
+  border-color: #b45309;
+  background-color: rgba(180, 83, 9, 0.12);
+  z-index: 1;
+}
+
+.wl-map-picker__circle-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 90%;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.88);
+  color: #7c2d12;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .wl-map-picker__search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wl-map-picker__viewport {
+    height: 300px;
+  }
+}

@@ -703,9 +703,28 @@
 
 .wl-dashboard .ui-btn--sm,
 .wl-modal-host .ui-btn--sm {
-  min-height: 34px;
-  padding: 6px 14px;
-  font-size: 12.5px;
+  min-height: 31px;
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+/* Botones de acciones en tablas y modales: compactos, precisos y sin sombras voluminosas */
+.wl-dashboard table .ui-btn--sm,
+.wl-dashboard .zones-table__actions .ui-btn,
+.wl-dashboard .wf-table__actions .ui-btn,
+.wl-dashboard .store-table .ui-btn {
+  min-height: 27px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.wl-modal-host .wf-modal__actions .ui-btn--sm {
+  min-height: 31px;
+  padding: 5px 13px;
+  font-size: 12px;
+  box-shadow: 0 4px 10px -6px rgba(15, 23, 42, 0.24);
 }
 
 .wl-dashboard .ui-btn--md,

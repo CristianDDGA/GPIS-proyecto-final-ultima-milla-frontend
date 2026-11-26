@@ -83,8 +83,8 @@ export const ZoneCoverageEditor: FC<ZoneCoverageEditorProps> = ({ zone, zones, o
   return (
     <Modal
       title={`Cobertura de ${zone.name}`}
-      description="Marca el centro de la zona en el mapa y elige hasta cuántos km llega. Los pedidos dentro del círculo se asignarán solos a esta zona."
-      size="lg"
+      description="Marca el centro de la zona en el mapa (solo dentro de Ecuador) y elige hasta cuántos km llega. Los pedidos dentro del círculo se asignarán solos a esta zona."
+      size="xl"
       onClose={() => !isSaving && onClose()}
       footer={
         <>
@@ -125,7 +125,7 @@ export const ZoneCoverageEditor: FC<ZoneCoverageEditorProps> = ({ zone, zones, o
           radiusKm={Number.isFinite(radiusKm) ? radiusKm : null}
         emptyHint="Aún no marcas el centro de la zona. Haz clic en el mapa o busca el lugar."
           overlays={overlays}
-          height={320}
+          height={440}
           disabled={isSaving}
         />
 

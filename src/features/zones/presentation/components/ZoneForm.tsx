@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type FC } from 'react';
+import { useMemo, useState, type FormEvent, type FC } from 'react';
 import {
   MAX_COVERAGE_RADIUS_KM,
   MIN_COVERAGE_RADIUS_KM,
@@ -11,7 +11,10 @@ import {
   type ZoneCoverage,
 } from '../../domain/index.js';
 import { Alert, Button, TextInput } from '../../../../shared/ui/index.js';
-import { EcuadorMapPicker } from '../../../store/presentation/components/EcuadorMapPicker.js';
+import {
+  EcuadorMapPicker,
+  type MapCoverageOverlay,
+} from '../../../store/presentation/components/EcuadorMapPicker.js';
 
 export interface ZoneFormProps {
   /** Zonas existentes: se usan para avisar si la nueva se solapa con otra. */
@@ -37,6 +40,20 @@ export const ZoneForm: FC<ZoneFormProps> = ({ onSubmit, isSubmitting = false, ex
     latitude !== null && longitude !== null && Number.isFinite(radiusKm)
       ? findOverlappingZones({ latitude, longitude, radiusKm }, existingZones)
       : [];
+
+  const existingOverlays = useMemo<readonly MapCoverageOverlay[]>(
+    () =>
+      existingZones
+        .filter((z): z is Zone & { coverage: ZoneCoverage } => z.coverage != null)
+        .map((z) => ({
+          id: z.id,
+          name: z.name,
+          latitude: z.coverage.latitude,
+          longitude: z.coverage.longitude,
+          radiusKm: z.coverage.radiusKm,
+        })),
+    [existingZones],
+  );
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -123,8 +140,9 @@ export const ZoneForm: FC<ZoneFormProps> = ({ onSubmit, isSubmitting = false, ex
           }
         }}
         radiusKm={Number.isFinite(radiusKm) ? radiusKm : null}
-        emptyHint="Aún no marcas el centro de la zona. Haz clic en el mapa o busca el lugar."
-        height={280}
+        overlays={existingOverlays}
+        emptyHint="Aún no marcas el centro de la zona. Haz clic en el mapa o busca el lugar dentro de Ecuador."
+        height={360}
         disabled={isSubmitting}
       />
 

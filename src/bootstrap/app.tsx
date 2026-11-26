@@ -627,6 +627,7 @@ export function App() {
                   useCases={useCases.couriers}
                   listPlanifiedRoutes={listPlanifiedRoutes}
                   zones={zones}
+                  orders={orders}
                   onNavigateToDeliveries={() => selectTab('deliveries')}
                 />
               )}
@@ -637,6 +638,7 @@ export function App() {
                   courierUseCases={useCases.couriers}
                   actor={deliveryActor}
                   zones={zones}
+                  orders={orders}
                   storeGateway={useCases.store}
                   onDeliveryChanged={() => {
                     void loadSharedCatalog();

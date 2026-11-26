@@ -166,7 +166,7 @@ export const OrderForm: FC<OrderFormProps> = ({
           }}
           overlays={overlays}
           emptyHint="Marca en el mapa el punto exacto de entrega: debe quedar dentro del círculo de la zona."
-          height={240}
+          height={340}
           disabled={isSubmitting || hasNoZones}
         />
         {errors.location && (

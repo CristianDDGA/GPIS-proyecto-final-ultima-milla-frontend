@@ -45,7 +45,11 @@
 }
 
 .wf-modal--lg {
-  width: min(100%, 680px);
+  width: min(100%, 720px);
+}
+
+.wf-modal--xl {
+  width: min(100%, 920px);
 }
 
 .wf-modal__header {

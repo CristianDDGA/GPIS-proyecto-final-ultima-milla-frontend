@@ -58,6 +58,8 @@ export interface RouteStopsMapProps {
   readonly selectedOrderId?: string | null | undefined;
   readonly onSelectStop?: ((orderId: string) => void) | undefined;
   readonly showRoutePolyline?: boolean | undefined;
+  /** Punto de partida opcional (p. ej. centro de la zona) para trazar ruta incluso con 1 parada. */
+  readonly routeOrigin?: LatLng | null | undefined;
   readonly compact?: boolean | undefined;
   readonly height?: number | undefined;
   readonly emptyMessage?: string | undefined;
@@ -85,9 +87,10 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   selectedOrderId = null,
   onSelectStop,
   showRoutePolyline = true,
+  routeOrigin = null,
   compact = false,
   height,
-  emptyMessage = 'Estas paradas se registraron en modo dirección manual (sin pin en mapa). Los pedidos de tienda con pin se trazan aquí automáticamente.',
+  emptyMessage = 'Estas paradas se registraron en modo dirección manual (sin pin en mapa). Los pedidos con pin en el mapa se trazan aquí automáticamente.',
 }) => {
   const map = useEcuadorMapViewport({
     initialCenter: DEFAULT_ECUADOR_CENTER,
@@ -97,8 +100,8 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>({
-    w: 720,
-    h: height ?? (compact ? 260 : 380),
+    w: 760,
+    h: height ?? (compact ? 320 : 460),
   });
   const [activeCityId, setActiveCityId] = useState<string>('quito');
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null);
@@ -122,9 +125,24 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
     [geoStops],
   );
 
+  const validOrigin = useMemo<LatLng | null>(() => {
+    if (!routeOrigin || !isWithinEcuador(routeOrigin.lat, routeOrigin.lng)) return null;
+    if (geoPoints.length !== 1) return null;
+    const only = geoPoints[0]!;
+    const samePoint = Math.abs(only.lat - routeOrigin.lat) < 0.0008 && Math.abs(only.lng - routeOrigin.lng) < 0.0008;
+    return samePoint ? null : routeOrigin;
+  }, [geoPoints, routeOrigin]);
+
+  const routeWaypoints = useMemo<readonly LatLng[]>(
+    () => (validOrigin ? [validOrigin, ...geoPoints] : geoPoints),
+    [geoPoints, validOrigin],
+  );
+
   const geoSignature = useMemo(
-    () => geoStops.map((s) => `${s.orderId}:${s.position}:${s.latitude.toFixed(5)},${s.longitude.toFixed(5)}`).join('|'),
-    [geoStops],
+    () =>
+      (validOrigin ? `hub:${validOrigin.lat.toFixed(5)},${validOrigin.lng.toFixed(5)}|` : '') +
+      geoStops.map((s) => `${s.orderId}:${s.position}:${s.latitude.toFixed(5)},${s.longitude.toFixed(5)}`).join('|'),
+    [geoStops, validOrigin],
   );
 
   const deliveredCount = useMemo(
@@ -150,15 +168,15 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   }, [isExpanded, viewportRef]);
 
   const fitRoute = useCallback(() => {
-    const fitted = computeFitView(geoPoints, viewportSize.w, viewportSize.h, DEFAULT_ECUADOR_CENTER);
+    const fitted = computeFitView(routeWaypoints, viewportSize.w, viewportSize.h, DEFAULT_ECUADOR_CENTER);
     setCenter(fitted.center);
     setZoom(fitted.zoom);
-  }, [geoPoints, setCenter, setZoom, viewportSize.h, viewportSize.w]);
+  }, [routeWaypoints, setCenter, setZoom, viewportSize.h, viewportSize.w]);
 
   // Encuadre automático cuando cambian las paradas geocodificadas
   useEffect(() => {
-    if (geoPoints.length > 0) {
-      const fitted = computeFitView(geoPoints, viewportSize.w, viewportSize.h, DEFAULT_ECUADOR_CENTER);
+    if (routeWaypoints.length > 0) {
+      const fitted = computeFitView(routeWaypoints, viewportSize.w, viewportSize.h, DEFAULT_ECUADOR_CENTER);
       setCenter(fitted.center);
       setZoom(fitted.zoom);
     }
@@ -167,21 +185,21 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
 
   // Geometría real de conducción por calles (OSRM público con respaldo directo)
   useEffect(() => {
-    if (!showRoutePolyline || geoPoints.length < 2) {
+    if (!showRoutePolyline || routeWaypoints.length < 2) {
       setGeometry(null);
       setIsLoadingRoute(false);
       return;
     }
     const controller = new AbortController();
     setIsLoadingRoute(true);
-    void fetchDrivingRouteGeometry(geoPoints, controller.signal).then((result) => {
+    void fetchDrivingRouteGeometry(routeWaypoints, controller.signal).then((result) => {
       if (!controller.signal.aborted) {
         setGeometry(result);
         setIsLoadingRoute(false);
       }
     });
     return () => controller.abort();
-  }, [geoPoints, showRoutePolyline, geoSignature]);
+  }, [routeWaypoints, showRoutePolyline, geoSignature]);
 
   // Selección activa: externa > interna > parada en_camino > primera parada
   const effectiveSelectedId = useMemo(() => {
@@ -247,10 +265,10 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   );
 
   const routeScreenPoints = useMemo(() => {
-    const pts = geometry?.points ?? (showRoutePolyline && geoPoints.length >= 2 ? geoPoints : []);
+    const pts = geometry?.points ?? (showRoutePolyline && routeWaypoints.length >= 2 ? routeWaypoints : []);
     if (pts.length < 2) return [];
     return pts.map((p) => toViewportXY(p.lat, p.lng));
-  }, [geometry?.points, geoPoints, showRoutePolyline, toViewportXY]);
+  }, [geometry?.points, routeWaypoints, showRoutePolyline, toViewportXY]);
 
   const polylineSvgPath = useMemo(() => {
     if (routeScreenPoints.length < 2) return '';
@@ -305,11 +323,11 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
     });
   };
 
-  const gmapsRouteUrl = useMemo(() => googleMapsMultiStopUrl(geoPoints), [geoPoints]);
+  const gmapsRouteUrl = useMemo(() => googleMapsMultiStopUrl(routeWaypoints), [routeWaypoints]);
   const distanceLabel = formatDistanceKm(geometry?.distanceMeters ?? null);
   const durationLabel = formatDurationMinutes(geometry?.durationSeconds ?? null);
 
-  const effectiveHeight = isExpanded ? 560 : height ?? (compact ? 250 : 380);
+  const effectiveHeight = isExpanded ? 640 : height ?? (compact ? 320 : 460);
 
   const vehicleXY = useMemo(() => {
     if (userLocation) return toViewportXY(userLocation.lat, userLocation.lng);

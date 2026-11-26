@@ -4,6 +4,7 @@ import type {
   Courier,
 } from '../../domain/index.js';
 import type { CourierUseCases } from '../../application/courierUseCases.js';
+import type { Order } from '../../../orders/domain/index.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import { useCouriers, type CourierAvailabilityFilter } from '../hooks/useCouriers.js';
 import {
@@ -13,11 +14,13 @@ import {
   EmptyState,
   KpiStrip,
   PageHeader,
+  RouteStopsMap,
   Select,
   ShortIdBadge,
   Spinner,
   TableRowsSkeleton,
   TopRefetchBar,
+  type RouteMapStop,
 } from '../../../../shared/ui/index.js';
 import '../styles/couriers.css';
 
@@ -35,6 +38,8 @@ export interface CourierFleetDispatchViewProps {
   listPlanifiedRoutes: () => Promise<readonly DispatchableRoute[]>;
   /** Catálogo de zonas para mostrar nombres legibles en lugar de identificadores. */
   zones?: readonly Zone[] | undefined;
+  /** Pedidos con coordenadas para dibujar la hoja de ruta activa en el mapa. */
+  orders?: readonly Order[] | undefined;
   /** Navegación guiada del pipeline: ejecutar la hoja de ruta en Entregas. */
   onNavigateToDeliveries?: (() => void) | undefined;
 }
@@ -66,6 +71,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
   useCases,
   listPlanifiedRoutes,
   zones,
+  orders,
   onNavigateToDeliveries,
 }) => {
   const {
@@ -226,6 +232,29 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     '--seg-index': AVAILABILITY_FILTERS.findIndex((filter) => filter.value === availabilityFilter),
     '--seg-count': AVAILABILITY_FILTERS.length,
   } as CSSProperties;
+
+  const activeRouteMapStops = useMemo<readonly RouteMapStop[]>(() => {
+    if (!activeRoute) return [];
+    const lookup = new Map((orders ?? []).map((item) => [item.id, item]));
+    return activeRoute.stops.map((stop) => {
+      const ord = lookup.get(stop.orderId);
+      return {
+        orderId: stop.orderId,
+        position: stop.position,
+        address: stop.deliveryAddress,
+        status: stop.status,
+        latitude: ord?.latitude ?? null,
+        longitude: ord?.longitude ?? null,
+        deliveryDate: activeRoute.serviceDate,
+        deliveryTime: stop.deliveryTime,
+      };
+    });
+  }, [activeRoute, orders]);
+
+  const activeRouteZone = activeRoute ? zones?.find((z) => z.id === activeRoute.zoneId) ?? null : null;
+  const activeRouteOrigin = activeRouteZone?.coverage
+    ? { lat: activeRouteZone.coverage.latitude, lng: activeRouteZone.coverage.longitude }
+    : null;
 
   const availableFleetCount = couriers.filter((c) => c.isEnabled && c.isAvailable).length;
 
@@ -593,6 +622,15 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
                       </div>
                     </dl>
                   </div>
+
+                  {activeRouteMapStops.length > 0 && (
+                    <RouteStopsMap
+                      title="Mapa de la hoja de ruta activa"
+                      subtitle={`${activeRoute.serviceDate} · ${resolveZoneName(activeRoute.zoneId)}`}
+                      stops={activeRouteMapStops}
+                      routeOrigin={activeRouteOrigin}
+                    />
+                  )}
 
                   <ol className="couriers-stops" aria-label="Paradas de la ruta activa">
                     {activeRoute.stops.map((stop) => (
