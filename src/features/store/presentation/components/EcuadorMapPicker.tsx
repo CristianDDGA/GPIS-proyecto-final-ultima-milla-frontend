@@ -146,24 +146,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     [onChange, reverseGeocode],
   );
 
-  const {
-    setCenter,
-    zoom,
-    setZoom,
-    activeLayer,
-    setFailedSatellite,
-    selectLayer,
-    isDragging,
-    centerWorld,
-    viewportRef,
-    panStageRef,
-    zoomIn,
-    zoomOut,
-    handlePointerDown,
-    handlePointerMove,
-    handlePointerUp,
-    handleKeyDown,
-  } = useEcuadorMapViewport({
+  const map = useEcuadorMapViewport({
     initialCenter:
       latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)
         ? { lat: latitude, lng: longitude }
@@ -172,11 +155,11 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     disabled,
     ignorePointerSelector: 'button',
     onTap: (clientX, clientY) => {
-      if (!viewportRef.current || disabled) return;
-      const rect = viewportRef.current.getBoundingClientRect();
+      if (!map.viewportRef.current || disabled) return;
+      const rect = map.viewportRef.current.getBoundingClientRect();
       const offsetX = clientX - rect.left - rect.width / 2;
       const offsetY = clientY - rect.top - rect.height / 2;
-      const picked = worldToLatLng(centerWorld.x + offsetX, centerWorld.y + offsetY, zoom);
+      const picked = worldToLatLng(map.centerWorld.x + offsetX, map.centerWorld.y + offsetY, map.zoom);
       if (!isWithinEcuador(picked.lat, picked.lng)) {
         setMapNotice('El punto debe estar dentro de Ecuador.');
         return;
@@ -185,6 +168,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     },
     onActivateKey: (clamped) => commitPickedPoint(clamped.lat, clamped.lng),
   });
+  const { setCenter, setZoom } = map;
 
   useEffect(() => {
     if (latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)) {
@@ -277,25 +261,25 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   };
 
   const tiles = useMemo(
-    () => buildMapTiles(centerWorld, zoom, activeLayer, 2, 1),
-    [activeLayer, centerWorld, zoom],
+    () => buildMapTiles(map.centerWorld, map.zoom, map.activeLayer, 2, 1),
+    [map.activeLayer, map.centerWorld, map.zoom],
   );
 
   const pinOffset = useMemo(() => {
     if (latitude === null || longitude === null) return null;
-    const pinWorld = latLngToWorld(latitude, longitude, zoom);
+    const pinWorld = latLngToWorld(latitude, longitude, map.zoom);
     return {
-      dx: pinWorld.x - centerWorld.x,
-      dy: pinWorld.y - centerWorld.y,
+      dx: pinWorld.x - map.centerWorld.x,
+      dy: pinWorld.y - map.centerWorld.y,
     };
-  }, [centerWorld.x, centerWorld.y, latitude, longitude, zoom]);
+  }, [latitude, longitude, map.centerWorld.x, map.centerWorld.y, map.zoom]);
 
   const circleFor = (lat: number, lng: number, km: number) => {
-    const world = latLngToWorld(lat, lng, zoom);
-    const diameter = (2 * km * 1000) / metersPerPixel(lat, zoom);
+    const world = latLngToWorld(lat, lng, map.zoom);
+    const diameter = (2 * km * 1000) / metersPerPixel(lat, map.zoom);
     return {
-      dx: world.x - centerWorld.x,
-      dy: world.y - centerWorld.y,
+      dx: world.x - map.centerWorld.x,
+      dy: world.y - map.centerWorld.y,
       diameter: Math.max(2, diameter),
     };
   };
@@ -303,7 +287,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   const stopBtn = (e: MouseEvent<HTMLButtonElement>) => e.stopPropagation();
 
   return (
-    <div className="wl-map-picker" data-map-layer={activeLayer}>
+    <div className="wl-map-picker" data-map-layer={map.activeLayer}>
       <div className="wl-map-picker__search">
         <TextInput
           id="map-search-ecuador"
@@ -326,8 +310,8 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       </div>
 
       <MapToolbar
-        activeLayer={activeLayer}
-        onSelectLayer={selectLayer}
+        activeLayer={map.activeLayer}
+        onSelectLayer={map.selectLayer}
         disabled={disabled}
         citiesAriaLabel="Ir a ciudad de Ecuador"
         onSelectCity={(city) => {
@@ -353,16 +337,12 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       )}
 
       <div
-        ref={viewportRef}
-        className={'wl-map-picker__viewport' + (isDragging ? ' wl-map-picker__viewport--dragging' : '')}
+        ref={map.viewportRef}
+        className={'wl-map-picker__viewport' + (map.isDragging ? ' wl-map-picker__viewport--dragging' : '')}
         style={height === undefined ? undefined : { height }}
         role="region"
         aria-label="Mapa de Ecuador para elegir punto de entrega"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onKeyDown={handleKeyDown}
+        {...map.viewportHandlers}
       >
         <button
           type="button"
@@ -370,16 +350,16 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
           disabled={disabled}
           aria-label="Mover el mapa o fijar pin con el teclado: flechas para desplazar, Enter para fijar el pin, más y menos para acercar o alejar"
         />
-        <div ref={panStageRef} className="wl-map-picker__stage">
+        <div ref={map.panStageRef} className="wl-map-picker__stage">
           <MapTileLayer
             tiles={tiles}
-            activeLayer={activeLayer}
+            activeLayer={map.activeLayer}
             containerClass="wl-map-picker__tiles"
             uberClass="wl-map-picker__tiles--uber"
             tileClass="wl-map-picker__tile"
             loadedTileClass="wl-map-picker__tile--loaded"
             positioning="transform"
-            onSatelliteError={() => setFailedSatellite(true)}
+            onSatelliteError={() => map.setFailedSatellite(true)}
           />
 
           {overlays?.map((zone) => {
@@ -421,7 +401,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
 
           {pinOffset !== null && (
             <div
-              className={'wl-map-picker__pin' + (isDragging ? ' wl-map-picker__pin--lifted' : '')}
+              className={'wl-map-picker__pin' + (map.isDragging ? ' wl-map-picker__pin--lifted' : '')}
               aria-hidden="true"
               style={{
                 transform: `translate3d(${Math.round(pinOffset.dx)}px, ${Math.round(pinOffset.dy)}px, 0)`,
@@ -443,7 +423,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
             aria-label="Acercar mapa"
             onClick={(e) => {
               stopBtn(e);
-              zoomIn();
+              map.zoomIn();
             }}
           >
             +
@@ -454,7 +434,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
             aria-label="Alejar mapa"
             onClick={(e) => {
               stopBtn(e);
-              zoomOut();
+              map.zoomOut();
             }}
           >
             −
@@ -479,7 +459,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         </div>
 
         <span className="wl-map-picker__attribution">
-          {activeLayer === 'satellite' ? '© Esri World Imagery' : '© OpenStreetMap'}
+          {map.activeLayer === 'satellite' ? '© Esri World Imagery' : '© OpenStreetMap'}
         </span>
       </div>
 

@@ -89,27 +89,11 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   height,
   emptyMessage = 'Estas paradas se registraron en modo dirección manual (sin pin en mapa). Los pedidos de tienda con pin se trazan aquí automáticamente.',
 }) => {
-  const {
-    setCenter,
-    zoom,
-    setZoom,
-    activeLayer,
-    setFailedSatellite,
-    selectLayer,
-    isDragging,
-    centerWorld,
-    viewportRef,
-    panStageRef,
-    zoomIn,
-    zoomOut,
-    handlePointerDown,
-    handlePointerMove,
-    handlePointerUp,
-    handleKeyDown,
-  } = useEcuadorMapViewport({
+  const map = useEcuadorMapViewport({
     initialCenter: DEFAULT_ECUADOR_CENTER,
     initialZoom: 13,
   });
+  const { setCenter, setZoom, viewportRef } = map;
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>({
@@ -240,18 +224,26 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   const tiles = useMemo(() => {
     const spanX = Math.ceil(viewportSize.w / (2 * MAP_TILE_SIZE)) + 1;
     const spanY = Math.ceil(viewportSize.h / (2 * MAP_TILE_SIZE)) + 1;
-    return buildMapTiles(centerWorld, zoom, activeLayer, spanX, spanY, viewportSize.w / 2, viewportSize.h / 2);
-  }, [activeLayer, centerWorld, viewportSize.h, viewportSize.w, zoom]);
+    return buildMapTiles(
+      map.centerWorld,
+      map.zoom,
+      map.activeLayer,
+      spanX,
+      spanY,
+      viewportSize.w / 2,
+      viewportSize.h / 2,
+    );
+  }, [map.activeLayer, map.centerWorld, map.zoom, viewportSize.h, viewportSize.w]);
 
   const toViewportXY = useCallback(
     (lat: number, lng: number) => {
-      const w = latLngToWorld(lat, lng, zoom);
+      const w = latLngToWorld(lat, lng, map.zoom);
       return {
-        x: viewportSize.w / 2 + (w.x - centerWorld.x),
-        y: viewportSize.h / 2 + (w.y - centerWorld.y),
+        x: viewportSize.w / 2 + (w.x - map.centerWorld.x),
+        y: viewportSize.h / 2 + (w.y - map.centerWorld.y),
       };
     },
-    [centerWorld.x, centerWorld.y, viewportSize.h, viewportSize.w, zoom],
+    [map.centerWorld.x, map.centerWorld.y, map.zoom, viewportSize.h, viewportSize.w],
   );
 
   const routeScreenPoints = useMemo(() => {
@@ -332,7 +324,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         (compact ? ' route-map-shell--compact' : '') +
         (isExpanded ? ' route-map-shell--expanded' : '')
       }
-      data-map-layer={activeLayer}
+      data-map-layer={map.activeLayer}
     >
       <div className="route-map-head">
         <div className="route-map-head__info">
@@ -365,8 +357,8 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
       </div>
 
       <MapToolbar
-        activeLayer={activeLayer}
-        onSelectLayer={selectLayer}
+        activeLayer={map.activeLayer}
+        onSelectLayer={map.selectLayer}
         onSelectCity={selectCity}
         activeCityId={geoStops.length === 0 ? activeCityId : null}
         leadingRightAction={
@@ -380,16 +372,12 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
 
       <div
         ref={viewportRef}
-        className={'route-map-viewport' + (isDragging ? ' route-map-viewport--dragging' : '')}
+        className={'route-map-viewport' + (map.isDragging ? ' route-map-viewport--dragging' : '')}
         style={{ height: `${effectiveHeight}px` }}
         role="region"
         aria-label={title}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onKeyDown={handleKeyDown}
-        onDoubleClick={zoomIn}
+        {...map.viewportHandlers}
+        onDoubleClick={map.zoomIn}
       >
         {/* Ancla de teclado interactiva real: las teclas del botón suben hasta el visor (flechas, +, −) */}
         <button
@@ -399,16 +387,16 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         />
 
         {/* Escenario GPU: tiles + ruta + marcadores se mueven juntos en 1 solo translate3d */}
-        <div ref={panStageRef} className="route-map-stage">
+        <div ref={map.panStageRef} className="route-map-stage">
           <MapTileLayer
             tiles={tiles}
-            activeLayer={activeLayer}
+            activeLayer={map.activeLayer}
             containerClass="route-map-tiles"
             uberClass="route-map-tiles--uber"
             tileClass="route-map-tile"
             loadedTileClass="route-map-tile--loaded"
             positioning="offset"
-            onSatelliteError={() => setFailedSatellite(true)}
+            onSatelliteError={() => map.setFailedSatellite(true)}
           />
 
           {polylineSvgPath.length > 0 && (
@@ -574,7 +562,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
             className="route-map-ctrl-btn"
             aria-label="Acercar mapa"
             title="Acercar (+)"
-            onClick={zoomIn}
+            onClick={map.zoomIn}
           >
             +
           </button>
@@ -583,7 +571,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
             className="route-map-ctrl-btn"
             aria-label="Alejar mapa"
             title="Alejar (−)"
-            onClick={zoomOut}
+            onClick={map.zoomOut}
           >
             −
           </button>
@@ -754,7 +742,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         )}
 
         <span className="route-map-attribution">
-          {activeLayer === 'satellite' ? '© Esri World Imagery' : '© OpenStreetMap'}
+          {map.activeLayer === 'satellite' ? '© Esri World Imagery' : '© OpenStreetMap'}
         </span>
       </div>
 

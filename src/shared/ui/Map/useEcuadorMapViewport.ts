@@ -292,9 +292,12 @@ export function useEcuadorMapViewport({
     panStageRef,
     zoomIn,
     zoomOut,
-    handlePointerDown,
-    handlePointerMove,
-    handlePointerUp,
-    handleKeyDown,
+    viewportHandlers: {
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerUp: handlePointerUp,
+      onPointerCancel: handlePointerUp,
+      onKeyDown: handleKeyDown,
+    },
   };
 }
