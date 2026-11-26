@@ -8,7 +8,7 @@ import {
   type PointerEvent,
 } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
-import type { AuthUser, HealthStatus } from '../../domain/index.js';
+import type { AuthUser } from '../../domain/index.js';
 import { useAuthFlows, type AuthScreen, type AuthTab } from '../hooks/useAuthFlows.js';
 import { AuthForgotPasswordForm } from './auth/AuthForgotPasswordForm.js';
 import {
@@ -21,14 +21,12 @@ import { AuthLoginForm } from './auth/AuthLoginForm.js';
 import { AuthRegisterForm } from './auth/AuthRegisterForm.js';
 import { AuthResetPasswordForm } from './auth/AuthResetPasswordForm.js';
 import { AuthStudioShowcase } from './auth/AuthStudioShowcase.js';
-import { AuthTopNav } from './auth/AuthTopNav.js';
 import { AuthVerifyEmailForm } from './auth/AuthVerifyEmailForm.js';
 import { LiquidGlassCardChrome } from './auth/LiquidGlassCardChrome.js';
 import '../styles/auth.css';
 
 export interface AuthViewProps {
   useCases: AuthUseCases;
-  readonly healthStatus?: HealthStatus | undefined;
   /** Optional bridge so the composition root can refresh its own session state. */
   onAuthenticated?: ((user: AuthUser) => void) | undefined;
 }
@@ -61,7 +59,7 @@ function getSecondaryInstruction(
   }
 }
 
-export const AuthView: FC<AuthViewProps> = ({ useCases, healthStatus, onAuthenticated }) => {
+export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
   const flows = useAuthFlows({ useCases, onAuthenticated });
   const cardRef = useRef<HTMLDivElement | null>(null);
   const glintRef = useRef<HTMLDivElement | null>(null);
@@ -179,6 +177,8 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, healthStatus, onAuthenti
     stepTiltSpring();
   }, [stepTiltSpring]);
 
+  const { activeTab, loginTabRef, registerTabRef, selectPrimaryTab } = flows;
+
   const handleTabKeyDown = useCallback(
     (event: KeyboardEvent<HTMLButtonElement>): void => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
@@ -186,16 +186,16 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, healthStatus, onAuthenti
       }
 
       event.preventDefault();
-      const nextTab: AuthTab = flows.activeTab === 'login' ? 'register' : 'login';
-      flows.selectPrimaryTab(nextTab);
+      const nextTab: AuthTab = activeTab === 'login' ? 'register' : 'login';
+      selectPrimaryTab(nextTab);
 
       if (nextTab === 'login') {
-        flows.loginTabRef.current?.focus();
+        loginTabRef.current?.focus();
       } else {
-        flows.registerTabRef.current?.focus();
+        registerTabRef.current?.focus();
       }
     },
-    [flows.activeTab, flows.loginTabRef, flows.registerTabRef, flows.selectPrimaryTab],
+    [activeTab, loginTabRef, registerTabRef, selectPrimaryTab],
   );
 
   const secondaryScreen = flows.isSecondary
@@ -205,8 +205,6 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, healthStatus, onAuthenti
   return (
     <div className="mlg-page">
       <div className="mlg-shell">
-        <AuthTopNav healthStatus={healthStatus} />
-
         <div className="mlg-grid" aria-label="Acceso a Millast">
           <AuthStudioShowcase />
 

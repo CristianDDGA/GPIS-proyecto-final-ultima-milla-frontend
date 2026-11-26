@@ -21,7 +21,7 @@ test.describe('02 · Admin Full End-to-End Operations Flow', () => {
 
     const zoneInput = page.getByLabel(/Nombre de la zona/i);
     await zoneInput.fill('Sur · Quitumbe');
-    const zonePicker = page.locator('.wl-map-picker__viewport').first();
+    const zonePicker = page.locator('.wl-map-picker__kbd').first();
     await zonePicker.focus();
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: /Crear zona/i }).click();

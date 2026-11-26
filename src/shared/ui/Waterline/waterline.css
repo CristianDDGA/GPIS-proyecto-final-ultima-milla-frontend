@@ -575,7 +575,7 @@
 
 .wl-dashboard .wf-app-panel,
 .wl-dashboard .app-panel {
-  animation: wl-reveal 170ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both;
+  animation: wl-reveal 170ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) backwards;
 }
 
 :root[data-nav-input='keyboard'] .wl-dashboard .wf-app-panel,
@@ -637,7 +637,6 @@
     0 0 0 1px rgba(11, 19, 43, 0.05),
     inset 0 1px 0 #ffffff;
   color: var(--wl-ink);
-  contain: layout style;
   transition: border-color 160ms ease;
 }
 

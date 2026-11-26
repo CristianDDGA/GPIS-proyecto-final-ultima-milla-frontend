@@ -32,9 +32,13 @@ export function useAsyncList<T>(load: () => Promise<T[]>) {
   const clearError = useCallback(() => setError(null), []);
 
   useEffect(() => {
+    const versionRef = version;
     mounted.current = true;
     void refresh();
-    return () => { mounted.current = false; ++version.current; };
+    return () => {
+      mounted.current = false;
+      ++versionRef.current;
+    };
   }, [refresh]);
 
   return { items, isLoading, error, refresh, updateItems, clearError };

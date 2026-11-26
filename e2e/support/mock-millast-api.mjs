@@ -313,10 +313,25 @@ function customerProductView(p) {
   };
 }
 
+/**
+ * Orígenes del frontend de pruebas permitidos (lista cerrada). Nunca se refleja el encabezado
+ * `Origin` recibido: solo se responde con una constante de esta lista (evita CORS por entrada del usuario).
+ */
+const ALLOWED_ORIGINS = [
+  'http://127.0.0.1:5174',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://localhost:5173',
+  'http://127.0.0.1:4173',
+  'http://localhost:4173',
+];
+
 function corsHeaders(req) {
-  const origin = req.headers.origin || '*';
+  const requested = req.headers.origin;
+  const allowedOrigin = ALLOWED_ORIGINS.find((candidate) => candidate === requested) ?? ALLOWED_ORIGINS[0];
   return {
-    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Origin': allowedOrigin,
+    Vary: 'Origin',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, Idempotency-Key',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   };
@@ -588,7 +603,14 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- Orders ---
-  if (req.method === 'GET' && path === '/orders') return send(req, res, 200, { items: state.orders });
+  if (req.method === 'GET' && path === '/orders') {
+    const filterDate = url.searchParams.get('deliveryDate');
+    const filterZone = url.searchParams.get('zoneId');
+    const filtered = state.orders.filter(
+      (o) => (!filterDate || o.deliveryDate === filterDate) && (!filterZone || o.zoneId === filterZone),
+    );
+    return send(req, res, 200, { items: filtered });
+  }
   if (req.method === 'POST' && path === '/orders') {
     const body = await readBody(req);
     const created = {
@@ -606,7 +628,11 @@ const server = http.createServer(async (req, res) => {
     return send(req, res, 201, created);
   }
   if (req.method === 'GET' && /^\/orders\/[^/]+$/.test(path)) {
-    const o = state.orders.find((x) => x.id === path.split('/')[2]);
+    const id = path.split('/')[2];
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return send(req, res, 400, { code: 'INVALID_ID', message: 'Identificador de pedido inválido.' });
+    }
+    const o = state.orders.find((x) => x.id === id);
     return o ? send(req, res, 200, o) : send(req, res, 404, { code: 'NOT_FOUND', message: 'Pedido no encontrado.' });
   }
 
@@ -715,7 +741,7 @@ const server = http.createServer(async (req, res) => {
       r.courierId = body.courierId;
       r.status = 'asignada';
     }
-    return send(req, res, 200, { routeId: body.routeId, courierId: body.courierId });
+    return send(req, res, 200, { routeId: body.routeId, courierId: body.courierId, status: 'asignada' });
   }
   if (req.method === 'GET' && /^\/couriers\/[^/]+\/route$/.test(path)) {
     const courierId = path.split('/')[2];

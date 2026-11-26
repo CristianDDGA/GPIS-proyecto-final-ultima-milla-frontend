@@ -22,9 +22,10 @@ test.describe('06 · Unified Design, 0fps Idle Perf, Skeletons & Uber-Style Maps
 
     await page.goto('/');
 
-    // Normalized Waterline Login header pill + live health indicator
-    await expect(page.locator('.mlg-header-pill')).toBeVisible();
-    await expect(page.getByText(/Sistema operativo|Verificando API/i).first()).toBeVisible();
+    // El login ya no muestra barra superior ni estado del sistema: solo el showcase y la tarjeta de acceso
+    await expect(page.locator('#auth-login-email')).toBeVisible();
+    await expect(page.locator('.mlg-header-pill')).toHaveCount(0);
+    await expect(page.getByText(/Sistema operativo|Verificando API|Sin conexión API/i)).toHaveCount(0);
 
     // Sign in as Admin and verify normalized PageHeader + KpiStrip
     await loginAs(page, 'admin@millast.ec');

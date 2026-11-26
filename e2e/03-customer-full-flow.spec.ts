@@ -35,7 +35,7 @@ test.describe('03 · Customer Store, Cart, COD Checkout, Orders & Addresses', ()
     await page.getByRole('radio', { name: /Otra dirección/i }).click();
     const pickerViewport = page.locator('.wl-map-picker__viewport');
     await expect(pickerViewport).toBeVisible();
-    await pickerViewport.focus();
+    await pickerViewport.locator('.wl-map-picker__kbd').focus();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
 

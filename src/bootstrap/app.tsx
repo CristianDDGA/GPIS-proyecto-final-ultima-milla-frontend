@@ -224,6 +224,9 @@ export function App() {
   const [authGateway] = useState(() => new HttpAuthGateway(httpClient));
   const useCases = useMemo(() => composeUseCases(httpClient), [httpClient]);
   const auth = useAuth(authGateway);
+  // Métodos estables del hook de sesión: se desestructuran para que los efectos y callbacks
+  // declaren dependencias primitivas y no reaccionen a la identidad del objeto `auth`.
+  const { forceSignOut, logout, refreshMe } = auth;
 
   const resetSessionViewState = useCallback(() => {
     setZones([]);
@@ -248,9 +251,9 @@ export function App() {
     unauthorizedHandlerRef.current = () => {
       clearToken();
       resetSessionViewState();
-      auth.forceSignOut();
+      forceSignOut();
     };
-  }, [auth.forceSignOut, resetSessionViewState]);
+  }, [forceSignOut, resetSessionViewState]);
 
   const currentRole = auth.user?.role ?? null;
   const currentUser = auth.user;
@@ -419,14 +422,14 @@ export function App() {
 
   const confirmLogout = useCallback(() => {
     setLogoutModalOpen(false);
-    void auth.logout().finally(() => {
+    void logout().finally(() => {
       resetSessionViewState();
     });
-  }, [auth.logout, resetSessionViewState]);
+  }, [logout, resetSessionViewState]);
 
   const handleAuthenticated = useCallback(() => {
-    void auth.refreshMe();
-  }, [auth.refreshMe]);
+    void refreshMe();
+  }, [refreshMe]);
 
   if (auth.status === 'loading') {
     return (
@@ -449,11 +452,7 @@ export function App() {
             </Alert>
           )}
           <Suspense fallback={<AppBootSkeleton />}>
-            <AuthView
-              useCases={useCases.auth}
-              healthStatus={auth.healthStatus}
-              onAuthenticated={handleAuthenticated}
-            />
+            <AuthView useCases={useCases.auth} onAuthenticated={handleAuthenticated} />
           </Suspense>
         </main>
       </div>

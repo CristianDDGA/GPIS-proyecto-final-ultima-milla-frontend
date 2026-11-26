@@ -601,8 +601,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         className={'route-map-viewport' + (isDragging ? ' route-map-viewport--dragging' : '')}
         style={{ height: `${effectiveHeight}px` }}
         role="region"
-        tabIndex={0}
-        aria-label={`${title}. Usa flechas para mover y + o - para acercar o alejar.`}
+        aria-label={title}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={commitDragEnd}
@@ -610,6 +609,13 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         onKeyDown={handleKeyDown}
         onDoubleClick={() => setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1))}
       >
+        {/* Ancla de teclado interactiva real: las teclas del botón suben hasta el visor (flechas, +, −) */}
+        <button
+          type="button"
+          className="route-map-kbd"
+          aria-label="Mover el mapa con el teclado: flechas para desplazar, más y menos para acercar o alejar"
+        />
+
         {/* Escenario GPU: tiles + ruta + marcadores se mueven juntos en 1 solo translate3d */}
         <div ref={panStageRef} className="route-map-stage">
           <div className={tilesLayerClass} aria-hidden="true">

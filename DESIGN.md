@@ -8,7 +8,7 @@
 
 ## 1. Principios de Arquitectura Visual
 1. **Identidad 100% unificada (Login + 3 Roles):**
-   - **Acceso (`AuthView`):** mismo lienzo Waterline `#e8f0f9`, barra superior de cápsula única (`mlg-header-pill`) con indicador de salud API en vivo, emblema espectral WebGL2 (`GlassIconReveal` en reproducción 1-shot con clic para repetir), tarjeta Porcelain `26px`, pestañas y botones píldora `999px` e inputs `15px`.
+   - **Acceso (`AuthView`):** mismo lienzo Waterline `#e8f0f9` sin barra superior ni indicadores de estado, emblema espectral WebGL2 (`GlassIconReveal` en reproducción 1-shot con clic para repetir), tarjeta Porcelain `26px`, pestañas y botones píldora `999px` e inputs `15px`.
    - **Consola Autenticada (`.wl-dashboard`):** barra superior flotante de cápsula única (`UnifiedWaterlineNavbar`), cabecera estándar `<PageHeader>` y banda de métricas `<KpiStrip>` en todas las vistas de **Administrador**, **Repartidor** y **Cliente**.
 2. **Waterline Porcelain (alto rendimiento GPU):**
    - Las tarjetas en flujo (`.ui-card`, `.wf-toolbar`, `.route-map-shell`, `.route-map-dock`, `.wf-modal`) usan superficies sólidas limpias (`rgba(255, 255, 255, 0.92–0.97)` + borde especular + `contain: layout style`), eliminando el apilamiento de `backdrop-filter: blur(22–28px)`.

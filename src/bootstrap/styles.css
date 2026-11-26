@@ -331,7 +331,7 @@ textarea {
   flex-direction: column;
   gap: 24px;
   min-width: 0;
-  animation: wf-panel-enter 240ms var(--ease-out-expo) both;
+  animation: wf-panel-enter 240ms var(--ease-out-expo) backwards;
 }
 
 @keyframes wf-panel-enter {

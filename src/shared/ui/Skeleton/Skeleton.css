@@ -19,11 +19,14 @@
 }
 
 .ui-refetch-bar {
-  position: relative;
-  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
   height: 3px;
-  border-radius: 999px;
-  background-color: rgba(22, 104, 243, 0.12);
+  pointer-events: none;
+  background-color: rgba(22, 104, 243, 0.14);
   overflow: hidden;
 }
 

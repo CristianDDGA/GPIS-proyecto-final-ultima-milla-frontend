@@ -28,7 +28,7 @@ test.describe('04 · Courier Delivery Execution, Interactive Route Map & COD Cas
     await expect(mapRegion).toBeVisible();
     await page.getByRole('button', { name: 'Satélite' }).click();
     await page.getByRole('button', { name: 'Calles' }).click();
-    await mapRegion.focus();
+    await mapRegion.getByRole('button', { name: /Mover el mapa con el teclado/i }).focus();
     await page.keyboard.press('+');
     await page.keyboard.press('ArrowRight');
 

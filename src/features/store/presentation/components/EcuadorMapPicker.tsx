@@ -573,14 +573,19 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         className={'wl-map-picker__viewport' + (isDragging ? ' wl-map-picker__viewport--dragging' : '')}
         style={height === undefined ? undefined : { height }}
         role="region"
-        tabIndex={disabled ? -1 : 0}
-        aria-label="Mapa de Ecuador para elegir punto de entrega. Haz clic o pulsa Enter para fijar el pin, usa flechas para mover y + o - para zoom."
+        aria-label="Mapa de Ecuador para elegir punto de entrega"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onKeyDown={handleKeyDown}
       >
+        <button
+          type="button"
+          className="wl-map-picker__kbd"
+          disabled={disabled}
+          aria-label="Mover el mapa o fijar pin con el teclado: flechas para desplazar, Enter para fijar el pin, más y menos para acercar o alejar"
+        />
         <div ref={panStageRef} className="wl-map-picker__stage">
           <div
             className={

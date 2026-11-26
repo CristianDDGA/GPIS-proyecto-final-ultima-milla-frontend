@@ -133,6 +133,8 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
     [courierStoreOrders],
   );
 
+  const activeServiceDate = deliveries.activeRoute?.serviceDate;
+
   const mapStops = useMemo<readonly RouteMapStop[]>(() => {
     return stops.map((stop) => {
       const record = deliveries.deliveryRecords[stop.orderId];
@@ -144,7 +146,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
         status: record?.status ?? stop.status,
         latitude: geo?.latitude ?? null,
         longitude: geo?.longitude ?? null,
-        deliveryDate: deliveries.activeRoute?.serviceDate,
+        deliveryDate: activeServiceDate,
         deliveryTime: stop.deliveryTime,
         recipientName: geo?.recipientName,
         recipientPhone: geo?.recipientPhone,
@@ -152,7 +154,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
         notes: geo?.notes,
       };
     });
-  }, [deliveries.deliveryRecords, geoByOrderId, stops]);
+  }, [activeServiceDate, deliveries.deliveryRecords, geoByOrderId, stops]);
 
   const activeZoneName =
     deliveries.activeRoute
