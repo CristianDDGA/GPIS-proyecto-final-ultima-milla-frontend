@@ -313,8 +313,16 @@ function customerProductView(p) {
   };
 }
 
+const ALLOWED_ORIGINS = [
+  'http://127.0.0.1:5174',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://localhost:5173',
+];
+
 function corsHeaders(req) {
-  const origin = req.headers.origin || '*';
+  // Solo se devuelven origenes locales conocidos (nunca el valor que manda el navegador).
+  const origin = ALLOWED_ORIGINS.find((allowed) => allowed === req.headers.origin) ?? ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, Idempotency-Key',
