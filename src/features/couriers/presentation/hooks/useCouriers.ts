@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toShortCode } from '../../../../shared/ui/ShortIdBadge/ShortIdBadge.js';
 import type {
   ActiveCourierRoute,
   AssignCourierResult,
   Courier,
   CourierFilters,
-  CreateCourierInput,
 } from '../../domain/index.js';
 import type { CourierUseCases } from '../../application/courierUseCases.js';
 
@@ -26,8 +26,6 @@ export interface UseCouriersResult {
   refreshCouriers: (filters?: CourierFilters) => Promise<void>;
   availabilityFilter: CourierAvailabilityFilter;
   setAvailabilityFilter: (filter: CourierAvailabilityFilter) => void;
-  isCreatingCourier: boolean;
-  createCourier: (input: CreateCourierInput) => Promise<Courier | null>;
   updatingCourierId: string | null;
   toggleAvailability: (courier: Courier) => Promise<void>;
   isAssigning: boolean;
@@ -64,7 +62,6 @@ export function useCouriers(useCases: CourierUseCases): UseCouriersResult {
   const [assignableCouriersError, setAssignableCouriersError] = useState<string | null>(null);
   const [availabilityFilter, setAvailabilityFilterState] =
     useState<CourierAvailabilityFilter>('all');
-  const [isCreatingCourier, setIsCreatingCourier] = useState(false);
   const [updatingCourierId, setUpdatingCourierId] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [activeRoute, setActiveRoute] = useState<ActiveCourierRoute | null>(null);
@@ -89,7 +86,7 @@ export function useCouriers(useCases: CourierUseCases): UseCouriersResult {
     };
   }, []);
 
-  const { getCouriers, createCourier, updateAvailability, assignRoute, getActiveRoute } = useCases;
+  const { getCouriers, updateAvailability, assignRoute, getActiveRoute } = useCases;
 
   const refreshCouriers = useCallback(
     async (filters?: CourierFilters): Promise<void> => {
@@ -153,28 +150,6 @@ export function useCouriers(useCases: CourierUseCases): UseCouriersResult {
   const setAvailabilityFilter = useCallback((filter: CourierAvailabilityFilter): void => {
     setAvailabilityFilterState(filter);
   }, []);
-
-  const createCourierHandler = useCallback(
-    async (input: CreateCourierInput): Promise<Courier | null> => {
-      setIsCreatingCourier(true);
-      setError(null);
-      setSuccessMessage(null);
-
-      try {
-        const created = await createCourier.execute(input);
-        setSuccessMessage(`Repartidor "${created.displayName}" registrado correctamente.`);
-        await refreshCouriers();
-        await refreshAssignableCouriers();
-        return created;
-      } catch (error_) {
-        setError(toMessage(error_, 'No se pudo registrar el repartidor.'));
-        return null;
-      } finally {
-        setIsCreatingCourier(false);
-      }
-    },
-    [createCourier, refreshCouriers, refreshAssignableCouriers],
-  );
 
   const toggleAvailability = useCallback(
     async (courier: Courier): Promise<void> => {
@@ -250,7 +225,7 @@ export function useCouriers(useCases: CourierUseCases): UseCouriersResult {
       try {
         const result = await assignRoute.execute({ routeId, courierId });
         setSuccessMessage(
-          `Ruta ${result.routeId} asignada al repartidor ${result.courierId} correctamente.`,
+          `Ruta #RUT-${toShortCode(result.routeId)} asignada al repartidor #REP-${toShortCode(result.courierId)} correctamente.`,
         );
         await refreshCouriers();
         await refreshAssignableCouriers();
@@ -281,8 +256,6 @@ export function useCouriers(useCases: CourierUseCases): UseCouriersResult {
     refreshCouriers,
     availabilityFilter,
     setAvailabilityFilter,
-    isCreatingCourier,
-    createCourier: createCourierHandler,
     updatingCourierId,
     toggleAvailability,
     isAssigning,

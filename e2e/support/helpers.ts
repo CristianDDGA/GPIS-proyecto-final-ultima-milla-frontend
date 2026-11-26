@@ -107,7 +107,23 @@ export async function loginAs(
   await page.locator('#auth-login-email').fill(email);
   await page.locator('#auth-login-password').fill(password);
   await page.getByRole('button', { name: 'Entrar al sistema' }).click();
-  await expect(page.getByRole('tablist', { name: 'Navegación principal del sistema' })).toBeVisible();
+  await expect(page.locator('.wl-account__trigger')).toBeVisible();
+}
+
+export async function openAccountMenu(page: Page): Promise<void> {
+  const trigger = page.locator('.wl-account__trigger');
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  await expect(page.getByRole('menu', { name: 'Opciones de la cuenta' })).toBeVisible();
+}
+
+export async function logoutViaAccountMenu(page: Page): Promise<void> {
+  await openAccountMenu(page);
+  await page.getByRole('menuitem', { name: /Cerrar sesión/i }).click();
+  const dialog = page.locator('.wf-modal[role="dialog"]');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: /Sí, salir|Cerrar sesión/i }).click();
+  await expect(page.locator('#auth-login-email')).toBeVisible();
 }
 
 export async function navigateTab(page: Page, label: string): Promise<void> {

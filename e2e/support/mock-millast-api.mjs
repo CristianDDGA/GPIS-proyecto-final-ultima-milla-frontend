@@ -467,6 +467,41 @@ const server = http.createServer(async (req, res) => {
 
   // --- Authenticated Auth ---
   if (req.method === 'GET' && path === '/auth/me') return send(req, res, 200, { user: actor });
+  if (req.method === 'GET' && path === '/auth/me/profile') {
+    return send(req, res, 200, {
+      profile: {
+        id: actor.id,
+        email: actor.email,
+        role: actor.role,
+        publicRole: actor.publicRole ?? actor.role,
+        displayName: actor.displayName ?? null,
+        phone: actor.phone ?? '+593 99 876 5432',
+        emailVerified: true,
+        hasPassword: true,
+        googleLinked: actor.emailVerifiedVia === 'google',
+        createdAt: actor.createdAt ?? '2026-09-01T12:00:00Z',
+      },
+    });
+  }
+  if (req.method === 'PATCH' && path === '/auth/me/profile') {
+    const body = await readBody(req);
+    if (typeof body.displayName === 'string') actor.displayName = body.displayName.trim();
+    if (typeof body.phone === 'string') actor.phone = body.phone.trim();
+    return send(req, res, 200, {
+      profile: {
+        id: actor.id,
+        email: actor.email,
+        role: actor.role,
+        publicRole: actor.publicRole ?? actor.role,
+        displayName: actor.displayName ?? null,
+        phone: actor.phone ?? null,
+        emailVerified: true,
+        hasPassword: true,
+        googleLinked: actor.emailVerifiedVia === 'google',
+        createdAt: actor.createdAt ?? '2026-09-01T12:00:00Z',
+      },
+    });
+  }
   if (req.method === 'POST' && path === '/auth/change-password') {
     const token = `e2e-jwt-${randomUUID()}`;
     state.tokens.set(token, actor);
@@ -518,11 +553,38 @@ const server = http.createServer(async (req, res) => {
     const created = {
       id: randomUUID(),
       name: String(body.name || 'Nueva Zona').trim(),
+      isActive: true,
+      coverage: body.coverage ?? null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     state.zones.push(created);
     return send(req, res, 201, created);
+  }
+  if (req.method === 'PUT' && /^\/zones\/[^/]+\/coverage$/.test(path)) {
+    const zoneId = path.split('/')[2];
+    const zone = state.zones.find((z) => z.id === zoneId);
+    if (!zone) return send(req, res, 404, { code: 'ZONE_NOT_FOUND', message: 'Zona no encontrada.' });
+    const body = await readBody(req);
+    const cov = body && typeof body.coverage === 'object' ? body.coverage : body;
+    zone.coverage = cov
+      ? {
+          latitude: Number(cov.latitude),
+          longitude: Number(cov.longitude),
+          radiusKm: Number(cov.radiusKm),
+        }
+      : null;
+    zone.updatedAt = new Date().toISOString();
+    return send(req, res, 200, zone);
+  }
+  if (req.method === 'PATCH' && /^\/zones\/[^/]+$/.test(path)) {
+    const zoneId = path.split('/')[2];
+    const zone = state.zones.find((z) => z.id === zoneId);
+    if (!zone) return send(req, res, 404, { code: 'ZONE_NOT_FOUND', message: 'Zona no encontrada.' });
+    const body = await readBody(req);
+    if (typeof body.isActive === 'boolean') zone.isActive = body.isActive;
+    zone.updatedAt = new Date().toISOString();
+    return send(req, res, 200, zone);
   }
 
   // --- Orders ---

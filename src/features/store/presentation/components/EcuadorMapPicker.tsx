@@ -8,7 +8,6 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
-  type WheelEvent,
 } from 'react';
 import {
   Button,
@@ -35,6 +34,27 @@ export interface EcuadorMapPickerProps {
   readonly onChange: (coords: { readonly latitude: number | null; readonly longitude: number | null }) => void;
   readonly onAddressSuggested?: ((address: string) => void) | undefined;
   readonly disabled?: boolean | undefined;
+  /** Radio en km del círculo de cobertura dibujado alrededor del pin (editor de zonas). */
+  readonly radiusKm?: number | null | undefined;
+  /** Coberturas de otras zonas, dibujadas como referencia. */
+  readonly overlays?: readonly MapCoverageOverlay[] | undefined;
+  /** Texto cuando aún no hay pin; por defecto el de dirección de entrega. */
+  readonly emptyHint?: string | undefined;
+  /** Alto del mapa en px (por defecto lo fija el CSS: 230). */
+  readonly height?: number | undefined;
+}
+
+export interface MapCoverageOverlay {
+  readonly id: string;
+  readonly name: string;
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly radiusKm: number;
+}
+
+/** Metros que representa un píxel del mapa a esa latitud y zoom (proyección Web Mercator). */
+export function metersPerPixel(latitude: number, zoom: number): number {
+  return (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom);
 }
 
 interface NominatimHit {
@@ -58,6 +78,10 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   onChange,
   onAddressSuggested,
   disabled = false,
+  radiusKm = null,
+  emptyHint = 'Sin pin en el mapa (modo dirección manual). Haz clic en el mapa para marcar el destino.',
+  overlays,
+  height,
 }) => {
   const [center, setCenter] = useState<{ lat: number; lng: number }>(() =>
     latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)
@@ -105,41 +129,58 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     }
   }, [latitude, longitude]);
 
+  // El último punto pedido gana: si el pin se mueve varias veces seguidas, solo se busca la dirección del último
+  // (respetando el límite de 1 consulta por segundo de Nominatim) y nunca se pierde la actualización.
+  const pendingPointRef = useRef<{ lat: number; lng: number } | null>(null);
+  const reverseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestSeqRef = useRef(0);
+
   useEffect(() => {
+    const drag = dragRef.current;
     return () => {
-      if (dragRef.current.rafId) {
-        cancelAnimationFrame(dragRef.current.rafId);
-      }
+      if (reverseTimerRef.current !== null) clearTimeout(reverseTimerRef.current);
+      if (drag.rafId) cancelAnimationFrame(drag.rafId);
     };
   }, []);
 
-  const reverseGeocode = useCallback(
-    async (lat: number, lng: number) => {
-      if (!onAddressSuggested) return;
-      const now = Date.now();
-      if (now - lastNominatimRef.current < 1050) return;
-      lastNominatimRef.current = now;
-      setIsReversing(true);
-      setMapNotice(null);
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=es`,
-        );
-        if (!res.ok) return;
-        const data = (await res.json()) as { display_name?: string };
-        if (typeof data.display_name === 'string') {
-          const clean = sanitizeBackendText(data.display_name, 160);
-          if (clean.length >= 6) {
-            onAddressSuggested(clean);
-          }
-        }
-      } catch {
-        setMapNotice('Pin guardado. Puedes escribir o ajustar la dirección manualmente.');
-      } finally {
-        setIsReversing(false);
+  const runReverseGeocode = useCallback(async () => {
+    const point = pendingPointRef.current;
+    if (!onAddressSuggested || point === null) return;
+    pendingPointRef.current = null;
+    lastNominatimRef.current = Date.now();
+    const seq = ++requestSeqRef.current;
+    setIsReversing(true);
+    setMapNotice(null);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${point.lat}&lon=${point.lng}&accept-language=es`,
+      );
+      if (!res.ok || seq !== requestSeqRef.current) return;
+      const data = (await res.json()) as { display_name?: string };
+      if (seq !== requestSeqRef.current) return;
+      if (typeof data.display_name === 'string') {
+        const clean = sanitizeBackendText(data.display_name, 160);
+        if (clean.length >= 6) onAddressSuggested(clean);
       }
+    } catch {
+      setMapNotice('Punto guardado. Escribe la dirección o ajústala a mano.');
+    } finally {
+      if (seq === requestSeqRef.current) setIsReversing(false);
+    }
+  }, [onAddressSuggested]);
+
+  const reverseGeocode = useCallback(
+    (lat: number, lng: number) => {
+      if (!onAddressSuggested) return;
+      pendingPointRef.current = { lat, lng };
+      if (reverseTimerRef.current !== null) clearTimeout(reverseTimerRef.current);
+      const wait = Math.max(350, 1050 - (Date.now() - lastNominatimRef.current));
+      reverseTimerRef.current = setTimeout(() => {
+        reverseTimerRef.current = null;
+        void runReverseGeocode();
+      }, wait);
     },
-    [onAddressSuggested],
+    [onAddressSuggested, runReverseGeocode],
   );
 
   const runSearch = useCallback(
@@ -287,6 +328,16 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     }
   };
 
+  const circleFor = (lat: number, lng: number, km: number) => {
+    const world = latLngToWorld(lat, lng, zoom);
+    const diameter = (2 * km * 1000) / metersPerPixel(lat, zoom);
+    return {
+      dx: world.x - centerWorld.x,
+      dy: world.y - centerWorld.y,
+      diameter: Math.max(2, diameter),
+    };
+  };
+
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (disabled) return;
     const target = event.target as HTMLElement | null;
@@ -378,17 +429,24 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       const clamped = clampEcuadorLatLng(picked.lat, picked.lng);
       setMapNotice(null);
       onChange({ latitude: clamped.lat, longitude: clamped.lng });
-      void reverseGeocode(clamped.lat, clamped.lng);
+      reverseGeocode(clamped.lat, clamped.lng);
     }
   };
 
-  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (disabled || Math.abs(event.deltaY) < 4) return;
-    event.preventDefault();
-    setZoom((prev) =>
-      event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
-    );
-  };
+  // La rueda hace zoom sin mover la página: el listener nativo no es pasivo (en React onWheel sí lo es).
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return undefined;
+    const onWheel = (event: globalThis.WheelEvent) => {
+      if (disabled || Math.abs(event.deltaY) < 4) return;
+      event.preventDefault();
+      setZoom((prev) =>
+        event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
+      );
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [disabled]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return;
@@ -513,6 +571,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       <div
         ref={viewportRef}
         className={'wl-map-picker__viewport' + (isDragging ? ' wl-map-picker__viewport--dragging' : '')}
+        style={height === undefined ? undefined : { height }}
         role="region"
         tabIndex={disabled ? -1 : 0}
         aria-label="Mapa de Ecuador para elegir punto de entrega. Haz clic o pulsa Enter para fijar el pin, usa flechas para mover y + o - para zoom."
@@ -520,7 +579,6 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        onWheel={handleWheel}
         onKeyDown={handleKeyDown}
       >
         <div ref={panStageRef} className="wl-map-picker__stage">
@@ -554,6 +612,43 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
               />
             ))}
           </div>
+
+          {overlays?.map((zone) => {
+            const circle = circleFor(zone.latitude, zone.longitude, zone.radiusKm);
+            return (
+              <div
+                key={zone.id}
+                className="wl-map-picker__circle wl-map-picker__circle--other"
+                aria-hidden="true"
+                title={zone.name}
+                style={{
+                  width: circle.diameter,
+                  height: circle.diameter,
+                  transform: `translate3d(${Math.round(circle.dx - circle.diameter / 2)}px, ${Math.round(circle.dy - circle.diameter / 2)}px, 0)`,
+                }}
+              >
+                <span className="wl-map-picker__circle-label">{zone.name}</span>
+              </div>
+            );
+          })}
+
+          {latitude !== null && longitude !== null && radiusKm !== null && radiusKm > 0 && (
+            (() => {
+              const circle = circleFor(latitude, longitude, radiusKm);
+              return (
+                <div
+                  className="wl-map-picker__circle"
+                  aria-hidden="true"
+                  data-testid="coverage-circle"
+                  style={{
+                    width: circle.diameter,
+                    height: circle.diameter,
+                    transform: `translate3d(${Math.round(circle.dx - circle.diameter / 2)}px, ${Math.round(circle.dy - circle.diameter / 2)}px, 0)`,
+                  }}
+                />
+              );
+            })()
+          )}
 
           {pinOffset !== null && (
             <div
@@ -623,7 +718,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         <span className="wl-map-picker__coords">
           {latitude !== null && longitude !== null
             ? `Pin fijado: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}${isReversing ? ' · leyendo dirección...' : ''}`
-            : 'Sin pin en el mapa (modo dirección manual). Haz clic en el mapa para marcar el destino.'}
+            : emptyHint}
         </span>
 
         {latitude !== null && longitude !== null && (

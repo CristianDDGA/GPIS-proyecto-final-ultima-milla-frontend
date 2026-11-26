@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FC, type FormEvent } from 'react';
 import type {
   ActiveCourierRouteStop,
-  CreateCourierInput,
   Courier,
 } from '../../domain/index.js';
-import { validateCreateCourierInput } from '../../domain/index.js';
 import type { CourierUseCases } from '../../application/courierUseCases.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import { useCouriers, type CourierAvailabilityFilter } from '../hooks/useCouriers.js';
@@ -19,7 +17,6 @@ import {
   ShortIdBadge,
   Spinner,
   TableRowsSkeleton,
-  TextInput,
   TopRefetchBar,
 } from '../../../../shared/ui/index.js';
 import '../styles/couriers.css';
@@ -81,8 +78,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     refreshCouriers,
     availabilityFilter,
     setAvailabilityFilter,
-    isCreatingCourier,
-    createCourier,
     updatingCourierId,
     toggleAvailability,
     isAssigning,
@@ -97,9 +92,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     clearFeedback,
   } = useCouriers(useCases);
 
-  const [displayName, setDisplayName] = useState('');
-  const [capacity, setCapacity] = useState('5');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [routes, setRoutes] = useState<readonly DispatchableRoute[]>([]);
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(true);
   const [routesError, setRoutesError] = useState<string | null>(null);
@@ -218,24 +210,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     [couriers, selectedCourierId],
   );
 
-  const handleCreateCourier = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    const input: CreateCourierInput = {
-      displayName: displayName.trim(),
-      maxOrdersPerTrip: Number(capacity),
-    };
-    const validation = validateCreateCourierInput(input);
-    setFieldErrors(validation.errors);
-    if (!validation.isValid) return;
-
-    const created = await createCourier(input);
-    if (created) {
-      setDisplayName('');
-      setCapacity('5');
-      setFieldErrors({});
-    }
-  };
-
   const handleAssignRoute = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     if (selectedRouteId.length === 0 || selectedAssignCourierId.length === 0) return;
@@ -306,44 +280,6 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
 
       <div className="couriers-grid">
         <div className="couriers-grid__column">
-          <Card variant="elevated" className="couriers-form-card">
-            <h3 className="couriers-card__title">Alta de repartidor</h3>
-            <form className="couriers-form" onSubmit={handleCreateCourier} noValidate>
-              <TextInput
-                id="courier-display-name"
-                label="Nombre del repartidor"
-                placeholder="Ej. Carlos Andrade"
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                error={fieldErrors['displayName']}
-                isRequired
-                maxLength={120}
-                disabled={isCreatingCourier}
-                autoComplete="name"
-              />
-
-              <TextInput
-                id="courier-capacity"
-                type="number"
-                label="Máximo de pedidos por viaje"
-                value={capacity}
-                onChange={(event) => setCapacity(event.target.value)}
-                error={fieldErrors['maxOrdersPerTrip']}
-                isRequired
-                min={1}
-                step={1}
-                inputMode="numeric"
-                disabled={isCreatingCourier}
-              />
-
-              <div className="couriers-form__actions">
-                <Button type="submit" isLoading={isCreatingCourier} disabled={isCreatingCourier}>
-                  {isCreatingCourier ? 'Registrando...' : 'Registrar repartidor'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-
           <Card variant="elevated" className="couriers-assignment-card">
             <div className="couriers-card__header">
               <h3 className="couriers-card__title">Asignación de ruta a repartidor</h3>

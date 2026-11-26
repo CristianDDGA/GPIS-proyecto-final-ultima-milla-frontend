@@ -119,3 +119,32 @@ export const APP_ROLE_LABELS: Record<AuthRole, string> = {
 };
 
 export { isAuthRole, isPublicRole };
+
+/** Perfil propio (GET/PATCH /auth/me/profile, migración 015 del backend). */
+export interface UserProfile {
+  readonly id: string;
+  readonly email: string;
+  readonly role: AuthRole;
+  readonly publicRole: PublicRole;
+  readonly displayName: string | null;
+  readonly phone: string | null;
+  readonly emailVerified: boolean;
+  /** false en una cuenta creada solo con Google: no se ofrece cambiar la contraseña. */
+  readonly hasPassword: boolean;
+  readonly googleLinked: boolean;
+  readonly createdAt: string;
+}
+
+export interface UpdateProfileInput {
+  readonly displayName?: string | null | undefined;
+  readonly phone?: string | null | undefined;
+}
+
+const PHONE_PATTERN = /^\+?\d(?:[ -]?\d){6,14}$/;
+
+/** Mismas reglas que el backend: 7 a 15 dígitos, + inicial opcional; vacío borra el teléfono. */
+export function validateProfilePhone(phone: string): string | null {
+  const trimmed = phone.trim();
+  if (trimmed.length === 0) return null;
+  return PHONE_PATTERN.test(trimmed) ? null : 'El teléfono debe tener entre 7 y 15 dígitos (puede iniciar con +).';
+}

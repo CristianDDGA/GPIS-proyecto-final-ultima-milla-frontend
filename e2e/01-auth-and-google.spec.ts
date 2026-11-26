@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { IS_LIVE_BACKEND, loginAs, resetMockApi, stubExternalNetwork } from './support/helpers';
+import {
+  IS_LIVE_BACKEND,
+  loginAs,
+  logoutViaAccountMenu,
+  resetMockApi,
+  stubExternalNetwork,
+} from './support/helpers';
 
 test.describe('01 · Auth, Registration, Password Recovery & Google Sign-In', () => {
   test.beforeEach(async ({ page }) => {
@@ -36,15 +42,10 @@ test.describe('01 · Auth, Registration, Password Recovery & Google Sign-In', ()
     await page.getByRole('button', { name: 'Entrar al sistema' }).click();
 
     await expect(page.getByRole('tablist', { name: 'Navegación principal del sistema' })).toBeVisible();
-    await expect(page.getByText('Matius Paredes')).toBeVisible();
+    await expect(page.locator('.wl-account__trigger')).toContainText('Matius');
 
-    // Open logout modal and confirm
-    await page.getByRole('button', { name: 'Cerrar sesión' }).click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
-
-    await expect(page.locator('#auth-login-email')).toBeVisible();
+    // Open AccountMenu -> logout modal and confirm
+    await logoutViaAccountMenu(page);
   });
 
   test('supports customer self-registration and 6-digit email verification', async ({ page }) => {
@@ -64,9 +65,9 @@ test.describe('01 · Auth, Registration, Password Recovery & Google Sign-In', ()
     await page.locator('#auth-verify-code').fill('123456');
     await page.getByRole('button', { name: 'Confirmar código', exact: true }).click();
 
-    // Authenticated directly as Cliente into Tienda
-    await expect(page.getByRole('tablist', { name: 'Navegación principal del sistema' })).toBeVisible();
-    await expect(page.getByText('Valeria Quiroz')).toBeVisible();
+    // Authenticated directly as Cliente into ClientTopBar + Tienda
+    await expect(page.locator('.client-topbar')).toBeVisible();
+    await expect(page.locator('.wl-account__trigger')).toContainText('Valeria');
   });
 
   test('supports forgot-password and reset-password flow', async ({ page }) => {
@@ -95,14 +96,14 @@ test.describe('01 · Auth, Registration, Password Recovery & Google Sign-In', ()
     await expect(googleBtn).toBeVisible();
     await googleBtn.click();
 
-    await expect(page.getByRole('tablist', { name: 'Navegación principal del sistema' })).toBeVisible();
-    await expect(page.getByText('Sofía Montalvo')).toBeVisible();
+    await expect(page.locator('.client-topbar')).toBeVisible();
+    await expect(page.locator('.wl-account__trigger')).toContainText('Sofía');
   });
 
   test('persists session across page reload when authenticated', async ({ page }) => {
     await loginAs(page, 'admin@millast.ec');
     await page.reload();
     await expect(page.getByRole('tablist', { name: 'Navegación principal del sistema' })).toBeVisible();
-    await expect(page.getByText('Matius Paredes')).toBeVisible();
+    await expect(page.locator('.wl-account__trigger')).toContainText('Matius');
   });
 });

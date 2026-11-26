@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { loginAs, navigateTab, resetMockApi, stubExternalNetwork } from './support/helpers';
+import { loginAs, navigateTab, openAccountMenu, resetMockApi, stubExternalNetwork } from './support/helpers';
 
 test.describe('05 · Accessibility, Motion Discipline & Responsive Layout', () => {
   test.beforeEach(async ({ page }) => {
@@ -50,9 +50,8 @@ test.describe('05 · Accessibility, Motion Discipline & Responsive Layout', () =
   test('traps focus inside Modal, closes on Escape, and restores focus to opener', async ({ page }) => {
     await loginAs(page, 'admin@millast.ec');
 
-    const trigger = page.getByRole('button', { name: 'Cambiar contraseña' });
-    await trigger.focus();
-    await trigger.click();
+    await openAccountMenu(page);
+    await page.getByRole('menuitem', { name: 'Cambiar contraseña' }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -71,7 +70,7 @@ test.describe('05 · Accessibility, Motion Discipline & Responsive Layout', () =
       expect(insideDialog).toBe(true);
     }
 
-    // Escape closes modal and restores focus to opener
+    // Escape closes modal and restores focus/scroll
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
 
@@ -81,11 +80,11 @@ test.describe('05 · Accessibility, Motion Discipline & Responsive Layout', () =
 
   test('respects prefers-reduced-motion: reduce without breaking interactions', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await loginAs(page, 'cliente@millast.ec');
-    await expect(page.getByText('Audífonos Inalámbricos Studio ANC')).toBeVisible();
+    await loginAs(page, 'admin@millast.ec');
+    await expect(page.getByRole('heading', { name: 'Zonas de cobertura' })).toBeVisible();
 
     // Transitions remain gentle & non-zero-broken (not blocked from clicking/switching)
-    await navigateTab(page, 'Zonas');
-    await expect(page.getByRole('heading', { name: 'Zonas de cobertura' })).toBeVisible();
+    await navigateTab(page, 'Pedidos');
+    await expect(page.getByText('Av. Amazonas N34-120 y República').first()).toBeVisible();
   });
 });

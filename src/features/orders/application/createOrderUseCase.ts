@@ -8,8 +8,8 @@ import {
 export class CreateOrderUseCase {
   constructor(private readonly orderGateway: OrderGateway) {}
 
-  public async execute(input: CreateOrderInput): Promise<Order> {
-    const validation = validateOrder(input);
+  public async execute(input: CreateOrderInput, options: { requirePin?: boolean } = {}): Promise<Order> {
+    const validation = validateOrder(input, options);
 
     if (!validation.isValid) {
       const firstErrorMessage =
@@ -22,6 +22,7 @@ export class CreateOrderUseCase {
       deliveryAddress: input.deliveryAddress.trim(),
       deliveryDate: input.deliveryDate.trim(),
       deliveryTime: input.deliveryTime.trim(),
+      ...(input.latitude != null && input.longitude != null ? { latitude: input.latitude, longitude: input.longitude } : {}),
     };
 
     return this.orderGateway.create(sanitizedInput);

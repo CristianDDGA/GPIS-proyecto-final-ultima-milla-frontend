@@ -3,7 +3,6 @@ import type { AuthGateway } from '../../domain/authGateway.js';
 import type {
   AuthSession,
   AuthUser,
-  CreateManagedUserInput,
   ForgotPasswordInput,
   HealthStatus,
   LoginInput,
@@ -19,6 +18,8 @@ import type {
   ManagedUserPage,
   ResetManagedUserPasswordInput,
   SetManagedUserActiveInput,
+  UpdateProfileInput,
+  UserProfile,
 } from '../../domain/managedUser.js';
 import { clearToken, setToken } from './authTokenStorage.js';
 import {
@@ -27,19 +28,13 @@ import {
   readAuthUser,
   readManagedUser,
   readManagedUserPage,
+  readProfile,
   readRegisterOutcome,
 } from './response.js';
 
 interface RegisterRequest {
   email: string;
   password: string;
-  displayName?: string | null | undefined;
-}
-
-interface CreateManagedUserRequest {
-  email: string;
-  password: string;
-  role: string;
   displayName?: string | null | undefined;
 }
 
@@ -143,19 +138,6 @@ export class HttpAuthGateway implements AuthGateway {
     }
   }
 
-  public async createManagedUser(input: CreateManagedUserInput): Promise<AuthUser> {
-    const request: CreateManagedUserRequest = {
-      email: input.email,
-      password: input.password,
-      role: input.role,
-    };
-
-    if (input.displayName !== undefined) {
-      request.displayName = input.displayName;
-    }
-
-    return readAuthUser(await this.httpClient.post<unknown>('/auth/users', request));
-  }
   public async changePassword(input: ChangePasswordInput): Promise<AuthSession> {
     const session = readAuthSession(
       await this.httpClient.post<unknown>('/auth/change-password', {
@@ -207,6 +189,17 @@ export class HttpAuthGateway implements AuthGateway {
         isActive: input.isActive,
       }),
     );
+  }
+
+  public async getProfile(): Promise<UserProfile> {
+    return readProfile(await this.httpClient.get<unknown>('/auth/me/profile'));
+  }
+
+  public async updateProfile(input: UpdateProfileInput): Promise<UserProfile> {
+    const body: Record<string, string | null> = {};
+    if (input.displayName !== undefined) body['displayName'] = input.displayName;
+    if (input.phone !== undefined) body['phone'] = input.phone;
+    return readProfile(await this.httpClient.patch<unknown>('/auth/me/profile', body));
   }
 
   public async resetManagedUserPassword(input: ResetManagedUserPasswordInput): Promise<void> {

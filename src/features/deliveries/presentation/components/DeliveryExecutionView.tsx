@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import type { CourierUseCases } from '../../../couriers/application/courierUseCases.js';
 import type { ActiveCourierRouteStop } from '../../../couriers/domain/index.js';
+import type { CourierStoreOrder } from '../../../store/domain/storeTypes.js';
+import { CollectDeliveryModal } from '../../../store/presentation/components/CollectDeliveryModal.js';
 import type { HttpStoreGateway } from '../../../store/infrastructure/http/httpStoreGateway.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import type { DeliveryUseCases } from '../../application/deliveryUseCases.js';
@@ -64,11 +66,16 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
   const hasCourierBinding = actor.role === 'repartidor' ? actor.courierId !== null : true;
 
   const [geoByOrderId, setGeoByOrderId] = useState<Record<string, StopGeoMeta>>({});
+  const [courierStoreOrders, setCourierStoreOrders] = useState<Record<string, CourierStoreOrder>>({});
+  const [collectTarget, setCollectTarget] = useState<CourierStoreOrder | null>(null);
+  const [collectNotice, setCollectNotice] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     const route = deliveries.activeRoute;
     if (!storeGateway || !route || route.stops.length === 0) {
       setGeoByOrderId({});
+      setCourierStoreOrders({});
       return;
     }
 
@@ -78,6 +85,11 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
         const next: Record<string, StopGeoMeta> = {};
         if (actor.role === 'repartidor') {
           const items = await storeGateway.getCourierOrders();
+          const storeOrders: Record<string, CourierStoreOrder> = {};
+          for (const item of items) {
+            if (item.isStoreOrder) storeOrders[item.orderId] = item;
+          }
+          if (!cancelled) setCourierStoreOrders(storeOrders);
           for (const item of items) {
             next[item.orderId] = {
               latitude: item.deliveryLatitude,
@@ -114,7 +126,12 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [actor.role, deliveries.activeRoute, storeGateway]);
+  }, [actor.role, deliveries.activeRoute, storeGateway, reloadTick]);
+
+  const collectableOrderIds = useMemo(
+    () => new Set(Object.keys(courierStoreOrders)),
+    [courierStoreOrders],
+  );
 
   const mapStops = useMemo<readonly RouteMapStop[]>(() => {
     return stops.map((stop) => {
@@ -270,6 +287,8 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
               onLoadActiveRoute={() => void deliveries.loadActiveRoute()}
               onInspectStop={(orderId) => void deliveries.inspectOrder(orderId)}
               onAdvanceStop={(orderId) => void deliveries.advanceStop(orderId)}
+              collectableOrderIds={collectableOrderIds}
+              onCollectStop={(orderId) => setCollectTarget(courierStoreOrders[orderId] ?? null)}
               onCompleteRoute={() => void deliveries.completeActiveRoute()}
             />
           </div>
@@ -305,6 +324,29 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
             )}
           </div>
         </div>
+      )}
+      {collectTarget && storeGateway && (
+        <CollectDeliveryModal
+          storeGateway={storeGateway}
+          order={collectTarget}
+          onClose={() => setCollectTarget(null)}
+          onDelivered={async (collectedCents) => {
+            const orderId = collectTarget.orderId;
+            setCollectTarget(null);
+            setCollectNotice(
+              `Entrega confirmada (${(collectedCents / 100).toFixed(2)} USD cobrados contra entrega).`,
+            );
+            await deliveries.syncDeliveryRecord(orderId);
+            await deliveries.loadActiveRoute();
+            setReloadTick((tick) => tick + 1);
+            onDeliveryChanged?.();
+          }}
+        />
+      )}
+      {collectNotice && (
+        <Alert type="success" title="Entrega registrada" onClose={() => setCollectNotice(null)}>
+          {collectNotice}
+        </Alert>
       )}
     </section>
   );

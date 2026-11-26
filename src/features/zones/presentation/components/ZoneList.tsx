@@ -1,11 +1,15 @@
 import type { FC } from 'react';
-import type { Zone } from '../../domain/index.js';
+import { describeCoverage, isZoneActive, type Zone } from '../../domain/index.js';
 import { Button, EmptyState, ShortIdBadge, TableRowsSkeleton } from '../../../../shared/ui/index.js';
 
 export interface ZoneListProps {
   zones: Zone[];
   isLoading: boolean;
   onSelectZone?: ((id: string) => void) | undefined;
+  /** Si se entrega, cada fila muestra el botón para definir la cobertura (solo admin). */
+  onEditCoverage?: ((zone: Zone) => void) | undefined;
+  /** Si se entrega, cada fila muestra el botón para activar o desactivar la zona (solo admin). */
+  onToggleActive?: ((zone: Zone) => void) | undefined;
   /** Conteo de pedidos por zona; se muestra como señal de demanda. */
   orderCountByZone?: ReadonlyMap<string, number> | undefined;
 }
@@ -14,7 +18,7 @@ function formatDate(isoDateString?: string): string {
   if (!isoDateString) return '—';
   try {
     const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) return isoDateString;
+    if (Number.isNaN(date.getTime())) return isoDateString;
     return new Intl.DateTimeFormat('es-ES', {
       dateStyle: 'medium',
       timeStyle: 'short',
@@ -28,6 +32,8 @@ export const ZoneList: FC<ZoneListProps> = ({
   zones,
   isLoading,
   onSelectZone,
+  onEditCoverage,
+  onToggleActive,
   orderCountByZone,
 }) => {
   if (isLoading && zones.length === 0) {
@@ -50,16 +56,18 @@ export const ZoneList: FC<ZoneListProps> = ({
           <tr>
             <th scope="col">Nombre de zona</th>
             <th scope="col">Código</th>
+            <th scope="col">Cobertura</th>
+            <th scope="col">Estado</th>
             <th scope="col">Demanda</th>
             <th scope="col">Registro</th>
-            {onSelectZone && <th scope="col">Detalle</th>}
+            {(onSelectZone || onEditCoverage || onToggleActive) && <th scope="col">Acciones</th>}
           </tr>
         </thead>
         <tbody>
           {zones.map((zone) => {
             const orderCount = orderCountByZone?.get(zone.id);
             return (
-              <tr key={zone.id}>
+              <tr key={zone.id} className={isZoneActive(zone) ? undefined : 'zones-table__row--inactive'}>
                 <td className="zones-table__name">{zone.name}</td>
                 <td>
                   <ShortIdBadge
@@ -67,6 +75,12 @@ export const ZoneList: FC<ZoneListProps> = ({
                     prefix="ZON"
                     ariaLabel={`Copiar el identificador de la zona ${zone.name}`}
                   />
+                </td>
+                <td className="zones-table__coverage">{describeCoverage(zone.coverage)}</td>
+                <td>
+                  <span className={`zones-status zones-status--${isZoneActive(zone) ? 'active' : 'inactive'}`}>
+                    {isZoneActive(zone) ? 'Activa' : 'Inactiva'}
+                  </span>
                 </td>
                 <td className="zones-table__demand">
                   {orderCount === undefined ? (
@@ -79,17 +93,41 @@ export const ZoneList: FC<ZoneListProps> = ({
                   )}
                 </td>
                 <td className="zones-table__date">{formatDate(zone.createdAt)}</td>
-                {onSelectZone && (
+                {(onSelectZone || onEditCoverage || onToggleActive) && (
                   <td className="zones-table__actions">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onSelectZone(zone.id)}
-                      aria-label={`Ver detalle de la zona ${zone.name}`}
-                    >
-                      Ver detalle
-                    </Button>
+                    {onSelectZone && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onSelectZone(zone.id)}
+                        aria-label={`Ver detalle de la zona ${zone.name}`}
+                      >
+                        Ver detalle
+                      </Button>
+                    )}
+                    {onEditCoverage && (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => onEditCoverage(zone)}
+                        aria-label={`Definir la cobertura de la zona ${zone.name}`}
+                      >
+                        Cobertura
+                      </Button>
+                    )}
+                    {onToggleActive && (
+                      <Button
+                        type="button"
+                        variant={isZoneActive(zone) ? 'danger' : 'secondary'}
+                        size="sm"
+                        onClick={() => onToggleActive(zone)}
+                        aria-label={`${isZoneActive(zone) ? 'Desactivar' : 'Activar'} la zona ${zone.name}`}
+                      >
+                        {isZoneActive(zone) ? 'Desactivar' : 'Activar'}
+                      </Button>
+                    )}
                   </td>
                 )}
               </tr>

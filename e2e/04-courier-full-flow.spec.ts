@@ -39,15 +39,19 @@ test.describe('04 · Courier Delivery Execution, Interactive Route Map & COD Cas
     await expect(page.locator('.route-map-popup')).toBeVisible();
 
     // Trigger COD delivery modal on the active en_camino stop
-    const deliverBtn = page.getByRole('button', { name: /Entregar y cobrar/i }).first();
+    const deliverBtn = page.getByRole('button', { name: /Cobrar y entregar|Entregar y cobrar/i }).first();
     await expect(deliverBtn).toBeVisible();
     await deliverBtn.click();
 
     const modal = page.locator('.wf-modal[role="dialog"]');
     await expect(modal).toBeVisible();
-    await modal.getByRole('button', { name: /Confirmar entrega/i }).click();
+    await modal.getByRole('button', { name: /Confirmar entrega|Cobrar y entregar/i }).click();
 
     await expect(page.getByText(/Entrega confirmada/i)).toBeVisible();
+    const okBtn = page.getByRole('button', { name: 'Cerrar notificación' });
+    if (await okBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await okBtn.click();
+    }
 
     // Check Mi caja subtab
     await page.getByRole('tab', { name: 'Mi caja', exact: true }).click();

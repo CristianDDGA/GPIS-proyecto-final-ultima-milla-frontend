@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { loginAs, navigateTab, resetMockApi, stubExternalNetwork } from './support/helpers';
+import {
+  loginAs,
+  logoutViaAccountMenu,
+  navigateTab,
+  openAccountMenu,
+  resetMockApi,
+  stubExternalNetwork,
+} from './support/helpers';
 
 test.describe('06 · Unified Design, 0fps Idle Perf, Skeletons & Uber-Style Maps', () => {
   test.beforeEach(async ({ page }) => {
@@ -42,20 +49,25 @@ test.describe('06 · Unified Design, 0fps Idle Perf, Skeletons & Uber-Style Maps
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
-    // Delay store catalog response so ProductGridSkeleton is observable on initial Customer load
-    await page.route('**/store/products**', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 750));
+    await loginAs(page, 'admin@millast.ec');
+    await navigateTab(page, 'Tienda');
+    await expect(page.getByRole('heading', { name: 'Administración de tienda', exact: true })).toBeVisible();
+
+    // Delay admin store orders response so StopCardsSkeleton is deterministically observable
+    await page.route('**/store/admin/orders**', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 900));
       await route.continue();
     });
 
-    await loginAs(page, 'cliente@millast.ec');
+    const storeTabs = page.getByRole('tablist', { name: 'Módulos de tienda' });
+    await storeTabs.getByRole('tab', { name: 'Pedidos' }).click();
     await expect(page.locator('[aria-busy="true"]').first()).toBeVisible();
-    await expect(page.getByText('Audífonos Inalámbricos Studio ANC').first()).toBeVisible();
+    await expect(page.getByText('Av. Amazonas N34-120 y República').first()).toBeVisible();
 
     expect(pageErrors).toEqual([]);
   });
 
-  test('operates Uber-style RouteStopsMap (layers, dock stepper, expand toggle, Waze/GMaps) and Customer 4-stage tracking', async ({
+  test('operates Uber-style RouteStopsMap (layers, dock stepper, expand toggle, Waze/GMaps) and Customer tracking', async ({
     page,
   }) => {
     const pageErrors: string[] = [];
@@ -97,27 +109,21 @@ test.describe('06 · Unified Design, 0fps Idle Perf, Skeletons & Uber-Style Maps
       await mapShell.getByRole('button', { name: 'Parada anterior' }).click();
     }
 
-    // 2. Customer Uber Eats-style 4-stage order tracking
-    await page.getByRole('button', { name: /Salir|Cerrar sesión/i }).click();
-    const logoutDialog = page.locator('.wf-modal[role="dialog"]');
-    await expect(logoutDialog).toBeVisible();
-    await logoutDialog.getByRole('button', { name: /Cerrar sesión|Salir/i }).click();
-    await expect(page.locator('#auth-login-email')).toBeVisible();
-
+    // 2. Customer order tracking via AccountMenu -> Mis pedidos + Uber RouteStopsMap
+    await logoutViaAccountMenu(page);
     await loginAs(page, 'cliente@millast.ec');
-    await expect(page.locator('.wl-page-header')).toBeVisible();
-    await expect(page.locator('.wl-kpi-strip')).toBeVisible();
+    await expect(page.locator('.client-topbar')).toBeVisible();
 
-    const storeTabs = page.getByRole('tablist', { name: /Secciones de la tienda|Tienda/i });
-    await storeTabs.getByRole('tab', { name: /Mis compras/i }).click();
-    const viewOrderBtn = page.getByRole('button', { name: 'Ver', exact: true }).first();
-    await expect(viewOrderBtn).toBeVisible();
-    await viewOrderBtn.click();
+    await openAccountMenu(page);
+    await page.getByRole('menuitem', { name: 'Mis pedidos' }).click();
+    const trackBtn = page
+      .locator('main')
+      .getByRole('button', { name: /Ver estado|Ver seguimiento|Seguir|Ver detalle|Ver/i })
+      .first();
+    await expect(trackBtn).toBeVisible();
+    await trackBtn.click();
 
-    const modal = page.locator('.wf-modal[role="dialog"]');
-    await expect(modal).toBeVisible();
-    await expect(modal.locator('.store-track-steps')).toBeVisible();
-    await expect(modal.locator('.route-map-shell')).toBeVisible();
+    await expect(page.locator('.route-map-shell')).toBeVisible();
 
     expect(pageErrors).toEqual([]);
   });

@@ -7,6 +7,7 @@ import {
   type ManagedUser,
   type ManagedUserPage,
   type RegisterCustomerOutcome,
+  type UserProfile,
 } from '../../domain/index.js';
 
 export const CONTRACT_ERROR_MESSAGE =
@@ -134,6 +135,37 @@ export function readManagedUser(value: unknown): ManagedUser {
   }
 
   return user;
+}
+
+export function readProfile(value: unknown): UserProfile {
+  const profile = isRecord(value) ? value['profile'] : null;
+  if (
+    !isRecord(profile) ||
+    !isUuid(profile['id']) ||
+    typeof profile['email'] !== 'string' ||
+    !isAuthRole(profile['role']) ||
+    !isPublicRole(profile['publicRole']) ||
+    !isNullableString(profile['displayName']) ||
+    !isNullableString(profile['phone']) ||
+    typeof profile['emailVerified'] !== 'boolean' ||
+    typeof profile['hasPassword'] !== 'boolean' ||
+    typeof profile['googleLinked'] !== 'boolean' ||
+    !isIsoDateTime(profile['createdAt'])
+  ) {
+    throw new Error(CONTRACT_ERROR_MESSAGE);
+  }
+  return {
+    id: profile['id'],
+    email: profile['email'],
+    role: profile['role'],
+    publicRole: profile['publicRole'],
+    displayName: profile['displayName'],
+    phone: profile['phone'],
+    emailVerified: profile['emailVerified'],
+    hasPassword: profile['hasPassword'],
+    googleLinked: profile['googleLinked'],
+    createdAt: profile['createdAt'],
+  };
 }
 
 export function readManagedUserPage(value: unknown): ManagedUserPage {

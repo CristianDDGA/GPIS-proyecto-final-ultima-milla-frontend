@@ -32,8 +32,9 @@ export class HttpOrderGateway implements OrderGateway {
   }
 
   async create(input: CreateOrderInput): Promise<Order> {
-    const { zoneId, deliveryAddress, deliveryDate, deliveryTime } = input;
-    return readItem(await this.httpClient.post<unknown>('/orders', { zoneId, deliveryAddress, deliveryDate, deliveryTime }), isOrder);
+    const { zoneId, deliveryAddress, deliveryDate, deliveryTime, latitude, longitude } = input;
+    const pin = latitude != null && longitude != null ? { latitude, longitude } : {};
+    return readItem(await this.httpClient.post<unknown>('/orders', { zoneId, deliveryAddress, deliveryDate, deliveryTime, ...pin }), isOrder);
   }
 
   async getAll(filters: OrderFilters = {}): Promise<Order[]> {
