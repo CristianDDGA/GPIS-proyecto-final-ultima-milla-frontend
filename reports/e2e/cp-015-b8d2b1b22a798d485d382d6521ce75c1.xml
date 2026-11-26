@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="2.641" tests="2" failures="1">
+  <testsuite name="Root Suite" timestamp="2026-10-21T00:14:19" tests="0" file="cypress\e2e\zones-orders.cy.js" time="0.000" failures="0">
+  </testsuite>
+  <testsuite name="CP-015: zonas y pedidos contra API y PostgreSQL reales" timestamp="2026-10-21T00:14:19" tests="2" time="2.640" failures="1">
+    <testcase name="CP-015: zonas y pedidos contra API y PostgreSQL reales registra, recarga y filtra un pedido persistido" time="0.000" classname="registra, recarga y filtra un pedido persistido">
+      <failure message="`Cypress.env()` was removed in Cypress version 16.0.0. Please update to use `Cypress.expose()` for non-sensitive values, or `cy.env()` for sensitive values.
+
+The key being accessed was: `apiUrl`
+
+This call may come from a plugin. Update the plugin to a version that supports Cypress 16.
+
+https://on.cypress.io/cypress-env-migration" type="CypressError"><![CDATA[CypressError: `Cypress.env()` was removed in Cypress version 16.0.0. Please update to use `Cypress.expose()` for non-sensitive values, or `cy.env()` for sensitive values.
+
+The key being accessed was: `apiUrl`
+
+This call may come from a plugin. Update the plugin to a version that supports Cypress 16.
+
+https://on.cypress.io/cypress-env-migration
+    at $Cypress.env (http://127.0.0.1:5173/__cypress/runner/cypress_runner.js:42145:67)
+    at Context.eval (webpack://gpis-ultima-milla-web/./cypress/e2e/zones-orders.cy.js:10:27)
+From Your Spec Code:
+    at Context.eval (webpack://gpis-ultima-milla-web/./cypress/e2e/zones-orders.cy.js:10:27)]]></failure>
+    </testcase>
+    <testcase name="CP-015: zonas y pedidos contra API y PostgreSQL reales muestra el error de validación de una zona vacía" time="1.696" classname="muestra el error de validación de una zona vacía">
+    </testcase>
+  </testsuite>
+</testsuites>
