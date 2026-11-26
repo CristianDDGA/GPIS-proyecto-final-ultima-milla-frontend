@@ -10,10 +10,12 @@ import {
   Alert,
   Button,
   Card,
-  KineticHeader,
+  KpiStrip,
   Modal,
+  PageHeader,
   ShortIdBadge,
   Spinner,
+  TopRefetchBar,
 } from '../../../../shared/ui/index.js';
 import '../styles/zones.css';
 
@@ -177,12 +179,27 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
     return counts;
   }, [orders]);
 
+  const totalLinkedOrders = orders?.length ?? 0;
+  const topZone = useMemo(() => {
+    let bestName: string | null = null;
+    let bestCount = 0;
+    for (const z of zones) {
+      const count = orderCountByZone.get(z.id) ?? 0;
+      if (count > bestCount) {
+        bestCount = count;
+        bestName = z.name;
+      }
+    }
+    return bestName ? { name: bestName, count: bestCount } : null;
+  }, [orderCountByZone, zones]);
+
   return (
     <section className="zones-layout" aria-labelledby="zones-view-title">
-      <KineticHeader
+      <PageHeader
         id="zones-view-title"
-        level="h2"
+        eyebrow="Operación · Cobertura"
         title="Zonas de cobertura"
+        subtitle="Sectores habilitados para entregas de última milla y demanda operativa asociada."
         actions={
           <Button
             type="button"
@@ -195,6 +212,32 @@ export const ZoneManagementView: FC<ZoneManagementViewProps> = ({
             {isLoading ? 'Actualizando...' : '↻ Actualizar'}
           </Button>
         }
+      />
+
+      <TopRefetchBar active={isLoading && zones.length > 0} label="Actualizando zonas" />
+
+      <KpiStrip
+        ariaLabel="Resumen de cobertura"
+        items={[
+          {
+            label: 'Zonas activas',
+            value: zones.filter(isZoneActive).length,
+            hint: `${zones.length} registradas en total`,
+            tone: 'blue',
+          },
+          {
+            label: 'Pedidos en catálogo',
+            value: totalLinkedOrders,
+            hint: 'Asociados a zonas registradas',
+            tone: 'neutral',
+          },
+          {
+            label: 'Mayor demanda',
+            value: topZone ? topZone.name : '—',
+            hint: topZone ? `${topZone.count} ${topZone.count === 1 ? 'pedido' : 'pedidos'}` : 'Sin demanda registrada',
+            tone: topZone ? 'green' : 'neutral',
+          },
+        ]}
       />
 
       {error && (

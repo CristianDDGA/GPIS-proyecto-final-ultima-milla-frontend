@@ -132,6 +132,9 @@ interface WaterState {
   last: number;
   time: number;
   glc: WaterGLContext | null;
+  blobsBuf: Float32Array;
+  syBuf: Float32Array;
+  ripsBuf: Float32Array;
 }
 
 function makeWaterState(): WaterState {
@@ -158,6 +161,9 @@ function makeWaterState(): WaterState {
     last: 0,
     time: 0,
     glc: null,
+    blobsBuf: new Float32Array(24),
+    syBuf: new Float32Array(6).fill(1),
+    ripsBuf: new Float32Array(24),
   };
 }
 
@@ -235,16 +241,6 @@ function initWaterGL(canvas: HTMLCanvasElement): WaterGLContext | null {
   };
 }
 
-function supportsBackdropRefraction(): boolean {
-  if (typeof window === 'undefined' || typeof CSS === 'undefined') return false;
-  const ua = navigator.userAgent;
-  return (
-    /Chrome\/|Chromium\/|Edg\//.test(ua) &&
-    !/Firefox\//.test(ua) &&
-    Boolean(CSS.supports?.('backdrop-filter', 'url(#a)'))
-  );
-}
-
 /**
  * UnifiedWaterlineNavbar:
  * Cápsula única de cristal líquido WebGL1 extendida a toda la barra superior
@@ -274,7 +270,6 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
   );
 
   const [glState, setGlState] = useState<'on' | 'off'>('on');
-  const [refract, setRefract] = useState(false);
   const [fx, setFx] = useState<{ i: number; n: number }>({ i: -1, n: 0 });
 
   const draw = useCallback(() => {
@@ -286,7 +281,7 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
 
     if (s.glc && !s.glc.gl.isContextLost()) {
       const { gl: g, u } = s.glc;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       g.viewport(0, 0, g.drawingBufferWidth, g.drawingBufferHeight);
       g.uniform2f(u.uRes, s.w + PAD * 2, s.h + PAD * 2);
       g.uniform1f(u.uDpr, dpr);
@@ -294,34 +289,48 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
       g.uniform4f(u.uPill, PAD, PAD, s.w, s.h);
       g.uniform1f(u.uRadius, s.radius);
 
-      const blobs = new Float32Array(24);
-      const sy = new Float32Array(6).fill(1);
+      const blobs = s.blobsBuf;
+      blobs.fill(0);
+      const sy = s.syBuf;
+      sy.fill(1);
       const head = s.lead === 0 ? s.a : s.b;
       const tail = s.lead === 0 ? s.b : s.a;
-      blobs.set(
-        [
-          head.x,
-          T.cy,
-          s.q * (1 - 0.25 * thin),
-          T.r * (1 - 0.12 * thin),
-          tail.x,
-          T.cy,
-          s.q * (1 - 0.8 * thin),
-          T.r * (1 - 0.5 * thin),
-        ],
-        0,
-      );
+      blobs[0] = head.x;
+      blobs[1] = T.cy;
+      blobs[2] = s.q * (1 - 0.25 * thin);
+      blobs[3] = T.r * (1 - 0.12 * thin);
+      blobs[4] = tail.x;
+      blobs[5] = T.cy;
+      blobs[6] = s.q * (1 - 0.8 * thin);
+      blobs[7] = T.r * (1 - 0.5 * thin);
       sy[0] = sy[1] = s.sy.s;
-      s.sats.slice(0, 4).forEach((d, i) => blobs.set([d.x, d.y, 0, d.r], 8 + i * 4));
+      for (let i = 0; i < Math.min(4, s.sats.length); i += 1) {
+        const d = s.sats[i]!;
+        const off = 8 + i * 4;
+        blobs[off] = d.x;
+        blobs[off + 1] = d.y;
+        blobs[off + 2] = 0;
+        blobs[off + 3] = d.r;
+      }
       g.uniform4fv(u.uBlob, blobs);
       g.uniform1fv(u.uSy, sy);
 
-      const rips = new Float32Array(24);
-      s.rips.slice(-6).forEach((p, i) => rips.set([p.x, p.y, p.age, p.amp], i * 4));
+      const rips = s.ripsBuf;
+      rips.fill(0);
+      const ripStart = Math.max(0, s.rips.length - 6);
+      for (let i = ripStart; i < s.rips.length; i += 1) {
+        const p = s.rips[i]!;
+        const off = (i - ripStart) * 4;
+        rips[off] = p.x;
+        rips[off + 1] = p.y;
+        rips[off + 2] = p.age;
+        rips[off + 3] = p.amp;
+      }
       g.uniform4fv(u.uRip, rips);
       g.uniform3f(u.uMouse, s.mouse.x, s.mouse.y, s.mouse.s);
       g.uniform1f(u.uDark, 0.0);
-      g.uniform1f(u.uAmb, s.reduce ? 0 : 1);
+      const isAnimating = s.moving || s.rips.length > 0 || s.sats.length > 0 || s.mouse.s > 0.01;
+      g.uniform1f(u.uAmb, !s.reduce && isAnimating ? 0.5 : 0);
       g.clearColor(0, 0, 0, 0);
       g.clear(g.COLOR_BUFFER_BIT);
       g.drawArrays(g.TRIANGLES, 0, 3);
@@ -424,16 +433,19 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
     const s = st.current;
     if (s.raf) return;
     s.last = performance.now();
+    if (navRef.current) navRef.current.dataset.rafActive = 'true';
     const tick = (now: number) => {
       const dt = Math.min((now - s.last) / 1000, 1 / 30);
       s.last = now;
       step(dt, now);
       draw();
-      const busy = s.moving || s.rips.length > 0 || s.sats.length > 0 || s.mouse.s > 0.01;
-      if (s.visible && (!s.reduce || busy)) {
+      const busy =
+        !s.reduce && (s.moving || s.rips.length > 0 || s.sats.length > 0 || s.mouse.s > 0.01);
+      if (s.visible && busy) {
         s.raf = requestAnimationFrame(tick);
       } else {
         s.raf = 0;
+        if (navRef.current) navRef.current.dataset.rafActive = 'false';
       }
     };
     s.raf = requestAnimationFrame(tick);
@@ -475,7 +487,7 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
 
       const cv = canvasRef.current;
       if (cv) {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
         const W = s.w + PAD * 2;
         const Hh = s.h + PAD * 2;
         const pw = Math.round(W * dpr);
@@ -494,7 +506,6 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
 
   // Inicialización persistente del contexto WebGL (NUNCA se destruye al cambiar de pestaña)
   useEffect(() => {
-    setRefract(supportsBackdropRefraction());
     const s = st.current;
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     s.reduce = motionQuery.matches;
@@ -634,21 +645,26 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
     return localCoords(b.left + b.width / 2, b.top + b.height / 2);
   };
 
-  const selectIndex = (i: number) => {
+  const selectIndex = (i: number, source: 'pointer' | 'keyboard' = 'pointer') => {
     const item = items[i];
     if (!item) return;
-    setFx((prev) => ({ i, n: prev.n + 1 }));
-    const c = iconCenter(i);
-    if (c && item.anim === 'drop') {
-      if (dropSplashTimerRef.current !== null) {
-        window.clearTimeout(dropSplashTimerRef.current);
-      }
-      dropSplashTimerRef.current = window.setTimeout(() => {
-        ripple(c.x, st.current.t.cy, 1.4);
-      }, 430);
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.navInput = source;
     }
-    if (c && item.anim === 'plane') {
-      ripple(c.x, c.y, 0.6);
+    if (source === 'pointer') {
+      setFx((prev) => ({ i, n: prev.n + 1 }));
+      const c = iconCenter(i);
+      if (c && item.anim === 'drop') {
+        if (dropSplashTimerRef.current !== null) {
+          window.clearTimeout(dropSplashTimerRef.current);
+        }
+        dropSplashTimerRef.current = window.setTimeout(() => {
+          ripple(c.x, st.current.t.cy, 1.4);
+        }, 260);
+      }
+      if (c && item.anim === 'plane') {
+        ripple(c.x, c.y, 0.6);
+      }
     }
     if (i !== active) {
       onSelect(item.id);
@@ -665,7 +681,7 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
 
     if (nextIndex !== null) {
       event.preventDefault();
-      selectIndex(nextIndex);
+      selectIndex(nextIndex, 'keyboard');
       itemRefs.current[nextIndex]?.focus();
     }
   };
@@ -689,7 +705,7 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
         className="nimbus-nav"
         data-tone="light"
         data-gl={glState}
-        data-refract={refract ? 'on' : 'off'}
+        data-raf-active="false"
         aria-label={ariaLabel}
         onPointerMove={handlePointerMove}
         onPointerLeave={() => {
@@ -701,34 +717,7 @@ export function UnifiedWaterlineNavbar<T extends string = string>({
           ripple(p.x, p.y, 0.85);
         }}
       >
-        <svg width="0" height="0" className="wl-refract-svg-defs" aria-hidden="true">
-          <filter
-            id="nimbus-refract"
-            x="0"
-            y="0"
-            width="100%"
-            height="100%"
-            colorInterpolationFilters="sRGB"
-          >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.005 0.018"
-              numOctaves="2"
-              seed="7"
-              result="noise"
-            />
-            <feGaussianBlur in="noise" stdDeviation="2" result="soft" />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="soft"
-              scale="28"
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
-        </svg>
-
-        {/* Fondo vítreo + WebGL Waterline extendido a toda la barra */}
+        {/* Fondo vítreo + WebGL Waterline bajo demanda (0 fps en reposo) */}
         <span className="nimbus-glass" aria-hidden="true" />
         <canvas className="nimbus-water" ref={canvasRef} role="presentation" />
         <span className="nimbus-drop" ref={dropRef} aria-hidden="true" />

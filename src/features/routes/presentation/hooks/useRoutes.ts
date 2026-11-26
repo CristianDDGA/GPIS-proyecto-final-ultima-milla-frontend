@@ -426,11 +426,13 @@ export function useRoutes(
   }, []);
 
   useEffect(() => {
+    const routesRef = routesVersion;
+    const detailRef = detailVersion;
     mounted.current = true;
     return () => {
       mounted.current = false;
-      ++routesVersion.current;
-      ++detailVersion.current;
+      ++routesRef.current;
+      ++detailRef.current;
     };
   }, []);
 

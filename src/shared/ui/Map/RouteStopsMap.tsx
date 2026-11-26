@@ -2,10 +2,8 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type FC,
-  type PointerEvent,
 } from 'react';
 import { ShortIdBadge } from '../ShortIdBadge/ShortIdBadge.js';
 import {
@@ -17,23 +15,25 @@ import {
 } from '../../../features/store/domain/storeTypes.js';
 import {
   DEFAULT_ECUADOR_CENTER,
-  ECUADOR_CITIES,
-  MAP_MAX_ZOOM,
-  MAP_MIN_ZOOM,
   MAP_TILE_SIZE,
-  clampEcuadorLatLng,
   computeFitView,
   fetchDrivingRouteGeometry,
   formatDistanceKm,
   formatDurationMinutes,
   googleMapsMultiStopUrl,
   latLngToWorld,
-  tileUrlFor,
-  worldToLatLng,
+  sampleRouteChevrons,
+  wazeDirectionsUrl,
   type DrivingRouteGeometry,
+  type EcuadorCityPreset,
   type LatLng,
-  type MapLayerStyle,
 } from './ecuadorMapMath.js';
+import { MapTileLayer, MapToolbar } from './MapToolbar.js';
+import {
+  buildMapTiles,
+  requestEcuadorGpsLocation,
+  useEcuadorMapViewport,
+} from './useEcuadorMapViewport.js';
 import './route-map.css';
 
 export interface RouteMapStop {
@@ -74,8 +74,9 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 /**
- * Mapa interactivo real de ciudad y ruta (Carto Voyager HD / OpenStreetMap + OSRM)
- * para Repartidor, Administrador y Cliente. Cero dependencias npm externas.
+ * Mapa interactivo estilo Uber / Uber Eats (OpenStreetMap + grading Uber Minimal / Esri Satélite + OSRM).
+ * Arrastre GPU 60-120fps con translate3d, HUD flotante ETA/km, dock inferior navegable,
+ * polilínea dual con flechas direccionales y puck vehicular — cero dependencias npm.
  */
 export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   stops,
@@ -88,27 +89,24 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   height,
   emptyMessage = 'Estas paradas se registraron en modo dirección manual (sin pin en mapa). Los pedidos de tienda con pin se trazan aquí automáticamente.',
 }) => {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const map = useEcuadorMapViewport({
+    initialCenter: DEFAULT_ECUADOR_CENTER,
+    initialZoom: 13,
+  });
+  const { setCenter, setZoom, viewportRef } = map;
+
+  const [isExpanded, setIsExpanded] = useState(false);
   const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>({
     w: 720,
-    h: height ?? (compact ? 260 : 360),
+    h: height ?? (compact ? 260 : 380),
   });
-  const [layer, setLayer] = useState<MapLayerStyle>('osm');
   const [activeCityId, setActiveCityId] = useState<string>('quito');
-  const [center, setCenter] = useState<LatLng>(DEFAULT_ECUADOR_CENTER);
-  const [zoom, setZoom] = useState<number>(13);
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null);
-  const [popupDismissed, setPopupDismissed] = useState(false);
+  const [dockVisible, setDockVisible] = useState<boolean>(!compact);
   const [geometry, setGeometry] = useState<DrivingRouteGeometry | null>(null);
-  const [failedSatellite, setFailedSatellite] = useState(false);
-
-  const dragRef = useRef<{
-    active: boolean;
-    startX: number;
-    startY: number;
-    startWorldX: number;
-    startWorldY: number;
-  }>({ active: false, startX: 0, startY: 0, startWorldX: 0, startWorldY: 0 });
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+  const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const [geoNotice, setGeoNotice] = useState<string | null>(null);
 
   const geoStops = useMemo(
     () =>
@@ -129,6 +127,11 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
     [geoStops],
   );
 
+  const deliveredCount = useMemo(
+    () => stops.filter((s) => s.status === 'entregado').length,
+    [stops],
+  );
+
   // Medición responsiva del contenedor
   useEffect(() => {
     const el = viewportRef.current;
@@ -144,13 +147,13 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
     const ro = new ResizeObserver(sync);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [isExpanded, viewportRef]);
 
   const fitRoute = useCallback(() => {
     const fitted = computeFitView(geoPoints, viewportSize.w, viewportSize.h, DEFAULT_ECUADOR_CENTER);
     setCenter(fitted.center);
     setZoom(fitted.zoom);
-  }, [geoPoints, viewportSize.h, viewportSize.w]);
+  }, [geoPoints, setCenter, setZoom, viewportSize.h, viewportSize.w]);
 
   // Encuadre automático cuando cambian las paradas geocodificadas
   useEffect(() => {
@@ -166,22 +169,46 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   useEffect(() => {
     if (!showRoutePolyline || geoPoints.length < 2) {
       setGeometry(null);
+      setIsLoadingRoute(false);
       return;
     }
     const controller = new AbortController();
+    setIsLoadingRoute(true);
     void fetchDrivingRouteGeometry(geoPoints, controller.signal).then((result) => {
       if (!controller.signal.aborted) {
         setGeometry(result);
+        setIsLoadingRoute(false);
       }
     });
     return () => controller.abort();
   }, [geoPoints, showRoutePolyline, geoSignature]);
 
-  // Sincronización con selección externa (por ejemplo al hacer clic en una parada de la lista)
-  const effectiveSelectedId = selectedOrderId ?? internalSelectedId;
-  const selectedStop = useMemo(
-    () => geoStops.find((s) => s.orderId === effectiveSelectedId) ?? null,
+  // Selección activa: externa > interna > parada en_camino > primera parada
+  const effectiveSelectedId = useMemo(() => {
+    if (selectedOrderId && geoStops.some((s) => s.orderId === selectedOrderId)) {
+      return selectedOrderId;
+    }
+    if (internalSelectedId && geoStops.some((s) => s.orderId === internalSelectedId)) {
+      return internalSelectedId;
+    }
+    if (!compact && geoStops.length > 0) {
+      const activeStop = geoStops.find((s) => s.status === 'en_camino') ?? geoStops[0]!;
+      return activeStop.orderId;
+    }
+    return null;
+  }, [compact, geoStops, internalSelectedId, selectedOrderId]);
+
+  const selectedIndex = useMemo(
+    () => geoStops.findIndex((s) => s.orderId === effectiveSelectedId),
     [effectiveSelectedId, geoStops],
+  );
+
+  const selectedStop = selectedIndex >= 0 ? geoStops[selectedIndex]! : null;
+
+  // Parada activa del vehículo (en_camino)
+  const activeVehicleStop = useMemo(
+    () => geoStops.find((s) => s.status === 'en_camino') ?? null,
+    [geoStops],
   );
 
   useEffect(() => {
@@ -190,131 +217,115 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
     if (target) {
       setCenter({ lat: target.latitude, lng: target.longitude });
       setZoom((z) => Math.max(z, 15));
-      setPopupDismissed(false);
+      setDockVisible(true);
     }
-  }, [selectedOrderId, geoStops]);
-
-  const centerWorld = useMemo(
-    () => latLngToWorld(center.lat, center.lng, zoom),
-    [center.lat, center.lng, zoom],
-  );
-
-  const activeLayer: MapLayerStyle = failedSatellite ? 'osm' : layer;
+  }, [selectedOrderId, geoStops, setCenter, setZoom]);
 
   const tiles = useMemo(() => {
-    const maxIndex = Math.pow(2, zoom);
-    const centerTileX = Math.floor(centerWorld.x / MAP_TILE_SIZE);
-    const centerTileY = Math.floor(centerWorld.y / MAP_TILE_SIZE);
     const spanX = Math.ceil(viewportSize.w / (2 * MAP_TILE_SIZE)) + 1;
     const spanY = Math.ceil(viewportSize.h / (2 * MAP_TILE_SIZE)) + 1;
-    const result: { key: string; url: string; fallbackUrl: string; left: number; top: number }[] = [];
-
-    for (let dx = -spanX; dx <= spanX; dx += 1) {
-      for (let dy = -spanY; dy <= spanY; dy += 1) {
-        const tx = centerTileX + dx;
-        const ty = centerTileY + dy;
-        if (ty < 0 || ty >= maxIndex) continue;
-        const wrappedX = ((tx % maxIndex) + maxIndex) % maxIndex;
-        result.push({
-          key: `${activeLayer}-${zoom}-${wrappedX}-${ty}`,
-          url: tileUrlFor(activeLayer, zoom, wrappedX, ty),
-          fallbackUrl: tileUrlFor('osm', zoom, wrappedX, ty),
-          left: viewportSize.w / 2 + (tx * MAP_TILE_SIZE - centerWorld.x),
-          top: viewportSize.h / 2 + (ty * MAP_TILE_SIZE - centerWorld.y),
-        });
-      }
-    }
-    return result;
-  }, [activeLayer, centerWorld.x, centerWorld.y, viewportSize.h, viewportSize.w, zoom]);
+    return buildMapTiles(
+      map.centerWorld,
+      map.zoom,
+      map.activeLayer,
+      spanX,
+      spanY,
+      viewportSize.w / 2,
+      viewportSize.h / 2,
+    );
+  }, [map.activeLayer, map.centerWorld, map.zoom, viewportSize.h, viewportSize.w]);
 
   const toViewportXY = useCallback(
     (lat: number, lng: number) => {
-      const w = latLngToWorld(lat, lng, zoom);
+      const w = latLngToWorld(lat, lng, map.zoom);
       return {
-        x: viewportSize.w / 2 + (w.x - centerWorld.x),
-        y: viewportSize.h / 2 + (w.y - centerWorld.y),
+        x: viewportSize.w / 2 + (w.x - map.centerWorld.x),
+        y: viewportSize.h / 2 + (w.y - map.centerWorld.y),
       };
     },
-    [centerWorld.x, centerWorld.y, viewportSize.h, viewportSize.w, zoom],
+    [map.centerWorld.x, map.centerWorld.y, map.zoom, viewportSize.h, viewportSize.w],
   );
 
-  const polylineSvgPath = useMemo(() => {
+  const routeScreenPoints = useMemo(() => {
     const pts = geometry?.points ?? (showRoutePolyline && geoPoints.length >= 2 ? geoPoints : []);
-    if (pts.length < 2) return '';
-    return pts
-      .map((p, idx) => {
-        const { x, y } = toViewportXY(p.lat, p.lng);
-        return `${idx === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(' ');
+    if (pts.length < 2) return [];
+    return pts.map((p) => toViewportXY(p.lat, p.lng));
   }, [geometry?.points, geoPoints, showRoutePolyline, toViewportXY]);
 
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('button, a')) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = {
-      active: true,
-      startX: event.clientX,
-      startY: event.clientY,
-      startWorldX: centerWorld.x,
-      startWorldY: centerWorld.y,
-    };
+  const polylineSvgPath = useMemo(() => {
+    if (routeScreenPoints.length < 2) return '';
+    return routeScreenPoints
+      .map((p, idx) => `${idx === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+      .join(' ');
+  }, [routeScreenPoints]);
+
+  const routeChevrons = useMemo(
+    () => (showRoutePolyline ? sampleRouteChevrons(routeScreenPoints, compact ? 3 : 6) : []),
+    [compact, routeScreenPoints, showRoutePolyline],
+  );
+
+  const selectCity = (city: EcuadorCityPreset) => {
+    setActiveCityId(city.id);
+    setCenter({ lat: city.lat, lng: city.lng });
+    setZoom(city.zoom);
   };
 
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragRef.current.active) return;
-    const dx = event.clientX - dragRef.current.startX;
-    const dy = event.clientY - dragRef.current.startY;
-    const next = worldToLatLng(
-      dragRef.current.startWorldX - dx,
-      dragRef.current.startWorldY - dy,
-      zoom,
-    );
-    setCenter(clampEcuadorLatLng(next.lat, next.lng));
+  const focusStop = useCallback(
+    (stop: RouteMapStop & { readonly latitude: number; readonly longitude: number }) => {
+      setInternalSelectedId(stop.orderId);
+      setDockVisible(true);
+      setCenter({ lat: stop.latitude, lng: stop.longitude });
+      setZoom((z) => Math.max(z, 15));
+      onSelectStop?.(stop.orderId);
+    },
+    [onSelectStop, setCenter, setZoom],
+  );
+
+  const stepStop = (delta: -1 | 1) => {
+    if (geoStops.length === 0) return;
+    const base = selectedIndex >= 0 ? selectedIndex : 0;
+    const nextIdx = (base + delta + geoStops.length) % geoStops.length;
+    const target = geoStops[nextIdx];
+    if (target) {
+      focusStop(target);
+    }
   };
 
-  const handlePointerUp = () => {
-    dragRef.current.active = false;
-  };
-
-  // La rueda hace zoom sin mover la página: el listener nativo no es pasivo (en React onWheel sí lo es).
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return undefined;
-    const onWheel = (event: globalThis.WheelEvent) => {
-      if (Math.abs(event.deltaY) < 4) return;
-      event.preventDefault();
-      setZoom((prev) =>
-        event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
-      );
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
-
-  const selectCity = (cityId: string) => {
-    const found = ECUADOR_CITIES.find((c) => c.id === cityId);
-    if (!found) return;
-    setActiveCityId(found.id);
-    setCenter({ lat: found.lat, lng: found.lng });
-    setZoom(found.zoom);
-  };
-
-  const handleMarkerClick = (stop: RouteMapStop & { latitude: number; longitude: number }) => {
-    setInternalSelectedId(stop.orderId);
-    setPopupDismissed(false);
-    setCenter({ lat: stop.latitude, lng: stop.longitude });
-    setZoom((z) => Math.max(z, 15));
-    onSelectStop?.(stop.orderId);
+  const handleLocateMe = () => {
+    setGeoNotice(null);
+    requestEcuadorGpsLocation({
+      outOfBoundsMessage: 'Tu ubicación GPS actual está fuera de Ecuador.',
+      failedMessage: 'No se pudo obtener tu ubicación GPS.',
+      onError: setGeoNotice,
+      onLocated: (clamped) => {
+        setUserLocation(clamped);
+        setCenter(clamped);
+        setZoom((z) => Math.max(z, 15));
+      },
+    });
   };
 
   const gmapsRouteUrl = useMemo(() => googleMapsMultiStopUrl(geoPoints), [geoPoints]);
   const distanceLabel = formatDistanceKm(geometry?.distanceMeters ?? null);
   const durationLabel = formatDurationMinutes(geometry?.durationSeconds ?? null);
 
+  const effectiveHeight = isExpanded ? 560 : height ?? (compact ? 250 : 380);
+
+  const vehicleXY = useMemo(() => {
+    if (userLocation) return toViewportXY(userLocation.lat, userLocation.lng);
+    if (activeVehicleStop) return toViewportXY(activeVehicleStop.latitude, activeVehicleStop.longitude);
+    return null;
+  }, [activeVehicleStop, toViewportXY, userLocation]);
+
   return (
-    <div className={'route-map-shell' + (compact ? ' route-map-shell--compact' : '')}>
+    <div
+      className={
+        'route-map-shell' +
+        (compact ? ' route-map-shell--compact' : '') +
+        (isExpanded ? ' route-map-shell--expanded' : '')
+      }
+      data-map-layer={map.activeLayer}
+    >
       <div className="route-map-head">
         <div className="route-map-head__info">
           <h4 className="route-map-head__title">{title}</h4>
@@ -345,127 +356,184 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         </div>
       </div>
 
-      <div className="route-map-toolbar">
-        <div className="route-map-cities" role="group" aria-label="Centrar en ciudad de Ecuador">
-          {ECUADOR_CITIES.map((city) => (
-            <button
-              key={city.id}
-              type="button"
-              className={
-                'route-map-chip' + (activeCityId === city.id && geoStops.length === 0 ? ' route-map-chip--active' : '')
-              }
-              onClick={() => selectCity(city.id)}
-            >
-              {city.name}
-            </button>
-          ))}
-        </div>
-
-        <div className="route-map-tools-right">
-          {geoStops.length > 0 && (
-            <button type="button" className="route-map-chip route-map-chip--active" onClick={fitRoute}>
+      <MapToolbar
+        activeLayer={map.activeLayer}
+        onSelectLayer={map.selectLayer}
+        onSelectCity={selectCity}
+        activeCityId={geoStops.length === 0 ? activeCityId : null}
+        leadingRightAction={
+          geoStops.length > 0 ? (
+            <button type="button" className="route-map-chip route-map-chip--dark" onClick={fitRoute}>
               Ajustar ruta
             </button>
-          )}
-          <button
-            type="button"
-            className={'route-map-chip' + (activeLayer === 'osm' ? ' route-map-chip--active' : '')}
-            onClick={() => setLayer('osm')}
-          >
-            Calles
-          </button>
-          <button
-            type="button"
-            className={'route-map-chip' + (activeLayer === 'satellite' ? ' route-map-chip--active' : '')}
-            onClick={() => {
-              setFailedSatellite(false);
-              setLayer('satellite');
-            }}
-          >
-            Satélite
-          </button>
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       <div
         ref={viewportRef}
-        className="route-map-viewport"
-        style={height ? { height: `${height}px` } : undefined}
+        className={'route-map-viewport' + (map.isDragging ? ' route-map-viewport--dragging' : '')}
+        style={{ height: `${effectiveHeight}px` }}
         role="region"
         aria-label={title}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onDoubleClick={() => setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1))}
+        {...map.viewportHandlers}
+        onDoubleClick={map.zoomIn}
       >
-        <div className="route-map-tiles" aria-hidden="true">
-          {tiles.map((tile) => (
-            <img
-              key={tile.key}
-              src={tile.url}
-              alt=""
-              draggable={false}
-              className="route-map-tile"
-              style={{ left: `${tile.left}px`, top: `${tile.top}px` }}
-              onError={(event) => {
-                if (activeLayer === 'satellite') {
-                  setFailedSatellite(true);
-                  event.currentTarget.src = tile.fallbackUrl;
-                }
-              }}
-            />
-          ))}
-        </div>
+        {/* Ancla de teclado interactiva real: las teclas del botón suben hasta el visor (flechas, +, −) */}
+        <button
+          type="button"
+          className="route-map-kbd"
+          aria-label="Mover el mapa con el teclado: flechas para desplazar, más y menos para acercar o alejar"
+        />
 
-        {polylineSvgPath.length > 0 && (
-          <svg className="route-map-svg" aria-hidden="true">
-            <path
-              d={polylineSvgPath}
-              fill="none"
-              stroke="rgba(255, 255, 255, 0.92)"
-              strokeWidth="8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d={polylineSvgPath}
-              fill="none"
-              stroke="#1668f3"
-              strokeWidth="4.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray={geometry?.isRoadGeometry === false ? '8 6' : undefined}
-            />
-          </svg>
-        )}
+        {/* Escenario GPU: tiles + ruta + marcadores se mueven juntos en 1 solo translate3d */}
+        <div ref={map.panStageRef} className="route-map-stage">
+          <MapTileLayer
+            tiles={tiles}
+            activeLayer={map.activeLayer}
+            containerClass="route-map-tiles"
+            uberClass="route-map-tiles--uber"
+            tileClass="route-map-tile"
+            loadedTileClass="route-map-tile--loaded"
+            positioning="offset"
+            onSatelliteError={() => map.setFailedSatellite(true)}
+          />
 
-        <div className="route-map-markers">
-          {geoStops.map((stop) => {
-            const { x, y } = toViewportXY(stop.latitude, stop.longitude);
-            if (x < -40 || x > viewportSize.w + 40 || y < -40 || y > viewportSize.h + 40) {
-              return null;
-            }
-            const isSelected = stop.orderId === effectiveSelectedId;
-            const statusClass = STATUS_CLASS[stop.status] ?? '';
-            return (
-              <button
-                key={`${stop.orderId}-${stop.position}`}
-                type="button"
-                className={
-                  `route-map-marker ${statusClass}` + (isSelected ? ' route-map-marker--selected' : '')
-                }
-                style={{ left: `${x}px`, top: `${y}px` }}
-                aria-label={`Parada ${stop.position}: ${stop.address}`}
-                title={`Parada #${stop.position} · ${stop.address}`}
-                onClick={() => handleMarkerClick(stop)}
+          {polylineSvgPath.length > 0 && (
+            <svg className="route-map-svg" aria-hidden="true">
+              {/* Casing oscuro Uber + núcleo azul eléctrico */}
+              <path
+                d={polylineSvgPath}
+                fill="none"
+                stroke="#0b132b"
+                strokeOpacity="0.82"
+                strokeWidth="9"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d={polylineSvgPath}
+                fill="none"
+                stroke="#ffffff"
+                strokeOpacity="0.92"
+                strokeWidth="6.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d={polylineSvgPath}
+                fill="none"
+                stroke="#1668f3"
+                strokeWidth="4.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray={geometry?.isRoadGeometry === false ? '8 6' : undefined}
+              />
+              {routeChevrons.map((ch, idx) => (
+                <g
+                  key={idx}
+                  transform={`translate(${ch.x.toFixed(1)}, ${ch.y.toFixed(1)}) rotate(${ch.angleDeg.toFixed(1)})`}
+                >
+                  <path
+                    d="M -3.5 -2.8 L 2.2 0 L -3.5 2.8"
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </g>
+              ))}
+            </svg>
+          )}
+
+          {/* Puck vehicular Uber / GPS en vivo */}
+          {vehicleXY &&
+            vehicleXY.x >= -36 &&
+            vehicleXY.x <= viewportSize.w + 36 &&
+            vehicleXY.y >= -36 &&
+            vehicleXY.y <= viewportSize.h + 36 && (
+              <div
+                className="route-map-vehicle-puck"
+                style={{ left: `${vehicleXY.x}px`, top: `${vehicleXY.y}px` }}
+                aria-hidden="true"
               >
-                <span className="route-map-marker__bubble">{stop.position}</span>
-                <span className="route-map-marker__tip" aria-hidden="true" />
-              </button>
-            );
-          })}
+                <span className="route-map-vehicle-puck__halo" />
+                <span className="route-map-vehicle-puck__core">
+                  <svg viewBox="0 0 16 16" width="11" height="11" fill="none">
+                    <path d="M8 2L13 13L8 10.6L3 13L8 2Z" fill="#ffffff" />
+                  </svg>
+                </span>
+              </div>
+            )}
+
+          <div className="route-map-markers">
+            {geoStops.map((stop) => {
+              const { x, y } = toViewportXY(stop.latitude, stop.longitude);
+              if (x < -48 || x > viewportSize.w + 48 || y < -48 || y > viewportSize.h + 48) {
+                return null;
+              }
+              const isSelected = stop.orderId === effectiveSelectedId;
+              const statusClass = STATUS_CLASS[stop.status] ?? '';
+              const isDelivered = stop.status === 'entregado';
+              const isFailed = stop.status === 'entrega_fallida' || stop.status === 'cancelado';
+              const pillSub =
+                stop.deliveryTime ??
+                (stop.totalCents !== null && stop.totalCents !== undefined
+                  ? formatCents(stop.totalCents)
+                  : null);
+
+              return (
+                <button
+                  key={`${stop.orderId}-${stop.position}`}
+                  type="button"
+                  className={
+                    `route-map-marker ${statusClass}` + (isSelected ? ' route-map-marker--selected' : '')
+                  }
+                  style={{ left: `${x}px`, top: `${y}px` }}
+                  aria-label={`Parada ${stop.position}: ${stop.address}`}
+                  title={`Parada #${stop.position} · ${stop.address}`}
+                  onClick={() => focusStop(stop)}
+                >
+                  {isSelected && (
+                    <span className="route-map-marker__callout" aria-hidden="true">
+                      #{stop.position}
+                      {pillSub ? ` · ${pillSub}` : ''}
+                    </span>
+                  )}
+                  <span className="route-map-marker__bubble">
+                    {isDelivered ? '✓' : isFailed ? '!' : stop.position}
+                  </span>
+                  <span className="route-map-marker__stem" aria-hidden="true" />
+                  <span className="route-map-marker__shadow" aria-hidden="true" />
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Floating Uber Top-Left HUD */}
+        {geoStops.length > 0 && (
+          <div className="route-map-hud" role="status" aria-live="polite">
+            <span className="route-map-hud__dot" aria-hidden="true" />
+            {isLoadingRoute ? (
+              <span className="route-map-hud__label">Trazando ruta vial…</span>
+            ) : durationLabel || distanceLabel ? (
+              <span className="route-map-hud__label">
+                {durationLabel ? <strong>{durationLabel}</strong> : null}
+                {durationLabel && distanceLabel ? ' · ' : ''}
+                {distanceLabel ?? ''}
+                {stops.length > 1 ? ` · ${deliveredCount}/${stops.length} entregadas` : ''}
+              </span>
+            ) : (
+              <span className="route-map-hud__label">
+                <strong>{geoStops.length}</strong>{' '}
+                {geoStops.length === 1 ? 'destino en mapa' : 'destinos en mapa'}
+                {stops.length > 1 ? ` · ${deliveredCount}/${stops.length} entregadas` : ''}
+              </span>
+            )}
+          </div>
+        )}
 
         {geoStops.length === 0 && (
           <div className="route-map-empty-pill" role="status">
@@ -473,12 +541,28 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
           </div>
         )}
 
+        {geoNotice && (
+          <div className="route-map-geo-notice" role="status">
+            <span>{geoNotice}</span>
+            <button
+              type="button"
+              className="route-map-geo-notice__close"
+              aria-label="Cerrar aviso de ubicación"
+              onClick={() => setGeoNotice(null)}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* Controles flotantes Uber (derecha) */}
         <div className="route-map-controls">
           <button
             type="button"
             className="route-map-ctrl-btn"
             aria-label="Acercar mapa"
-            onClick={() => setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1))}
+            title="Acercar (+)"
+            onClick={map.zoomIn}
           >
             +
           </button>
@@ -486,36 +570,139 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
             type="button"
             className="route-map-ctrl-btn"
             aria-label="Alejar mapa"
-            onClick={() => setZoom((z) => Math.max(MAP_MIN_ZOOM, z - 1))}
+            title="Alejar (−)"
+            onClick={map.zoomOut}
           >
             −
           </button>
+          {geoStops.length > 0 && (
+            <button
+              type="button"
+              className="route-map-ctrl-btn"
+              aria-label="Encuadrar ruta"
+              title="Encuadrar todas las paradas"
+              onClick={fitRoute}
+            >
+              <svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true">
+                <path
+                  d="M3 6.5V3h3.5M15 6.5V3h-3.5M3 11.5V15h3.5M15 11.5V15h-3.5"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button"
+            className={'route-map-ctrl-btn' + (userLocation ? ' route-map-ctrl-btn--active' : '')}
+            aria-label="Mi ubicación"
+            title="Centrar en mi ubicación GPS"
+            onClick={handleLocateMe}
+          >
+            <svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true">
+              <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.7" />
+              <path
+                d="M9 2.2v2.2M9 13.6v2.2M2.2 9h2.2M13.6 9h2.2"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+          {!compact && (
+            <button
+              type="button"
+              className={'route-map-ctrl-btn' + (isExpanded ? ' route-map-ctrl-btn--active' : '')}
+              aria-label={isExpanded ? 'Contraer mapa' : 'Expandir mapa'}
+              aria-pressed={isExpanded}
+              title={isExpanded ? 'Vista normal' : 'Expandir mapa'}
+              onClick={() => setIsExpanded((prev) => !prev)}
+            >
+              {isExpanded ? (
+                <svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true">
+                  <path
+                    d="M7 3v4H3M11 15v-4h4M15 7h-4V3M3 11h4v4"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true">
+                  <path
+                    d="M11.5 3H15v3.5M6.5 15H3v-3.5M15 3l-4.5 4.5M3 15l4.5-4.5"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </button>
+          )}
         </div>
 
-        {selectedStop && !popupDismissed && (
-          <div className="route-map-popup" role="dialog" aria-label={`Detalle de parada ${selectedStop.position}`}>
-            <div className="route-map-popup__head">
-              <div className="route-map-popup__tags">
-                <span className="route-map-metric">Parada #{selectedStop.position}</span>
+        {/* Uber Bottom Interactive Stop Dock */}
+        {selectedStop && dockVisible && (
+          <div
+            className="route-map-dock route-map-popup"
+            role="region"
+            aria-label={`Parada ${selectedStop.position} seleccionada`}
+          >
+            <div className="route-map-dock__head">
+              <div className="route-map-dock__tags">
+                <span className="route-map-dock__index">
+                  #{selectedStop.position}
+                  {geoStops.length > 1 ? ` / ${geoStops.length}` : ''}
+                </span>
                 <ShortIdBadge id={selectedStop.orderId} prefix="PED" />
                 <span className="route-map-metric route-map-metric--neutral">
                   {STORE_ORDER_STATUS_LABELS[selectedStop.status] ?? selectedStop.status}
                 </span>
                 {selectedStop.totalCents !== null && selectedStop.totalCents !== undefined && (
                   <span className="route-map-metric">
-                    COD: {formatCents(selectedStop.totalCents)}
+                    COD {formatCents(selectedStop.totalCents)}
                   </span>
                 )}
               </div>
-              <button
-                type="button"
-                className="route-map-popup__close"
-                aria-label="Cerrar detalle de parada"
-                onClick={() => setPopupDismissed(true)}
-              >
-                ×
-              </button>
+
+              <div className="route-map-dock__nav">
+                {geoStops.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="route-map-dock__step-btn"
+                      aria-label="Parada anterior"
+                      title="Parada anterior"
+                      onClick={() => stepStop(-1)}
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="route-map-dock__step-btn"
+                      aria-label="Parada siguiente"
+                      title="Parada siguiente"
+                      onClick={() => stepStop(1)}
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="route-map-popup__close"
+                  aria-label="Cerrar detalle de parada"
+                  onClick={() => setDockVisible(false)}
+                >
+                  ×
+                </button>
+              </div>
             </div>
+
             <p className="route-map-popup__address">{selectedStop.address}</p>
             <p className="route-map-popup__meta">
               {selectedStop.deliveryDate ? `${selectedStop.deliveryDate}` : ''}
@@ -523,16 +710,24 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
               {selectedStop.recipientName
                 ? ` · ${selectedStop.recipientName}${selectedStop.recipientPhone ? ` (${selectedStop.recipientPhone})` : ''}`
                 : ''}
-              {` · (${selectedStop.latitude.toFixed(5)}, ${selectedStop.longitude.toFixed(5)})`}
             </p>
+
             <div className="route-map-popup__links">
               <a
                 href={googleMapsDirectionsUrl(selectedStop.latitude, selectedStop.longitude)}
                 target="_blank"
                 rel="noreferrer"
+                className="route-map-popup__link route-map-popup__link--primary"
+              >
+                Google Maps ↗
+              </a>
+              <a
+                href={wazeDirectionsUrl(selectedStop.latitude, selectedStop.longitude)}
+                target="_blank"
+                rel="noreferrer"
                 className="route-map-popup__link"
               >
-                Cómo llegar en Google Maps ↗
+                Waze ↗
               </a>
               <a
                 href={osmDirectionsUrl(selectedStop.latitude, selectedStop.longitude)}
@@ -540,14 +735,14 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
                 rel="noreferrer"
                 className="route-map-popup__link"
               >
-                OpenStreetMap ↗
+                OSM ↗
               </a>
             </div>
           </div>
         )}
 
         <span className="route-map-attribution">
-          {activeLayer === 'satellite' ? '© Esri World Imagery' : '© OpenStreetMap'}
+          {map.activeLayer === 'satellite' ? '© Esri World Imagery' : '© OpenStreetMap'}
         </span>
       </div>
 
@@ -570,7 +765,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
             Fallida / Cancelada
           </span>
         </div>
-        <span>Arrastra para mover · Rueda o +/− para zoom · Clic en un pin para ver detalle</span>
+        <span>Arrastra para explorar · Rueda o +/− para zoom · Toca un pin o usa ‹ ›</span>
       </div>
     </div>
   );

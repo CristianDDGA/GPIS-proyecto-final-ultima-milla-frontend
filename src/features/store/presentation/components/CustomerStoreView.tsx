@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useRef, useState, type FC, type FormEvent, type ReactNode } from 'react';
 import type { Zone } from '../../../zones/domain/index.js';
-import { Alert, Button, Card, EmptyState, Select, Spinner, TextInput } from '../../../../shared/ui/index.js';
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  ProductGridSkeleton,
+  Select,
+  Skeleton,
+  TextInput,
+  TopRefetchBar,
+} from '../../../../shared/ui/index.js';
 import {
   MAX_LINE_QUANTITY,
   MAX_ORDER_LINES,
@@ -972,7 +982,12 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({ storeGateway, zo
                       ))}
                     </div>
                     {isLoadingSlots ? (
-                      <Spinner size="sm" label="Consultando horarios..." />
+                      <div className="client-slots" role="status" aria-busy="true" aria-label="Consultando horarios">
+                        <Skeleton height={54} radius={16} />
+                        <Skeleton height={54} radius={16} />
+                        <Skeleton height={54} radius={16} />
+                        <Skeleton height={54} radius={16} />
+                      </div>
                     ) : availableSlots.length === 0 ? (
                       <p className="client-muted">Ya no quedan horarios ese día. Prueba con otro día.</p>
                     ) : (
@@ -1171,10 +1186,10 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({ storeGateway, zo
         </Alert>
       )}
 
+      <TopRefetchBar active={isLoadingProducts && products.length > 0} label="Actualizando catálogo" />
+
       {isLoadingProducts && products.length === 0 ? (
-        <div className="wf-loading-card wf-loading-card--inline">
-          <Spinner size="lg" label="Cargando productos" />
-        </div>
+        <ProductGridSkeleton count={6} />
       ) : products.length === 0 ? (
         <Card className="store-card">
           <EmptyState

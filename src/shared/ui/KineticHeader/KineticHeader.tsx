@@ -1,12 +1,11 @@
-import { Fragment, type FC, type ReactNode } from 'react';
+import type { FC, ReactNode } from 'react';
 import './KineticHeader.css';
 
 export interface KineticHeaderProps {
-  /** Título principal que se revela palabra por palabra. */
   readonly title: string;
   readonly eyebrow?: string | undefined;
   readonly description?: string | undefined;
-  /** 'h1' para la portada, 'h2' para las cabeceras de módulo. */
+  /** 'h1' para portada, 'h2' para las cabeceras de módulo. */
   readonly level?: 'h1' | 'h2' | 'h3' | undefined;
   /** Control de etiqueta para asociar el encabezado a la sección (aria-labelledby). */
   readonly id?: string | undefined;
@@ -16,8 +15,8 @@ export interface KineticHeaderProps {
 }
 
 /**
- * Cabecera cinética Webflow Studio (DESIGN.md):
- * revela el título palabra por palabra con tipografía Inter (peso 600).
+ * Cabecera de módulo operativa Millast (Operate mode):
+ * legible e instantánea sin cascada repetitiva de palabras al cambiar de pestaña.
  */
 export const KineticHeader: FC<KineticHeaderProps> = ({
   title,
@@ -29,7 +28,6 @@ export const KineticHeader: FC<KineticHeaderProps> = ({
   className = '',
 }) => {
   const Heading = level;
-  const words = title.split(' ').filter((word) => word.length > 0);
 
   return (
     <header className={`kinetic-header ${className}`.trim()}>
@@ -39,17 +37,7 @@ export const KineticHeader: FC<KineticHeaderProps> = ({
         )}
 
         <Heading id={id} className="kinetic-header__title">
-          {words.map((word, index) => (
-            <Fragment key={`${title}-${word}-${index}`}>
-              <span
-                className="kinetic-header__word"
-                style={{ animationDelay: `${index * 22}ms` }}
-              >
-                {word}
-              </span>
-              {index < words.length - 1 ? ' ' : null}
-            </Fragment>
-          ))}
+          {title}
         </Heading>
 
         {description !== undefined && description.length > 0 && (

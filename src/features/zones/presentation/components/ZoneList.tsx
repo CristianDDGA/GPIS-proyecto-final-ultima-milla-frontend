@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { describeCoverage, isZoneActive, type Zone } from '../../domain/index.js';
-import { Button, EmptyState, ShortIdBadge, Spinner } from '../../../../shared/ui/index.js';
+import { Button, EmptyState, ShortIdBadge, TableRowsSkeleton } from '../../../../shared/ui/index.js';
 
 export interface ZoneListProps {
   zones: Zone[];
@@ -37,12 +37,7 @@ export const ZoneList: FC<ZoneListProps> = ({
   orderCountByZone,
 }) => {
   if (isLoading && zones.length === 0) {
-    return (
-      <div className="zones-loading-container" role="status">
-        <Spinner size="lg" label="Cargando listado de zonas..." />
-        <p>Obteniendo zonas disponibles...</p>
-      </div>
-    );
+    return <TableRowsSkeleton rows={4} label="Cargando listado de zonas..." />;
   }
 
   if (zones.length === 0) {

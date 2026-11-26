@@ -7,7 +7,7 @@ import {
   EmptyState,
   IsometricCapacityCube,
   ShortIdBadge,
-  Spinner,
+  TableRowsSkeleton,
 } from '../../../../shared/ui/index.js';
 
 const ROUTE_STATUS_LABELS: Record<RouteStatus, string> = {
@@ -44,12 +44,7 @@ export const RouteTable: FC<RouteTableProps> = ({
   };
 
   if (isLoading && routes.length === 0) {
-    return (
-      <output className="routes-loading" aria-live="polite">
-        <Spinner size="lg" label="Cargando rutas..." />
-        <p>Consultando rutas planificadas...</p>
-      </output>
-    );
+    return <TableRowsSkeleton rows={5} label="Consultando rutas planificadas..." />;
   }
 
   if (routes.length === 0) {

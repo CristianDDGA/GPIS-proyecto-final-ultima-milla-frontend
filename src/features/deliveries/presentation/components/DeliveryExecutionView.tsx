@@ -13,8 +13,10 @@ import { DeliveryStopList } from './DeliveryStopList.js';
 import {
   Alert,
   Button,
-  KineticHeader,
+  KpiStrip,
+  PageHeader,
   RouteStopsMap,
+  TopRefetchBar,
   type RouteMapStop,
 } from '../../../../shared/ui/index.js';
 import '../styles/deliveries.css';
@@ -131,6 +133,8 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
     [courierStoreOrders],
   );
 
+  const activeServiceDate = deliveries.activeRoute?.serviceDate;
+
   const mapStops = useMemo<readonly RouteMapStop[]>(() => {
     return stops.map((stop) => {
       const record = deliveries.deliveryRecords[stop.orderId];
@@ -142,7 +146,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
         status: record?.status ?? stop.status,
         latitude: geo?.latitude ?? null,
         longitude: geo?.longitude ?? null,
-        deliveryDate: deliveries.activeRoute?.serviceDate,
+        deliveryDate: activeServiceDate,
         deliveryTime: stop.deliveryTime,
         recipientName: geo?.recipientName,
         recipientPhone: geo?.recipientPhone,
@@ -150,19 +154,39 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
         notes: geo?.notes,
       };
     });
-  }, [deliveries.deliveryRecords, geoByOrderId, stops]);
+  }, [activeServiceDate, deliveries.deliveryRecords, geoByOrderId, stops]);
 
   const activeZoneName =
     deliveries.activeRoute
       ? zones?.find((z) => z.id === deliveries.activeRoute?.zoneId)?.name ?? null
       : null;
 
+  const deliveredCount = stops.filter(
+    (s) => (deliveries.deliveryRecords[s.orderId]?.status ?? s.status) === 'entregado',
+  ).length;
+  const closedCount = stops.filter((s) => {
+    const st = deliveries.deliveryRecords[s.orderId]?.status ?? s.status;
+    return st === 'entregado' || st === 'entrega_fallida';
+  }).length;
+  const progressPct = stops.length === 0 ? 0 : Math.round((closedCount / stops.length) * 100);
+  const availLabel =
+    deliveries.courierAvailability === null
+      ? 'Por confirmar'
+      : deliveries.courierAvailability
+        ? 'Disponible'
+        : 'No disponible';
+
   return (
     <section className="deliveries-layout" aria-labelledby="deliveries-view-title">
-      <KineticHeader
+      <PageHeader
         id="deliveries-view-title"
-        level="h2"
+        eyebrow={actor.role === 'repartidor' ? 'Reparto en Ruta' : 'Supervisión · Entregas'}
         title="Ejecución de entregas"
+        subtitle={
+          activeZoneName
+            ? `Ruta activa en ${activeZoneName}${deliveries.activeRoute ? ` · ${deliveries.activeRoute.serviceDate}` : ''}.`
+            : 'Seguimiento en vivo de paradas, trazado vial y confirmación de entregas.'
+        }
         actions={
           stops.length > 0 ? (
             <Button
@@ -179,6 +203,42 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
           ) : undefined
         }
       />
+
+      <TopRefetchBar
+        active={deliveries.isLoadingRoute || deliveries.isLoadingDeliveryRecords}
+        label="Sincronizando entregas"
+      />
+
+      {hasCourierBinding && (
+        <KpiStrip
+          ariaLabel="Resumen de ejecución de entregas"
+          items={[
+            {
+              label: 'Disponibilidad',
+              value: availLabel,
+              hint: selectedCourier?.displayName ?? actor.displayName ?? 'Operador',
+              tone:
+                deliveries.courierAvailability === null
+                  ? 'neutral'
+                  : deliveries.courierAvailability
+                    ? 'green'
+                    : 'red',
+            },
+            {
+              label: 'Paradas en ruta',
+              value: stops.length,
+              hint: deliveries.activeRoute ? `Estado: ${deliveries.activeRoute.status}` : 'Sin ruta activa',
+              tone: 'blue',
+            },
+            {
+              label: 'Entregadas',
+              value: `${deliveredCount}/${stops.length}`,
+              hint: `${progressPct}% completado`,
+              tone: progressPct === 100 && stops.length > 0 ? 'green' : 'neutral',
+            },
+          ]}
+        />
+      )}
 
       {deliveries.error && (
         <Alert type="error" title="Atención" onClose={deliveries.clearFeedback}>

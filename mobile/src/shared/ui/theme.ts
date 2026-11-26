@@ -1,25 +1,25 @@
 import {Platform, type TextStyle} from 'react-native';
 
 /**
- * Sistema visual Webflow Studio (`DESIGN.md`) adaptado nativamente a React Native:
- * - Lienzo blanco puro `#FFFFFF`, superficie `#F0F0F0`, tinta `#080808`, bordes `#D8D8D8`
- * - Acento único interactivo `#146EF5`
- * - Geometría: `4px` en controles/tags/inputs, `8px` en tarjetas y modales
- * - Elevación plana definida por bordes `1px`, sin sombras pesadas en reposo
+ * Sistema visual Millast Waterline (`DESIGN.md`) adaptado nativamente a React Native:
+ * - Lienzo blanco `#FFFFFF`, superficie táctil `#F3F7FC`, tinta `#0B132B`, bordes `#CBD5E1`
+ * - Acento único interactivo `#1668F3`
+ * - Geometría: `12dp` controles/inputs, `16dp` tarjetas y sheets, `999dp` tags/pills
+ * - Elevación limpia definida por bordes `1px`, objetivos táctiles >= 48dp
  */
 export const colors = {
   pureWhite: '#FFFFFF',
-  mist: '#F0F0F0',
-  mistHover: '#E6E6E6',
-  obsidian: '#080808',
-  slate: '#5A5A5A',
-  mutedInk: '#737373',
-  ashBorder: '#D8D8D8',
-  webflowBlue: '#146EF5',
-  indigoInk: '#1366E2',
+  mist: '#F3F7FC',
+  mistHover: '#E5EEF8',
+  obsidian: '#0B132B',
+  slate: '#475569',
+  mutedInk: '#64748B',
+  ashBorder: '#CBD5E1',
+  webflowBlue: '#1668F3',
+  indigoInk: '#1254CC',
   skyGlow: '#6CA7FF',
-  blueTintBg: '#EEF4FF',
-  blueTintBorder: '#B8D3FE',
+  blueTintBg: '#EEF5FF',
+  blueTintBorder: '#BFD7FE',
   greenBg: '#EEFBF1',
   greenText: '#0F6B2F',
   greenBorder: '#B5E8C3',
@@ -31,13 +31,13 @@ export const colors = {
   redBg: '#FEF2F2',
   redText: '#B42318',
   redBorder: '#F5B8B4',
-  backdrop: 'rgba(8, 8, 8, 0.42)',
+  backdrop: 'rgba(11, 19, 43, 0.42)',
 } as const;
 
 export const radii = {
-  control: 4,
-  tag: 4,
-  card: 8,
+  control: 12,
+  tag: 999,
+  card: 16,
 } as const;
 
 export const spacing = {

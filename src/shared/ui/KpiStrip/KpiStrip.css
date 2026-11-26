@@ -1,0 +1,108 @@
+.wl-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.wl-kpi-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 15px 18px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.90);
+  border: 1px solid rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 10px 26px -18px rgba(15, 23, 42, 0.18),
+    0 1px 3px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 #ffffff;
+  contain: layout style;
+}
+
+.wl-kpi-tile__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wl-kpi-tile__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--wl-ink-muted, #475569);
+}
+
+.wl-kpi-tile__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background-color: rgba(11, 19, 43, 0.05);
+  color: var(--wl-ink-soft, #334155);
+}
+
+.wl-kpi-tile__value {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--wl-ink, #0b132b);
+  font-variant-numeric: tabular-nums;
+}
+
+.wl-kpi-tile__hint {
+  font-size: 12px;
+  color: var(--wl-ink-soft, #334155);
+  line-height: 1.35;
+}
+
+.wl-kpi-tile--blue .wl-kpi-tile__value,
+.wl-kpi-tile--blue .wl-kpi-tile__icon {
+  color: #0b49c6;
+}
+.wl-kpi-tile--blue .wl-kpi-tile__icon {
+  background-color: rgba(22, 104, 243, 0.11);
+}
+
+.wl-kpi-tile--green .wl-kpi-tile__value,
+.wl-kpi-tile--green .wl-kpi-tile__icon {
+  color: #15803d;
+}
+.wl-kpi-tile--green .wl-kpi-tile__icon {
+  background-color: rgba(22, 163, 74, 0.12);
+}
+
+.wl-kpi-tile--amber .wl-kpi-tile__value,
+.wl-kpi-tile--amber .wl-kpi-tile__icon {
+  color: #9a3412;
+}
+.wl-kpi-tile--amber .wl-kpi-tile__icon {
+  background-color: rgba(217, 119, 6, 0.12);
+}
+
+.wl-kpi-tile--red .wl-kpi-tile__value,
+.wl-kpi-tile--red .wl-kpi-tile__icon {
+  color: #b91c1c;
+}
+.wl-kpi-tile--red .wl-kpi-tile__icon {
+  background-color: rgba(220, 38, 38, 0.11);
+}
+
+@media (max-width: 640px) {
+  .wl-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .wl-kpi-tile {
+    padding: 13px 14px;
+    border-radius: 18px;
+  }
+
+  .wl-kpi-tile__value {
+    font-size: 20px;
+  }
+}

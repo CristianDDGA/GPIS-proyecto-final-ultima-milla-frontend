@@ -2,7 +2,7 @@ import { useState, type CSSProperties, type FC } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import type { CourierApplicationUseCases } from '../../../courier-applications/application/index.js';
 import { AdminCourierApplicationsPanel } from '../../../courier-applications/presentation/components/AdminCourierApplicationsPanel.js';
-import { SectionHeader } from '../../../../shared/ui/index.js';
+import { PageHeader } from '../../../../shared/ui/index.js';
 import { AdminUserManagementView } from './AdminUserManagementView.js';
 import '../styles/admin-access.css';
 
@@ -31,8 +31,15 @@ export const AdminAccessView: FC<AdminAccessViewProps> = ({
 
   return (
     <section className="wf-access" aria-labelledby="wf-access-title">
-      <SectionHeader
+      <PageHeader
+        id="wf-access-title"
+        eyebrow="Administración · Accesos"
         title={tab === 'users' ? 'Directorio de usuarios' : 'Solicitudes de repartidor'}
+        subtitle={
+          tab === 'users'
+            ? 'Controla cuentas, roles, verificación por código o Google y restablecimiento de claves.'
+            : 'Revisa documentos, licencias y aprueba o rechaza postulaciones a repartidor.'
+        }
         actions={
           <div
             className="segmented wf-access__tabs"
@@ -66,10 +73,6 @@ export const AdminAccessView: FC<AdminAccessViewProps> = ({
           </div>
         }
       />
-
-      <h2 id="wf-access-title" className="sr-only">
-        Accesos y solicitudes
-      </h2>
 
       {tab === 'users' ? (
         <AdminUserManagementView useCases={authUseCases} />

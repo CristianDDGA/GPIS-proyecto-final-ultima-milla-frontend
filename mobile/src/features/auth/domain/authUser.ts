@@ -1,6 +1,6 @@
 export type AuthRole = 'personal' | 'repartidor' | 'cliente';
 export type PublicRole = 'admin' | 'repartidor' | 'cliente';
-export type EmailVerifiedVia = 'code' | 'admin' | 'legacy' | 'demo';
+export type EmailVerifiedVia = 'code' | 'admin' | 'legacy' | 'demo' | 'google';
 
 export interface AuthUser {
   readonly id: string;

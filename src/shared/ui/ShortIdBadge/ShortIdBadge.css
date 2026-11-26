@@ -28,28 +28,67 @@
 .short-id__copy {
   border: 1px solid transparent;
   background: transparent;
-  padding: 2px 6px;
-  border-radius: var(--radius-tags, 4px);
-  color: var(--color-slate, #5a5a5a);
+  min-height: 28px;
+  padding: 2px 8px;
+  border-radius: var(--radius-tags, 999px);
+  color: var(--color-slate, #334155);
   font-family: var(--font-wf-visual-sans-variable, 'Inter', sans-serif);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 140ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)),
+    filter 150ms ease;
 }
 
-.short-id__copy:hover {
-  color: var(--color-webflow-blue, #146ef5);
-  background: var(--color-mist, #f0f0f0);
-  border-color: var(--color-ash-border, #d8d8d8);
+.short-id__copy:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .short-id__copy:hover {
+    color: var(--wl-brand-active, #0b49c6);
+    background: var(--color-mist, #f1f5f9);
+    border-color: var(--color-ash-border, rgba(11, 19, 43, 0.12));
+  }
 }
 
 .short-id__copy:focus-visible {
-  outline: 2px solid var(--color-webflow-blue, #146ef5);
+  outline: 2px solid var(--wl-brand, #1668f3);
   outline-offset: 2px;
 }
 
 .short-id__copy--done {
-  color: var(--color-webflow-blue, #146ef5);
-  font-weight: 600;
+  color: var(--wl-brand-active, #0b49c6);
+  background-color: rgba(22, 104, 243, 0.10);
+  border-color: rgba(22, 104, 243, 0.24);
+  font-weight: 700;
+  animation: short-id-morph 160ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both;
+}
+
+@keyframes short-id-morph {
+  from {
+    filter: blur(1.5px);
+    opacity: 0.72;
+  }
+  to {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+@media (pointer: coarse) {
+  .short-id__copy {
+    min-height: 36px;
+    padding: 4px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .short-id__copy--done {
+    animation: none;
+  }
 }

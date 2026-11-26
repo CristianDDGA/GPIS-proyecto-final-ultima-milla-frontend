@@ -1,14 +1,14 @@
 /* ============================================================================
-   Millast Login · Liquid Glass sobre blanco puro (#ffffff)
-   Estética 100% colores sólidos + blur óptico (cero degradados), motor WebGL2
-   en bucle autónomo y tarjeta con refracción líquida y haz especular orbital.
+   Millast Login · Sistema Canónico Waterline Porcelain (High-Speed 0fps Idle)
+   Unificado al 100% con los dashboards autenticados: atmósfera #e8f0f9,
+   emblema circular #1668f3, tarjetas 26px, inputs 15px y píldoras 999px.
    ========================================================================== */
 
 .mlg-page {
   min-height: 100dvh;
   width: 100%;
-  background-color: #ffffff;
-  color: #0f172a;
+  background-color: #e8f0f9;
+  color: #0b132b;
   overflow-x: hidden;
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color-scheme: light;
@@ -16,7 +16,7 @@
 
 .mlg-page ::selection {
   background-color: rgba(22, 104, 243, 0.15);
-  color: #1668f3;
+  color: #0b132b;
 }
 
 .mlg-display {
@@ -27,45 +27,12 @@
 
 .mlg-shell {
   width: 100%;
-  max-width: 1152px;
+  max-width: 1200px;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 28px 24px;
+  padding: 18px 24px 36px;
   display: flex;
   flex-direction: column;
-}
-
-/* --- Cabecera superior izquierda ----------------------------------------- */
-
-.mlg-header {
-  flex: none;
-}
-
-.mlg-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  user-select: none;
-}
-
-.mlg-brand__badge {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background-color: #1668f3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px -2px rgba(22, 104, 243, 0.32);
-  flex: none;
-}
-
-.mlg-brand__name {
-  font-weight: 700;
-  color: #0f172a;
-  font-size: 17px;
-  line-height: 1.2;
-  letter-spacing: -0.025em;
 }
 
 /* --- Grid principal de 2 columnas equilibradas --------------------------- */
@@ -73,13 +40,13 @@
 .mlg-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 44px;
+  gap: 36px;
   align-items: center;
   margin: auto 0;
-  padding: 28px 0;
+  padding: 24px 0;
 }
 
-/* --- Columna izquierda: Titular + WebGL2 Liquid Glass -------------------- */
+/* --- Columna izquierda: Titular + WebGL2 One-Shot ------------------------ */
 
 .mlg-showcase {
   display: flex;
@@ -88,10 +55,19 @@
   min-width: 0;
 }
 
+.mlg-eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1668f3;
+}
+
 .mlg-hero-title {
   margin: 0;
-  color: #0a0a0a;
-  font-weight: 700;
+  color: #0b132b;
+  font-weight: 800;
   font-size: 40px;
   line-height: 1.08;
   letter-spacing: -0.035em;
@@ -101,15 +77,53 @@
   display: block;
 }
 
+.mlg-hero-desc {
+  margin: 12px 0 0;
+  max-width: 44ch;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.mlg-showcase-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.mlg-showcase-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.96);
+  color: #0b132b;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.16);
+}
+
 .mlg-reveal-stage {
-  margin-top: 24px;
-  width: 300px;
-  height: 300px;
+  margin-top: 18px;
+  width: 260px;
+  height: 260px;
   max-width: 100%;
-  margin-left: -16px;
+  margin-left: -12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+}
+
+.mlg-reveal-stage:focus-visible {
+  outline: 2px solid #1668f3;
+  outline-offset: 4px;
 }
 
 .mlg-reveal-stage__canvas {
@@ -151,22 +165,22 @@
 }
 
 .mlg-card-float {
-  animation: mlg-float-breathe 6.8s ease-in-out infinite;
+  /* Mantiene los controles del formulario estables (WCAG / precisión de puntero); la vida óptica vive en los orbes, rim y resorte 3D */
+  transform: none;
 }
 
 .mlg-card {
   position: relative;
   width: 100%;
-  border-radius: 24px;
-  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 26px;
+  background-color: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.98);
   overflow: hidden;
-  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform;
   box-shadow:
-    0 28px 60px -24px rgba(15, 23, 42, 0.14),
-    0 8px 22px -8px rgba(22, 104, 243, 0.08),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(148, 163, 184, 0.16);
+    0 24px 52px -26px rgba(15, 23, 42, 0.22),
+    0 6px 18px -8px rgba(22, 104, 243, 0.10),
+    0 0 0 1px rgba(11, 19, 43, 0.05),
+    inset 0 1.5px 0 #ffffff;
 }
 
 .mlg-card__content {
@@ -297,10 +311,10 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  background-color: rgba(241, 245, 249, 0.85);
+  background-color: rgba(241, 246, 252, 0.95);
   padding: 4px;
-  border-radius: 11px;
-  border: 1px solid rgba(226, 232, 240, 0.7);
+  border-radius: 999px;
+  border: 1px solid rgba(11, 19, 43, 0.08);
   margin-bottom: 24px;
 }
 
@@ -311,10 +325,12 @@
   bottom: 4px;
   left: 4px;
   width: calc(50% - 4px);
-  border-radius: 8px;
+  border-radius: 999px;
   background-color: #ffffff;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.07);
-  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow:
+    0 6px 14px -6px rgba(22, 104, 243, 0.24),
+    0 1px 4px rgba(15, 23, 42, 0.08);
+  transition: transform 220ms var(--ease-in-out, cubic-bezier(0.77, 0, 0.175, 1));
   overflow: hidden;
   transform: translateX(0);
 }
@@ -324,12 +340,7 @@
 }
 
 .mlg-segmented__pill-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: #1668f3;
+  display: none;
 }
 
 .mlg-tab {
@@ -337,22 +348,23 @@
   z-index: 1;
   height: 36px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 999px;
   background: transparent;
   font-size: 13.5px;
   font-weight: 600;
-  color: #64748b;
+  color: #475569;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 180ms ease;
+  transition: color 160ms ease;
 }
 
 .mlg-tab:hover:not(.mlg-tab--active) {
-  color: #334155;
+  color: #0b132b;
 }
 
 .mlg-tab--active {
-  color: #0f172a;
+  color: #0b49c6;
+  font-weight: 700;
 }
 
 .mlg-tab:focus-visible {
@@ -550,11 +562,11 @@
   width: 100%;
   height: 44px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: 15px;
   font-size: 14px;
-  color: #0f172a;
-  background-color: rgba(255, 255, 255, 0.9);
-  border: 1px solid #e2e8f0;
+  color: #0b132b;
+  background-color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 19, 43, 0.14);
   outline: none;
   transition: border-color 160ms ease, background-color 160ms ease, box-shadow 180ms ease;
 }
@@ -603,13 +615,13 @@
 .mlg-password-toggle {
   position: absolute;
   right: 8px;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #0f172a;
+  background-color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 19, 43, 0.14);
+  color: #0b132b;
   font-size: 12px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: 6px;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 999px;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
 }
@@ -735,8 +747,8 @@
   margin-top: 4px;
   width: 100%;
   height: 44px;
-  border: 0;
-  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
   background-color: #1668f3;
   color: #ffffff;
   font-size: 14.5px;
@@ -746,20 +758,24 @@
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 10px 22px -8px rgba(22, 104, 243, 0.45);
+  box-shadow:
+    0 10px 22px -8px rgba(22, 104, 243, 0.56),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
   transition:
     background-color 160ms ease,
-    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 140ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)),
     box-shadow 160ms ease;
 }
 
-.mlg-submit-btn:hover:not(:disabled) {
-  background-color: #1256cc;
-  transform: translateY(-1px);
+.mlg-submit-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
 }
 
-.mlg-submit-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.985);
+@media (hover: hover) and (pointer: fine) {
+  .mlg-submit-btn:hover:not(:disabled) {
+    background-color: #1256cc;
+    transform: translateY(-1px);
+  }
 }
 
 .mlg-submit-btn:focus-visible {
@@ -778,14 +794,18 @@
 .mlg-secondary-btn {
   width: 100%;
   height: 42px;
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.9);
-  border: 1px solid #e2e8f0;
-  color: #0f172a;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 19, 43, 0.14);
+  color: #0b132b;
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 140ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+.mlg-secondary-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .mlg-secondary-btn:hover:not(:disabled) {
@@ -858,10 +878,10 @@
   width: 100%;
   height: 44px;
   padding: 0 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 999px;
+  border: 1px solid rgba(11, 19, 43, 0.14);
   background-color: rgba(255, 255, 255, 0.96);
-  color: #0f172a;
+  color: #0b132b;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -880,15 +900,17 @@
     box-shadow 160ms ease;
 }
 
-.mlg-google-btn:hover:not(:disabled) {
-  background-color: #ffffff;
-  border-color: rgba(22, 104, 243, 0.36);
-  box-shadow: 0 8px 18px -10px rgba(22, 104, 243, 0.28);
-  transform: translateY(-1px);
+.mlg-google-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
 }
 
-.mlg-google-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.985);
+@media (hover: hover) and (pointer: fine) {
+  .mlg-google-btn:hover:not(:disabled) {
+    background-color: #ffffff;
+    border-color: rgba(22, 104, 243, 0.36);
+    box-shadow: 0 8px 18px -10px rgba(22, 104, 243, 0.28);
+    transform: translateY(-1px);
+  }
 }
 
 .mlg-google-btn:focus-visible {

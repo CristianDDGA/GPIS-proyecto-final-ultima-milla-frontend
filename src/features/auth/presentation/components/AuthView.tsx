@@ -21,7 +21,6 @@ import { AuthLoginForm } from './auth/AuthLoginForm.js';
 import { AuthRegisterForm } from './auth/AuthRegisterForm.js';
 import { AuthResetPasswordForm } from './auth/AuthResetPasswordForm.js';
 import { AuthStudioShowcase } from './auth/AuthStudioShowcase.js';
-import { AuthTopNav } from './auth/AuthTopNav.js';
 import { AuthVerifyEmailForm } from './auth/AuthVerifyEmailForm.js';
 import { LiquidGlassCardChrome } from './auth/LiquidGlassCardChrome.js';
 import '../styles/auth.css';
@@ -64,7 +63,71 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
   const flows = useAuthFlows({ useCases, onAuthenticated });
   const cardRef = useRef<HTMLDivElement | null>(null);
   const glintRef = useRef<HTMLDivElement | null>(null);
+  const cardRectRef = useRef<DOMRect | null>(null);
+  const tiltSpringRef = useRef({
+    rx: 0,
+    ry: 0,
+    vrx: 0,
+    vry: 0,
+    tx: 0,
+    ty: 0,
+    raf: 0,
+    last: 0,
+  });
   const [isShaking, setIsShaking] = useState(false);
+
+  useEffect(() => {
+    const spring = tiltSpringRef.current;
+    return () => {
+      if (spring.raf) {
+        window.cancelAnimationFrame(spring.raf);
+        spring.raf = 0;
+      }
+    };
+  }, []);
+
+  const stepTiltSpring = useCallback((): void => {
+    const s = tiltSpringRef.current;
+    if (s.raf) return;
+    s.last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min((now - s.last) / 1000, 1 / 30);
+      s.last = now;
+      const stiffness = 170;
+      const damping = 22;
+      const ax = stiffness * (s.tx - s.rx) - damping * s.vrx;
+      const ay = stiffness * (s.ty - s.ry) - damping * s.vry;
+      s.vrx += ax * dt;
+      s.vry += ay * dt;
+      s.rx += s.vrx * dt;
+      s.ry += s.vry * dt;
+
+      if (cardRef.current) {
+        cardRef.current.style.transform = `rotateX(${s.rx.toFixed(2)}deg) rotateY(${s.ry.toFixed(2)}deg)`;
+      }
+
+      const settled =
+        Math.abs(s.tx - s.rx) < 0.015 &&
+        Math.abs(s.ty - s.ry) < 0.015 &&
+        Math.abs(s.vrx) < 0.02 &&
+        Math.abs(s.vry) < 0.02;
+
+      if (settled) {
+        s.rx = s.tx;
+        s.ry = s.ty;
+        s.vrx = 0;
+        s.vry = 0;
+        if (cardRef.current) {
+          cardRef.current.style.transform =
+            s.tx === 0 && s.ty === 0 ? '' : `rotateX(${s.rx.toFixed(2)}deg) rotateY(${s.ry.toFixed(2)}deg)`;
+        }
+        s.raf = 0;
+      } else {
+        s.raf = window.requestAnimationFrame(tick);
+      }
+    };
+    s.raf = window.requestAnimationFrame(tick);
+  }, []);
 
   useEffect(() => {
     if (flows.shakeNonce === 0) return;
@@ -73,36 +136,48 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
     return () => window.cancelAnimationFrame(frame);
   }, [flows.shakeNonce]);
 
-  // Inclinación óptica 3D contenida (±2.1deg) + destello especular reactivo al cursor
-  const handleCardPointerMove = useCallback((event: PointerEvent<HTMLDivElement>): void => {
-    if (
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      return;
-    }
+  const handleCardPointerEnter = useCallback((event: PointerEvent<HTMLDivElement>): void => {
     if (event.pointerType === 'touch') return;
-    const card = cardRef.current;
-    if (!card) return;
-
-    const rect = card.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    if (glintRef.current) {
-      glintRef.current.style.transform = `translate3d(${(x - 88).toFixed(1)}px, ${(y - 88).toFixed(1)}px, 0)`;
-    }
-
-    const rotateY = (x / rect.width - 0.5) * 4.2;
-    const rotateX = (y / rect.height - 0.5) * -4.2;
-    card.style.transform = `rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`;
+    cardRectRef.current = cardRef.current?.getBoundingClientRect() ?? null;
   }, []);
+
+  // Inclinación óptica 3D contenida (±2.1deg) con resorte amortiguado + destello reactivo
+  const handleCardPointerMove = useCallback(
+    (event: PointerEvent<HTMLDivElement>): void => {
+      if (
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        return;
+      }
+      if (event.pointerType === 'touch') return;
+      const card = cardRef.current;
+      if (!card) return;
+
+      const rect = cardRectRef.current ?? card.getBoundingClientRect();
+      cardRectRef.current = rect;
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      if (glintRef.current) {
+        glintRef.current.style.transform = `translate3d(${(x - 88).toFixed(1)}px, ${(y - 88).toFixed(1)}px, 0)`;
+      }
+
+      tiltSpringRef.current.ty = (x / rect.width - 0.5) * 4.2;
+      tiltSpringRef.current.tx = (y / rect.height - 0.5) * -4.2;
+      stepTiltSpring();
+    },
+    [stepTiltSpring],
+  );
 
   const handleCardPointerLeave = useCallback((): void => {
-    if (cardRef.current) {
-      cardRef.current.style.transform = 'rotateX(0deg) rotateY(0deg)';
-    }
-  }, []);
+    cardRectRef.current = null;
+    tiltSpringRef.current.tx = 0;
+    tiltSpringRef.current.ty = 0;
+    stepTiltSpring();
+  }, [stepTiltSpring]);
+
+  const { activeTab, loginTabRef, registerTabRef, selectPrimaryTab } = flows;
 
   const handleTabKeyDown = useCallback(
     (event: KeyboardEvent<HTMLButtonElement>): void => {
@@ -111,16 +186,16 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
       }
 
       event.preventDefault();
-      const nextTab: AuthTab = flows.activeTab === 'login' ? 'register' : 'login';
-      flows.selectPrimaryTab(nextTab);
+      const nextTab: AuthTab = activeTab === 'login' ? 'register' : 'login';
+      selectPrimaryTab(nextTab);
 
       if (nextTab === 'login') {
-        flows.loginTabRef.current?.focus();
+        loginTabRef.current?.focus();
       } else {
-        flows.registerTabRef.current?.focus();
+        registerTabRef.current?.focus();
       }
     },
-    [flows.activeTab, flows.loginTabRef, flows.registerTabRef, flows.selectPrimaryTab],
+    [activeTab, loginTabRef, registerTabRef, selectPrimaryTab],
   );
 
   const secondaryScreen = flows.isSecondary
@@ -130,8 +205,6 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
   return (
     <div className="mlg-page">
       <div className="mlg-shell">
-        <AuthTopNav />
-
         <div className="mlg-grid" aria-label="Acceso a Millast">
           <AuthStudioShowcase />
 
@@ -142,6 +215,7 @@ export const AuthView: FC<AuthViewProps> = ({ useCases, onAuthenticated }) => {
             <div className="mlg-card-float">
               <div
                 ref={cardRef}
+                onPointerEnter={handleCardPointerEnter}
                 onPointerMove={handleCardPointerMove}
                 onPointerLeave={handleCardPointerLeave}
                 onAnimationEnd={(event) => {

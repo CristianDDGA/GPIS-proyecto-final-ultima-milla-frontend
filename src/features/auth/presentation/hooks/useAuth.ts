@@ -3,7 +3,6 @@ import type { AuthGateway } from '../../domain/authGateway.js';
 import type {
   AuthStatus,
   AuthUser,
-  HealthStatus,
   LoginInput,
   RegisterCustomerInput,
   RegisterCustomerOutcome,
@@ -14,7 +13,6 @@ import {
   validateRegisterCustomerInput,
 } from '../../domain/index.js';
 import {
-  CheckHealthUseCase,
   GetCurrentUserUseCase,
   LoginUseCase,
   LogoutUseCase,
@@ -26,14 +24,12 @@ import { HttpError } from '../../../../shared/infrastructure/http/index.js';
 export interface UseAuthResult {
   status: AuthStatus;
   user: AuthUser | null;
-  healthStatus: HealthStatus;
   error: string | null;
   isSubmitting: boolean;
   login: (input: LoginInput) => Promise<boolean>;
   registerCustomer: (input: RegisterCustomerInput) => Promise<RegisterCustomerOutcome | null>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<AuthUser | null>;
-  retryHealth: () => void;
   clearError: () => void;
   forceSignOut: () => void;
 }
@@ -51,7 +47,6 @@ function toErrorMessage(error: unknown, fallbackMessage: string): string {
 export function useAuth(gateway: AuthGateway): UseAuthResult {
   const useCases = useMemo(
     () => ({
-      checkHealth: new CheckHealthUseCase(gateway),
       login: new LoginUseCase(gateway),
       registerCustomer: new RegisterCustomerUseCase(gateway),
       getCurrentUser: new GetCurrentUserUseCase(gateway),
@@ -64,29 +59,9 @@ export function useAuth(gateway: AuthGateway): UseAuthResult {
     getToken() === null ? 'unauthenticated' : 'loading',
   );
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [healthStatus, setHealthStatus] = useState<HealthStatus>('checking');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const mountedRef = useRef(true);
-
-  const checkHealth = useCallback(async (): Promise<void> => {
-    if (!mountedRef.current) {
-      return;
-    }
-
-    setHealthStatus('checking');
-
-    try {
-      const nextHealthStatus = await useCases.checkHealth.execute();
-      if (mountedRef.current) {
-        setHealthStatus(nextHealthStatus);
-      }
-    } catch {
-      if (mountedRef.current) {
-        setHealthStatus('offline');
-      }
-    }
-  }, [useCases]);
 
   const hydrateSession = useCallback(async (): Promise<void> => {
     const token = getToken();
@@ -123,13 +98,12 @@ export function useAuth(gateway: AuthGateway): UseAuthResult {
 
   useEffect(() => {
     mountedRef.current = true;
-    void checkHealth();
     void hydrateSession();
 
     return () => {
       mountedRef.current = false;
     };
-  }, [checkHealth, hydrateSession]);
+  }, [hydrateSession]);
 
   const login = useCallback(
     async (input: LoginInput): Promise<boolean> => {
@@ -261,10 +235,6 @@ export function useAuth(gateway: AuthGateway): UseAuthResult {
     }
   }, [useCases]);
 
-  const retryHealth = useCallback((): void => {
-    void checkHealth();
-  }, [checkHealth]);
-
   const clearError = useCallback((): void => {
     setError(null);
   }, []);
@@ -284,14 +254,12 @@ export function useAuth(gateway: AuthGateway): UseAuthResult {
   return {
     status,
     user,
-    healthStatus,
     error,
     isSubmitting,
     login,
     registerCustomer,
     logout,
     refreshMe,
-    retryHealth,
     clearError,
     forceSignOut,
   };

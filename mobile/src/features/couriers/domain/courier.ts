@@ -18,7 +18,9 @@ export type ActiveStopStatus =
   | 'asignado_a_ruta'
   | 'recogido'
   | 'en_camino'
-  | 'entregado';
+  | 'entregado'
+  | 'entrega_fallida'
+  | 'cancelado';
 
 export interface ActiveCourierRouteStop {
   readonly orderId: string;

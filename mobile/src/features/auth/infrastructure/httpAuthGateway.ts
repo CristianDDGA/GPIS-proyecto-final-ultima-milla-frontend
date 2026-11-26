@@ -52,7 +52,9 @@ function parseAdminUser(value: unknown): AdminUserView {
   const raw = value as Record<string, unknown>;
   const via = raw.emailVerifiedVia;
   const emailVerifiedVia: EmailVerifiedVia | null =
-    via === 'code' || via === 'admin' || via === 'legacy' || via === 'demo' ? via : null;
+    via === 'code' || via === 'admin' || via === 'legacy' || via === 'demo' || via === 'google'
+      ? via
+      : null;
   return {
     ...base,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : '',

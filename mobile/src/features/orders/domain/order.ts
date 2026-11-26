@@ -3,7 +3,9 @@ export type OrderStatus =
   | 'asignado_a_ruta'
   | 'recogido'
   | 'en_camino'
-  | 'entregado';
+  | 'entregado'
+  | 'entrega_fallida'
+  | 'cancelado';
 
 export interface Order {
   readonly id: string;
@@ -23,6 +25,8 @@ export const ORDER_STATUS_LABELS: Readonly<Record<OrderStatus, string>> = {
   recogido: 'Recogido',
   en_camino: 'En camino',
   entregado: 'Entregado',
+  entrega_fallida: 'Entrega fallida',
+  cancelado: 'Cancelado',
 };
 
 export const ORDER_TIMELINE: readonly {readonly status: OrderStatus; readonly label: string}[] = [

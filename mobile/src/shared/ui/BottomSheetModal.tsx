@@ -1,7 +1,10 @@
-import type {ReactNode} from 'react';
+import {useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
 import {
+  AccessibilityInfo,
+  Animated,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -28,10 +31,78 @@ export function BottomSheetModal({
   children,
 }: BottomSheetModalProps) {
   const insets = useSafeAreaInsets();
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const dragY = useRef(new Animated.Value(0)).current;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(enabled => {
+        if (active) setReduceMotion(enabled);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (visible) {
+      dragY.setValue(0);
+    }
+  }, [dragY, visible]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          Math.abs(gesture.dy) > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+        onPanResponderMove: (_, gesture) => {
+          if (gesture.dy >= 0) {
+            dragY.setValue(gesture.dy);
+          } else {
+            // Amortiguación elástica en el límite superior (Emil Kowalski)
+            dragY.setValue(-Math.sqrt(Math.abs(gesture.dy)) * 2.5);
+          }
+        },
+        onPanResponderRelease: (_, gesture) => {
+          const velocityDismiss = gesture.vy > 0.11 && gesture.dy > 24;
+          const distanceDismiss = gesture.dy > 96;
+          if (velocityDismiss || distanceDismiss) {
+            Animated.timing(dragY, {
+              toValue: 320,
+              duration: reduceMotion ? 100 : 180,
+              useNativeDriver: true,
+            }).start(() => {
+              dragY.setValue(0);
+              onCloseRef.current();
+            });
+          } else {
+            Animated.spring(dragY, {
+              toValue: 0,
+              damping: 26,
+              stiffness: 280,
+              useNativeDriver: true,
+            }).start();
+          }
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(dragY, {
+            toValue: 0,
+            damping: 26,
+            stiffness: 280,
+            useNativeDriver: true,
+          }).start();
+        },
+      }),
+    [dragY, reduceMotion],
+  );
 
   return (
     <Modal
-      animationType="slide"
+      animationType={reduceMotion ? 'fade' : 'slide'}
       onRequestClose={onClose}
       statusBarTranslucent
       transparent
@@ -40,25 +111,32 @@ export function BottomSheetModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.overlay}>
         <Pressable accessibilityLabel="Cerrar modal" onPress={onClose} style={styles.backdrop} />
-        <View
+        <Animated.View
           style={[
             styles.sheet,
-            {paddingBottom: Math.max(insets.bottom, spacing.lg)},
+            {
+              paddingBottom: Math.max(insets.bottom, spacing.lg),
+              transform: [{translateY: dragY}],
+            },
           ]}>
-          <View style={styles.handle} />
-          <View style={styles.header}>
-            <View style={styles.headerText}>
-              <Text style={styles.title}>{title}</Text>
-              {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          <View {...panResponder.panHandlers}>
+            <View style={styles.handleArea}>
+              <View style={styles.handle} />
             </View>
-            <Pressable
-              accessibilityLabel="Cerrar"
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={onClose}
-              style={styles.closeBtn}>
-              <Text style={styles.closeLabel}>✕</Text>
-            </Pressable>
+            <View style={styles.header}>
+              <View style={styles.headerText}>
+                <Text style={styles.title}>{title}</Text>
+                {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+              </View>
+              <Pressable
+                accessibilityLabel="Cerrar"
+                accessibilityRole="button"
+                hitSlop={6}
+                onPress={onClose}
+                style={styles.closeBtn}>
+                <Text style={styles.closeLabel}>✕</Text>
+              </Pressable>
+            </View>
           </View>
           <ScrollView
             contentContainerStyle={styles.body}
@@ -66,7 +144,7 @@ export function BottomSheetModal({
             showsVerticalScrollIndicator={false}>
             {children}
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -84,22 +162,25 @@ const styles = StyleSheet.create({
   sheet: {
     maxHeight: '88%',
     backgroundColor: colors.pureWhite,
-    borderTopLeftRadius: radii.card + 4,
-    borderTopRightRadius: radii.card + 4,
+    borderTopLeftRadius: radii.card + 8,
+    borderTopRightRadius: radii.card + 8,
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: colors.ashBorder,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
+  },
+  handleArea: {
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
   },
   handle: {
     alignSelf: 'center',
-    width: 36,
+    width: 40,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.ashBorder,
-    marginBottom: spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -127,8 +208,8 @@ const styles = StyleSheet.create({
     color: colors.slate,
   },
   closeBtn: {
-    minWidth: 36,
-    minHeight: 36,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.control,

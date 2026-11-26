@@ -9,8 +9,11 @@ import {
   RouteStopsMap,
   Select,
   ShortIdBadge,
-  Spinner,
+  Skeleton,
+  StopCardsSkeleton,
+  TableRowsSkeleton,
   TextInput,
+  TopRefetchBar,
 } from '../../../../shared/ui/index.js';
 import {
   CANCEL_REASONS,
@@ -235,10 +238,10 @@ export const AdminStoreOrdersPanel: FC<{
         </div>
       </form>
 
+      <TopRefetchBar active={isLoading && orders.length > 0} label="Actualizando pedidos de tienda" />
+
       {isLoading && orders.length === 0 ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '28px' }}>
-          <Spinner size="md" label="Cargando pedidos de tienda..." />
-        </div>
+        <StopCardsSkeleton count={4} label="Cargando pedidos de tienda" />
       ) : orders.length === 0 ? (
         <EmptyState
           title="Sin pedidos de tienda"
@@ -279,12 +282,7 @@ export const AdminStoreOrdersPanel: FC<{
               return (
                 <li
                   key={order.id}
-                  className="store-stop-card"
-                  style={
-                    isFocused
-                      ? { borderColor: 'rgba(22, 104, 243, 0.52)', backgroundColor: 'rgba(238, 245, 255, 0.90)' }
-                      : undefined
-                  }
+                  className={'store-stop-card' + (isFocused ? ' store-stop-card--focused' : '')}
                 >
                 <div className="store-stop-card__head">
                   <div>
@@ -548,10 +546,10 @@ export const AdminStoreCashPanel: FC<{ readonly storeGateway: HttpStoreGateway }
       {error && <Alert type="error" title="Atención" onClose={() => setError(null)}>{error}</Alert>}
       {notice && <Alert type="success" title="Rendición completada" onClose={() => setNotice(null)}>{notice}</Alert>}
 
+      <TopRefetchBar active={isLoading && rows.length > 0} label="Actualizando cajas diarias" />
+
       {isLoading && rows.length === 0 ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '28px' }}>
-          <Spinner size="md" label="Consultando cajas..." />
-        </div>
+        <TableRowsSkeleton rows={4} label="Consultando cajas de repartidores" />
       ) : rows.length === 0 ? (
         <EmptyState
           title="Sin cobros registrados en esta fecha"
@@ -703,7 +701,16 @@ export const AdminStoreSettingsPanel: FC<{ readonly storeGateway: HttpStoreGatew
       {notice && <Alert type="success" title="Configuración guardada" onClose={() => setNotice(null)}>{notice}</Alert>}
 
       {isLoading ? (
-        <Spinner size="md" label="Cargando configuración..." />
+        <div className="store-form" role="status" aria-busy="true" aria-label="Cargando configuración">
+          <div className="store-form__row">
+            <Skeleton height={44} radius={15} />
+            <Skeleton height={44} radius={15} />
+          </div>
+          <div className="store-form__row">
+            <Skeleton height={44} radius={15} />
+            <Skeleton height={44} radius={15} />
+          </div>
+        </div>
       ) : (
         <form className="store-form" onSubmit={handleSave}>
           <div className="store-form__row">

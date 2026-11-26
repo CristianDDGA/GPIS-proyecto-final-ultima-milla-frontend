@@ -11,10 +11,13 @@ import {
   Button,
   Card,
   EmptyState,
-  KineticHeader,
+  KpiStrip,
+  PageHeader,
   Select,
   ShortIdBadge,
   Spinner,
+  TableRowsSkeleton,
+  TopRefetchBar,
 } from '../../../../shared/ui/index.js';
 import '../styles/couriers.css';
 
@@ -224,12 +227,15 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
     '--seg-count': AVAILABILITY_FILTERS.length,
   } as CSSProperties;
 
+  const availableFleetCount = couriers.filter((c) => c.isEnabled && c.isAvailable).length;
+
   return (
     <section className="couriers-layout" aria-labelledby="couriers-view-title">
-      <KineticHeader
+      <PageHeader
         id="couriers-view-title"
-        level="h2"
+        eyebrow="Despacho · Flota"
         title="Flota y despacho"
+        subtitle="Gestiona repartidores, controla disponibilidad en tiempo real y asigna rutas planificadas."
         actions={
           <Button
             type="button"
@@ -242,6 +248,22 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
             {isLoadingCouriers ? 'Actualizando...' : '↻ Actualizar'}
           </Button>
         }
+      />
+
+      <TopRefetchBar active={isLoadingCouriers && couriers.length > 0} label="Actualizando flota" />
+
+      <KpiStrip
+        ariaLabel="Resumen de flota y despacho"
+        items={[
+          { label: 'Repartidores', value: couriers.length, hint: 'En el filtro actual', tone: 'neutral' },
+          { label: 'Disponibles ahora', value: availableFleetCount, hint: 'Listos para recibir ruta', tone: 'green' },
+          {
+            label: 'Rutas por asignar',
+            value: planifiedRoutes.length,
+            hint: 'En estado planificada',
+            tone: planifiedRoutes.length > 0 ? 'blue' : 'neutral',
+          },
+        ]}
       />
 
       {error && (
@@ -395,10 +417,7 @@ export const CourierFleetDispatchView: FC<CourierFleetDispatchViewProps> = ({
             )}
 
             {isLoadingCouriers && couriers.length === 0 ? (
-              <div className="couriers-loading" role="status">
-                <Spinner size="md" label="Cargando repartidores..." />
-                <p>Consultando repartidores registrados...</p>
-              </div>
+              <TableRowsSkeleton rows={4} label="Consultando repartidores registrados..." />
             ) : couriers.length === 0 ? (
               <EmptyState
                 title={

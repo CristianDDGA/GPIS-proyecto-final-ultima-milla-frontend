@@ -58,15 +58,41 @@
   font-size: 18px;
   cursor: pointer;
   line-height: 1;
-  padding: 2px 4px;
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
   color: var(--color-slate, #5a5a5a);
-  border-radius: var(--radius-tags, 4px);
-  transition: color 150ms ease, background-color 150ms ease;
+  border-radius: var(--radius-tags, 999px);
+  transition: color 150ms ease, background-color 150ms ease, transform 140ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
 }
 
-.ui-alert__close:hover {
-  color: var(--color-obsidian, #080808);
-  background-color: rgba(8, 8, 8, 0.06);
+.ui-alert__close:active {
+  transform: scale(0.95);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-alert__close:hover {
+    color: var(--color-obsidian, #080808);
+    background-color: rgba(8, 8, 8, 0.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-alert {
+    animation: wf-alert-fade 150ms ease both;
+  }
+
+  @keyframes wf-alert-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 /* Modificadores semánticos */

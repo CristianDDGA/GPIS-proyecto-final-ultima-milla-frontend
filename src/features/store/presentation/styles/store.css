@@ -28,11 +28,17 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 180ms ease;
+  transition: color 160ms ease, transform 140ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
 }
 
-.store-tab:hover:not(.store-tab--active) {
-  color: var(--wl-ink, #0b132b);
+.store-tab:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .store-tab:hover:not(.store-tab--active) {
+    color: var(--wl-ink, #0b132b);
+  }
 }
 
 .store-tab--active {
@@ -129,14 +135,16 @@
   box-shadow:
     0 14px 32px -22px rgba(15, 23, 42, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.96);
-  transition: transform 180ms ease, box-shadow 200ms ease;
+  transition: transform 180ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)), box-shadow 200ms ease;
 }
 
-.store-product-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 18px 36px -20px rgba(15, 23, 42, 0.26),
-    inset 0 1px 0 #ffffff;
+@media (hover: hover) and (pointer: fine) {
+  .store-product-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 18px 36px -20px rgba(15, 23, 42, 0.26),
+      inset 0 1px 0 #ffffff;
+  }
 }
 
 .store-product-card__media {
@@ -254,13 +262,22 @@
   color: var(--wl-ink, #0b132b);
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease, transform 140ms ease;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 140ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
 }
 
-.store-slot-btn:hover:not(:disabled) {
-  background-color: #ffffff;
-  border-color: rgba(22, 104, 243, 0.45);
-  transform: translateY(-1px);
+.store-slot-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .store-slot-btn:hover:not(:disabled) {
+    background-color: #ffffff;
+    border-color: rgba(22, 104, 243, 0.45);
+    transform: translateY(-1px);
+  }
 }
 
 .store-slot-btn--selected {
@@ -561,6 +578,16 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  transform-origin: top center;
+  transition: opacity 150ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)),
+    transform 150ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+@starting-style {
+  .wl-map-picker__results {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
 }
 
 .wl-map-picker__result-btn {
@@ -574,24 +601,60 @@
   font-family: inherit;
   font-size: 12.5px;
   cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, transform var(--duration-press, 110ms) var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
 }
 
-.wl-map-picker__result-btn:hover {
-  background-color: rgba(22, 104, 243, 0.10);
-  color: #0b49c6;
+@media (hover: hover) and (pointer: fine) {
+  .wl-map-picker__result-btn:hover {
+    background-color: rgba(22, 104, 243, 0.10);
+    color: #0b49c6;
+  }
+}
+
+.wl-map-picker__result-btn:active {
+  transform: scale(0.98);
 }
 
 .wl-map-picker__viewport {
   position: relative;
   width: 100%;
-  height: 230px;
+  height: 250px;
   border-radius: 16px;
   overflow: hidden;
-  background-color: #dbe6f2;
+  background-color: #dce4ee;
   border: 1px solid rgba(11, 19, 43, 0.14);
   cursor: crosshair;
   touch-action: none;
   user-select: none;
+}
+
+.wl-map-picker__viewport--dragging {
+  cursor: grabbing;
+}
+
+.wl-map-picker__kbd {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wl-map-picker__viewport:has(.wl-map-picker__kbd:focus-visible) {
+  outline: 2px solid #1668f3;
+  outline-offset: 2px;
+}
+
+.wl-map-picker__stage {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  transform: translate3d(0px, 0px, 0px);
 }
 
 .wl-map-picker__tiles {
@@ -602,6 +665,10 @@
   height: 0;
 }
 
+.wl-map-picker__tiles--uber {
+  filter: grayscale(0.76) contrast(1.08) brightness(1.04) saturate(0.85);
+}
+
 .wl-map-picker__tile {
   position: absolute;
   top: 0;
@@ -609,6 +676,12 @@
   width: 256px;
   height: 256px;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.wl-map-picker__tile--loaded {
+  opacity: 1;
 }
 
 .wl-map-picker__pin {
@@ -617,18 +690,111 @@
   left: 50%;
   pointer-events: none;
   z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: -13px;
+  margin-top: -36px;
 }
 
-.wl-map-picker__pin-dot {
-  display: block;
-  width: 18px;
-  height: 18px;
-  margin-left: -9px;
-  margin-top: -9px;
+.wl-map-picker__pin-head {
+  width: 26px;
+  height: 26px;
   border-radius: 999px;
-  background-color: #1668f3;
+  background-color: #0b132b;
   border: 3px solid #ffffff;
-  box-shadow: 0 4px 12px rgba(11, 19, 43, 0.40);
+  box-shadow: 0 8px 16px rgba(11, 19, 43, 0.42);
+  display: grid;
+  place-items: center;
+  transition: transform 180ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+.wl-map-picker__pin-core {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background-color: #38bdf8;
+}
+
+.wl-map-picker__pin-stem {
+  width: 3px;
+  height: 9px;
+  margin-top: -1px;
+  border-radius: 999px;
+  background-color: #0b132b;
+  transition: transform 180ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+.wl-map-picker__pin-shadow {
+  width: 12px;
+  height: 4px;
+  margin-top: -1px;
+  border-radius: 999px;
+  background-color: rgba(11, 19, 43, 0.30);
+  transition: transform 180ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)), opacity 180ms ease;
+}
+
+.wl-map-picker__pin--lifted .wl-map-picker__pin-head,
+.wl-map-picker__pin--lifted .wl-map-picker__pin-stem {
+  transform: translate3d(0, -10px, 0) scale(1.06);
+}
+
+.wl-map-picker__pin--lifted .wl-map-picker__pin-shadow {
+  transform: scale(0.65);
+  opacity: 0.45;
+}
+
+/* Uber Eats-style 4-Stage Customer Tracking Progress Bar */
+.store-track-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background-color: #f8fafc;
+  border: 1px solid rgba(11, 19, 43, 0.08);
+}
+
+.store-track-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.store-track-step__bar {
+  height: 5px;
+  border-radius: 999px;
+  background-color: #dbe4ef;
+  transition: background-color 180ms ease;
+}
+
+.store-track-step--done .store-track-step__bar {
+  background-color: #1668f3;
+}
+
+.store-track-step--current .store-track-step__bar {
+  background-color: #0b132b;
+}
+
+.store-track-step--alert .store-track-step__bar {
+  background-color: #dc2626;
+}
+
+.store-track-step__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.store-track-step--done .store-track-step__label,
+.store-track-step--current .store-track-step__label {
+  color: #0b132b;
+  font-weight: 700;
+}
+
+.store-track-step--alert .store-track-step__label {
+  color: #b91c1c;
+  font-weight: 700;
 }
 
 .wl-map-picker__zoom {
@@ -654,10 +820,24 @@
   display: grid;
   place-items: center;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+  transition: background-color 140ms ease, transform var(--duration-press, 110ms) var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
 }
 
-.wl-map-picker__zoom-btn:hover {
-  background-color: #ffffff;
+@media (hover: hover) and (pointer: fine) {
+  .wl-map-picker__zoom-btn:hover {
+    background-color: #ffffff;
+  }
+}
+
+.wl-map-picker__zoom-btn:active {
+  transform: scale(0.94);
+}
+
+@media (pointer: coarse) {
+  .wl-map-picker__zoom-btn {
+    width: 38px;
+    height: 38px;
+  }
 }
 
 .wl-map-picker__attribution {
@@ -710,12 +890,20 @@
   gap: 12px;
   padding: 16px 18px;
   border-radius: 20px;
-  background-color: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.92);
-  border-left: 4px solid #1668f3;
+  background-color: rgba(255, 255, 255, 0.80);
+  border: 1px solid rgba(22, 104, 243, 0.22);
   box-shadow:
     0 10px 24px -18px rgba(15, 23, 42, 0.20),
     inset 0 1px 0 #ffffff;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 180ms ease;
+}
+
+.store-stop-card--focused {
+  border-color: rgba(22, 104, 243, 0.54);
+  background-color: rgba(238, 245, 255, 0.90);
+  box-shadow:
+    0 0 0 2px rgba(22, 104, 243, 0.14),
+    0 12px 26px -18px rgba(22, 104, 243, 0.30);
 }
 
 .store-stop-card__head {

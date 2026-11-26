@@ -5,9 +5,11 @@ import {
   Button,
   Card,
   EmptyState,
-  SectionHeader,
-  Spinner,
+  KpiStrip,
+  KpiStripSkeleton,
+  PageHeader,
   TextInput,
+  TopRefetchBar,
 } from '../../../../shared/ui/index.js';
 import {
   CANCEL_REASON_LABELS,
@@ -89,8 +91,11 @@ export const AdminStoreView: FC<AdminStoreViewProps> = ({ storeGateway, zones })
 
   return (
     <section className="store-layout" aria-labelledby="admin-store-title">
-      <SectionHeader
+      <PageHeader
+        id="admin-store-title"
+        eyebrow="Comercio · Administración"
         title="Administración de tienda"
+        subtitle="Resumen de ventas COD, catálogo de inventario, pedidos con mapa, caja y franjas."
         actions={
           <div
             className="segmented store-tabs"
@@ -114,9 +119,6 @@ export const AdminStoreView: FC<AdminStoreViewProps> = ({ storeGateway, zones })
           </div>
         }
       />
-      <h2 id="admin-store-title" className="sr-only">
-        Administración de tienda y catálogo
-      </h2>
 
       {tab === 'summary' && (
         <>
@@ -157,38 +159,41 @@ export const AdminStoreView: FC<AdminStoreViewProps> = ({ storeGateway, zones })
               </Alert>
             )}
 
+            <TopRefetchBar active={isLoadingSummary && summary !== null} label="Actualizando métricas" />
+
             {isLoadingSummary && !summary ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '28px' }}>
-                <Spinner size="md" label="Calculando resumen..." />
-              </div>
+              <KpiStripSkeleton count={4} />
             ) : summary ? (
               <>
-                <div className="store-kpi-grid">
-                  <div className="store-kpi-card">
-                    <span className="store-kpi-card__label">Ventas brutas (sin cancelados)</span>
-                    <span className="store-kpi-card__value">{formatCents(summary.grossCents)}</span>
-                    <span className="store-kpi-card__meta">
-                      {summary.from} → {summary.to}
-                    </span>
-                  </div>
-                  <div className="store-kpi-card">
-                    <span className="store-kpi-card__label">Efectivo cobrado (COD)</span>
-                    <span className="store-kpi-card__value">{formatCents(summary.collectedCents)}</span>
-                    <span className="store-kpi-card__meta">{summary.orders.total} pedidos totales</span>
-                  </div>
-                  <div className="store-kpi-card">
-                    <span className="store-kpi-card__label">Cancelaciones / Fallas</span>
-                    <span className="store-kpi-card__value">
-                      {summary.cancellations.count} / {summary.failures.count}
-                    </span>
-                    <span className="store-kpi-card__meta">Registradas en el rango</span>
-                  </div>
-                  <div className="store-kpi-card">
-                    <span className="store-kpi-card__label">Alertas de stock bajo</span>
-                    <span className="store-kpi-card__value">{summary.lowStockCount}</span>
-                    <span className="store-kpi-card__meta">Productos con stock ≤ {threshold}</span>
-                  </div>
-                </div>
+                <KpiStrip
+                  ariaLabel="Resumen de ventas e inventario"
+                  items={[
+                    {
+                      label: 'Ventas brutas',
+                      value: formatCents(summary.grossCents),
+                      hint: `${summary.from} → ${summary.to}`,
+                      tone: 'blue',
+                    },
+                    {
+                      label: 'Efectivo cobrado (COD)',
+                      value: formatCents(summary.collectedCents),
+                      hint: `${summary.orders.total} pedidos totales`,
+                      tone: 'green',
+                    },
+                    {
+                      label: 'Cancelaciones / Fallas',
+                      value: `${summary.cancellations.count} / ${summary.failures.count}`,
+                      hint: 'Registradas en el rango',
+                      tone: summary.failures.count > 0 ? 'red' : 'neutral',
+                    },
+                    {
+                      label: 'Alertas de stock bajo',
+                      value: summary.lowStockCount,
+                      hint: `Productos con stock ≤ ${threshold}`,
+                      tone: summary.lowStockCount > 0 ? 'amber' : 'green',
+                    },
+                  ]}
+                />
 
                 <div className="store-two-col--equal">
                   <div className="store-card">
