@@ -21,6 +21,7 @@ export default defineConfig({
         'src/features/*/domain/**/*.ts',
         'src/features/*/application/**/*.ts',
         'src/features/*/infrastructure/**/*.ts',
+        'src/shared/geo.ts',
         'src/shared/infrastructure/**/*.ts',
         'src/shared/hooks/**/*.ts',
         'src/shared/ui/Map/ecuadorMapMath.ts',

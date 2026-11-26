@@ -214,6 +214,7 @@ export const RouteManagementView: FC<RouteManagementViewProps> = ({
           route={routes.selectedRoute}
           routes={routes.routes}
           zones={zones}
+          orders={pending}
           couriers={courierList}
           storeGateway={storeGateway}
           isAdmin={isAdmin}

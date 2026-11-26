@@ -1,3 +1,7 @@
+import { ECUADOR_BOUNDS, isWithinEcuador } from '../../../shared/geo.js';
+
+export { ECUADOR_BOUNDS, isWithinEcuador };
+
 export type ProductAvailability = 'in_stock' | 'low_stock' | 'out_of_stock';
 export type ProductSort = 'relevance' | 'price_asc' | 'price_desc' | 'newest' | 'discount';
 export type ProductStatusFilter = 'active' | 'inactive' | 'all';
@@ -62,13 +66,6 @@ export const STORE_ORDER_STATUS_LABELS: Readonly<Record<string, string>> = {
   entrega_fallida: 'Entrega fallida',
   cancelado: 'Cancelado',
 };
-
-export const ECUADOR_BOUNDS = {
-  minLat: -5.1,
-  maxLat: 1.5,
-  minLng: -92.5,
-  maxLng: -75.0,
-} as const;
 
 export const MAX_ORDER_LINES = 20;
 export const MAX_LINE_QUANTITY = 10;
@@ -456,17 +453,6 @@ export function generateIdempotencyKey(): string {
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
-}
-
-export function isWithinEcuador(lat: number, lng: number): boolean {
-  return (
-    Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    lat >= ECUADOR_BOUNDS.minLat &&
-    lat <= ECUADOR_BOUNDS.maxLat &&
-    lng >= ECUADOR_BOUNDS.minLng &&
-    lng <= ECUADOR_BOUNDS.maxLng
-  );
 }
 
 /**

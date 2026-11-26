@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FC } from 'react';
 import type { CourierUseCases } from '../../../couriers/application/courierUseCases.js';
 import type { ActiveCourierRouteStop } from '../../../couriers/domain/index.js';
 import type { CourierStoreOrder } from '../../../store/domain/storeTypes.js';
+import type { Order } from '../../../orders/domain/index.js';
 import { CollectDeliveryModal } from '../../../store/presentation/components/CollectDeliveryModal.js';
 import type { HttpStoreGateway } from '../../../store/infrastructure/http/httpStoreGateway.js';
 import type { Zone } from '../../../zones/domain/index.js';
@@ -34,6 +35,8 @@ export interface DeliveryExecutionViewProps {
   actor: DeliveryActor;
   /** Catálogo de zonas para resolver el nombre real de la zona de la ruta. */
   zones?: readonly Zone[] | undefined;
+  /** Catálogo compartido de pedidos con coordenadas para trazar pedidos administrativos en el mapa. */
+  orders?: readonly Order[] | undefined;
   /** Gateway de tienda para enriquecer paradas con coordenadas (migración 013) y datos COD. */
   storeGateway?: HttpStoreGateway | undefined;
   /** Sincroniza catálogos compartidos tras cambiar estados o completar una ruta. */
@@ -56,6 +59,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
   courierUseCases,
   actor,
   zones,
+  orders,
   storeGateway,
   onDeliveryChanged,
 }) => {
@@ -135,17 +139,24 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
 
   const activeServiceDate = deliveries.activeRoute?.serviceDate;
 
+  const orderById = useMemo(() => {
+    const map = new Map<string, Order>();
+    for (const item of orders ?? []) map.set(item.id, item);
+    return map;
+  }, [orders]);
+
   const mapStops = useMemo<readonly RouteMapStop[]>(() => {
     return stops.map((stop) => {
       const record = deliveries.deliveryRecords[stop.orderId];
       const geo = geoByOrderId[stop.orderId];
+      const ord = orderById.get(stop.orderId);
       return {
         orderId: stop.orderId,
         position: stop.position,
         address: stop.deliveryAddress,
         status: record?.status ?? stop.status,
-        latitude: geo?.latitude ?? null,
-        longitude: geo?.longitude ?? null,
+        latitude: geo?.latitude ?? ord?.latitude ?? null,
+        longitude: geo?.longitude ?? ord?.longitude ?? null,
         deliveryDate: activeServiceDate,
         deliveryTime: stop.deliveryTime,
         recipientName: geo?.recipientName,
@@ -154,12 +165,15 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
         notes: geo?.notes,
       };
     });
-  }, [activeServiceDate, deliveries.deliveryRecords, geoByOrderId, stops]);
+  }, [activeServiceDate, deliveries.deliveryRecords, geoByOrderId, orderById, stops]);
 
-  const activeZoneName =
-    deliveries.activeRoute
-      ? zones?.find((z) => z.id === deliveries.activeRoute?.zoneId)?.name ?? null
-      : null;
+  const activeZone = deliveries.activeRoute
+    ? zones?.find((z) => z.id === deliveries.activeRoute?.zoneId) ?? null
+    : null;
+  const activeZoneName = activeZone?.name ?? null;
+  const routeOrigin = activeZone?.coverage
+    ? { lat: activeZone.coverage.latitude, lng: activeZone.coverage.longitude }
+    : null;
 
   const deliveredCount = stops.filter(
     (s) => (deliveries.deliveryRecords[s.orderId]?.status ?? s.status) === 'entregado',
@@ -267,6 +281,7 @@ export const DeliveryExecutionView: FC<DeliveryExecutionViewProps> = ({
                 title="Mapa de la ruta activa"
                 subtitle={`${deliveries.activeRoute.serviceDate}${activeZoneName ? ` · ${activeZoneName}` : ''}${selectedCourier ? ` · ${selectedCourier.displayName}` : ''}`}
                 stops={mapStops}
+                routeOrigin={routeOrigin}
                 selectedOrderId={deliveries.inspectorOrderId}
                 onSelectStop={(orderId) => void deliveries.inspectOrder(orderId)}
               />

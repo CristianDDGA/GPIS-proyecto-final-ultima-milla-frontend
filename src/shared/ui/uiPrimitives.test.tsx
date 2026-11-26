@@ -167,10 +167,10 @@ describe('RouteStopsMap estilo Uber', () => {
     const viewport = screen.getByRole('region', { name: 'Mapa de prueba' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Expandir mapa' }));
-    expect(viewport).toHaveStyle({ height: '560px' });
+    expect(viewport).toHaveStyle({ height: '640px' });
     expect(container.querySelector('.route-map-shell--expanded')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Contraer mapa' }));
-    expect(viewport).toHaveStyle({ height: '380px' });
+    expect(viewport).toHaveStyle({ height: '460px' });
 
     for (const key of ['+', '-', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) {
       fireEvent.keyDown(screen.getByRole('button', { name: /Mover el mapa con el teclado/i }), { key });

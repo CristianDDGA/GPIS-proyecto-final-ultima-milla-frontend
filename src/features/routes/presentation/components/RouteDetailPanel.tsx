@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import type { Courier } from '../../../couriers/domain/index.js';
+import type { Order } from '../../../orders/domain/index.js';
 import type { HttpStoreGateway } from '../../../store/infrastructure/http/httpStoreGateway.js';
 import type { Zone } from '../../../zones/domain/index.js';
 import type {
@@ -52,6 +53,7 @@ export interface RouteDetailPanelProps {
   route: RouteDetail;
   routes: readonly RouteSummary[];
   zones: readonly Zone[];
+  orders?: readonly Order[] | undefined;
   couriers?: readonly Courier[] | undefined;
   storeGateway?: HttpStoreGateway | undefined;
   isAdmin: boolean;
@@ -72,6 +74,7 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
   route,
   routes,
   zones,
+  orders,
   couriers,
   storeGateway,
   isAdmin,
@@ -182,17 +185,24 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
     [draftOrderIds, stopsByOrderId],
   );
 
+  const orderById = useMemo(() => {
+    const map = new Map<string, Order>();
+    for (const item of orders ?? []) map.set(item.id, item);
+    return map;
+  }, [orders]);
+
   const mapStops = useMemo<readonly RouteMapStop[]>(
     () =>
       orderedStops.map((stop, idx) => {
         const geo = geoByOrderId[stop.orderId];
+        const ord = orderById.get(stop.orderId);
         return {
           orderId: stop.orderId,
           position: idx + 1,
           address: stop.deliveryAddress,
           status: stop.status,
-          latitude: geo?.latitude ?? null,
-          longitude: geo?.longitude ?? null,
+          latitude: geo?.latitude ?? ord?.latitude ?? null,
+          longitude: geo?.longitude ?? ord?.longitude ?? null,
           deliveryDate: stop.deliveryDate,
           deliveryTime: stop.deliveryTime,
           recipientName: geo?.recipientName,
@@ -200,14 +210,18 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
           totalCents: geo?.totalCents,
         };
       }),
-    [geoByOrderId, orderedStops],
+    [geoByOrderId, orderById, orderedStops],
   );
 
   const isEditable = EDITABLE_ROUTE_STATUSES.has(route.status);
   const canReorder = isAdmin && isEditable;
   const hasStartedStops = route.stops.some((stop) => STARTED_STOP_STATUSES.has(stop.status));
   const canCancel = isAdmin && isEditable && !hasStartedStops;
-  const zoneName = zones.find((zone) => zone.id === route.zoneId)?.name ?? 'Zona sin catalogar';
+  const routeZone = zones.find((zone) => zone.id === route.zoneId);
+  const zoneName = routeZone?.name ?? 'Zona sin catalogar';
+  const routeOrigin = routeZone?.coverage
+    ? { lat: routeZone.coverage.latitude, lng: routeZone.coverage.longitude }
+    : null;
   const courierName =
     route.courierId === null
       ? null
@@ -333,6 +347,7 @@ export const RouteDetailPanel: FC<RouteDetailPanelProps> = ({
           title="Mapa interactivo de la ruta"
           subtitle={`${route.serviceDate} · ${zoneName}${isDraftDirty ? ' · Vista previa del nuevo orden' : ''}`}
           stops={mapStops}
+          routeOrigin={routeOrigin}
           selectedOrderId={selectedMapOrderId}
           onSelectStop={(orderId) => setSelectedMapOrderId(orderId)}
         />

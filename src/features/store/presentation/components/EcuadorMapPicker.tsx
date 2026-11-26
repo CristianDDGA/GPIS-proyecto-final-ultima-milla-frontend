@@ -10,6 +10,7 @@ import {
 import {
   Button,
   DEFAULT_ECUADOR_CENTER,
+  MAP_TILE_SIZE,
   MapTileLayer,
   MapToolbar,
   TextInput,
@@ -20,6 +21,8 @@ import {
   useEcuadorMapViewport,
   worldToLatLng,
 } from '../../../../shared/ui/index.js';
+import '../../../../shared/ui/Map/route-map.css';
+import '../../../../shared/ui/Map/ecuador-map-picker.css';
 import {
   isWithinEcuador,
   sanitizeBackendText,
@@ -138,6 +141,10 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
 
   const commitPickedPoint = useCallback(
     (lat: number, lng: number) => {
+      if (!isWithinEcuador(lat, lng)) {
+        setMapNotice('Solo se permiten zonas y ubicaciones dentro del Ecuador.');
+        return;
+      }
       const clamped = clampEcuadorLatLng(lat, lng);
       setMapNotice(null);
       onChange({ latitude: clamped.lat, longitude: clamped.lng });
@@ -146,12 +153,17 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     [onChange, reverseGeocode],
   );
 
+  const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>({
+    w: 760,
+    h: height ?? 360,
+  });
+
   const map = useEcuadorMapViewport({
     initialCenter:
       latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)
         ? { lat: latitude, lng: longitude }
         : DEFAULT_ECUADOR_CENTER,
-    initialZoom: 14,
+    initialZoom: 13,
     disabled,
     ignorePointerSelector: 'button',
     onTap: (clientX, clientY) => {
@@ -160,15 +172,27 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       const offsetX = clientX - rect.left - rect.width / 2;
       const offsetY = clientY - rect.top - rect.height / 2;
       const picked = worldToLatLng(map.centerWorld.x + offsetX, map.centerWorld.y + offsetY, map.zoom);
-      if (!isWithinEcuador(picked.lat, picked.lng)) {
-        setMapNotice('El punto debe estar dentro de Ecuador.');
-        return;
-      }
       commitPickedPoint(picked.lat, picked.lng);
     },
     onActivateKey: (clamped) => commitPickedPoint(clamped.lat, clamped.lng),
   });
-  const { setCenter, setZoom } = map;
+  const { setCenter, setZoom, viewportRef } = map;
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return undefined;
+    const sync = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 20 && rect.height > 20) {
+        setViewportSize({ w: rect.width, h: rect.height });
+      }
+    };
+    sync();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [height, viewportRef]);
 
   useEffect(() => {
     if (latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)) {
@@ -260,10 +284,11 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     });
   };
 
-  const tiles = useMemo(
-    () => buildMapTiles(map.centerWorld, map.zoom, map.activeLayer, 2, 1),
-    [map.activeLayer, map.centerWorld, map.zoom],
-  );
+  const tiles = useMemo(() => {
+    const spanX = Math.max(2, Math.ceil(viewportSize.w / (2 * MAP_TILE_SIZE)) + 1);
+    const spanY = Math.max(2, Math.ceil(viewportSize.h / (2 * MAP_TILE_SIZE)) + 1);
+    return buildMapTiles(map.centerWorld, map.zoom, map.activeLayer, spanX, spanY);
+  }, [map.activeLayer, map.centerWorld, map.zoom, viewportSize.h, viewportSize.w]);
 
   const pinOffset = useMemo(() => {
     if (latitude === null || longitude === null) return null;
@@ -344,6 +369,9 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         aria-label="Mapa de Ecuador para elegir punto de entrega"
         {...map.viewportHandlers}
       >
+        <span className="wl-map-picker__bounds-badge" aria-hidden="true">
+          Solo territorio de Ecuador
+        </span>
         <button
           type="button"
           className="wl-map-picker__kbd"

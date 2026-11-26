@@ -7,7 +7,7 @@ export interface ModalProps {
   readonly eyebrow?: string | undefined;
   readonly title: string;
   readonly description?: string | undefined;
-  readonly size?: 'sm' | 'md' | 'lg' | undefined;
+  readonly size?: 'sm' | 'md' | 'lg' | 'xl' | undefined;
   readonly onClose: () => void;
   readonly children: ReactNode;
   readonly footer?: ReactNode | undefined;
