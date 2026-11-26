@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   MAP_MIN_ZOOM,
   clampEcuadorLatLng,
+  clipPolygonToRect,
   computeFitView,
   fetchDrivingRouteGeometry,
   formatDistanceKm,
@@ -217,5 +218,36 @@ describe('fetchDrivingRouteGeometry', () => {
     expect(fetchMock).toHaveBeenCalledTimes(41);
     await fetchDrivingRouteGeometry(route(0));
     expect(fetchMock).toHaveBeenCalledTimes(42);
+  });
+});
+
+describe('clipPolygonToRect', () => {
+  const rect = { minX: -100, maxX: 100, minY: -100, maxY: 100 };
+
+  it('conserva polígonos que rodean al rectángulo y recorta sus vértices al borde', () => {
+    const huge = [
+      { x: -5000, y: -5000 },
+      { x: 5000, y: -5000 },
+      { x: 5000, y: 5000 },
+      { x: -5000, y: 5000 },
+    ];
+    const clipped = clipPolygonToRect(huge, rect);
+    expect(clipped).toHaveLength(4);
+    for (const p of clipped) {
+      expect(p.x).toBeGreaterThanOrEqual(rect.minX);
+      expect(p.x).toBeLessThanOrEqual(rect.maxX);
+      expect(p.y).toBeGreaterThanOrEqual(rect.minY);
+      expect(p.y).toBeLessThanOrEqual(rect.maxY);
+    }
+  });
+
+  it('descarta polígonos completamente fuera del rectángulo y tolera listas vacías', () => {
+    expect(clipPolygonToRect([], rect)).toEqual([]);
+    const farAway = [
+      { x: 300, y: 300 },
+      { x: 400, y: 300 },
+      { x: 350, y: 400 },
+    ];
+    expect(clipPolygonToRect(farAway, rect)).toEqual([]);
   });
 });

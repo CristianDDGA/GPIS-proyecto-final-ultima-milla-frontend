@@ -23,14 +23,15 @@ test.describe('04 · Courier Delivery Execution, Interactive Route Map & COD Cas
     await navigateTab(page, 'Cobros');
     await expect(page.getByText('Av. Amazonas N34-120 y República').first()).toBeVisible();
 
-    // Verify interactive RouteStopsMap is rendered and responds to layer switch & keyboard zoom/pan
+    // Verify interactive RouteStopsMap is rendered in unified style and responds to keyboard zoom/pan
     const mapRegion = page.getByRole('region', { name: /Mapa de paradas de tu ruta/i });
     await expect(mapRegion).toBeVisible();
-    await page.getByRole('button', { name: 'Satélite' }).click();
-    await page.getByRole('button', { name: 'Calles' }).click();
+    await expect(page.locator('.route-map-territory-mask').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Satélite' })).toHaveCount(0);
     await mapRegion.getByRole('button', { name: /Mover el mapa con el teclado/i }).focus();
     await page.keyboard.press('+');
     await page.keyboard.press('ArrowRight');
+    await page.getByRole('button', { name: 'Ajustar ruta' }).click();
 
     // Click stop marker #1 on map to open popup, then deliver & collect COD
     const firstPin = page.locator('.route-map-marker').first();

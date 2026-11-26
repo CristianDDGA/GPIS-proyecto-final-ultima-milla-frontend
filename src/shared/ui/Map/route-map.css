@@ -203,6 +203,7 @@
   height: 460px;
   border-radius: 18px;
   overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(11, 19, 43, 0.14);
   background-color: #dce4ee;
   cursor: grab;
@@ -263,11 +264,22 @@
   user-select: none;
   image-rendering: auto;
   opacity: 0;
-  transition: opacity 160ms ease-out;
+  transition: opacity 90ms ease-out;
 }
 
 .route-map-tile--loaded {
   opacity: 1;
+}
+
+/* Máscara SVG para sombreado de territorio externo */
+.route-map-territory-mask {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Capa SVG para polilínea de ruta real */

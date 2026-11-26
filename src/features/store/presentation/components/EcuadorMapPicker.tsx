@@ -10,6 +10,7 @@ import {
 import {
   Button,
   DEFAULT_ECUADOR_CENTER,
+  EcuadorTerritoryMask,
   MAP_TILE_SIZE,
   MapTileLayer,
   MapToolbar,
@@ -285,10 +286,10 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   };
 
   const tiles = useMemo(() => {
-    const spanX = Math.max(2, Math.ceil(viewportSize.w / (2 * MAP_TILE_SIZE)) + 1);
-    const spanY = Math.max(2, Math.ceil(viewportSize.h / (2 * MAP_TILE_SIZE)) + 1);
-    return buildMapTiles(map.centerWorld, map.zoom, map.activeLayer, spanX, spanY);
-  }, [map.activeLayer, map.centerWorld, map.zoom, viewportSize.h, viewportSize.w]);
+    const spanX = Math.max(3, Math.ceil(viewportSize.w / (2 * MAP_TILE_SIZE)) + 2);
+    const spanY = Math.max(3, Math.ceil(viewportSize.h / (2 * MAP_TILE_SIZE)) + 2);
+    return buildMapTiles(map.centerWorld, map.zoom, spanX, spanY);
+  }, [map.centerWorld, map.zoom, viewportSize.h, viewportSize.w]);
 
   const pinOffset = useMemo(() => {
     if (latitude === null || longitude === null) return null;
@@ -312,11 +313,11 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   const stopBtn = (e: MouseEvent<HTMLButtonElement>) => e.stopPropagation();
 
   return (
-    <div className="wl-map-picker" data-map-layer={map.activeLayer}>
+    <div className="wl-map-picker" data-map-layer="uber">
       <div className="wl-map-picker__search">
         <TextInput
           id="map-search-ecuador"
-          label="Buscar calle o lugar en Ecuador (opcional)"
+          label="Buscar calle o lugar (opcional)"
           placeholder="Ej. Av. Amazonas, Quito o Parque Cevallos, Ambato"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -335,10 +336,8 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       </div>
 
       <MapToolbar
-        activeLayer={map.activeLayer}
-        onSelectLayer={map.selectLayer}
         disabled={disabled}
-        citiesAriaLabel="Ir a ciudad de Ecuador"
+        citiesAriaLabel="Ir a ciudad"
         onSelectCity={(city) => {
           setCenter({ lat: city.lat, lng: city.lng });
           setZoom(city.zoom);
@@ -366,12 +365,9 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         className={'wl-map-picker__viewport' + (map.isDragging ? ' wl-map-picker__viewport--dragging' : '')}
         style={height === undefined ? undefined : { height }}
         role="region"
-        aria-label="Mapa de Ecuador para elegir punto de entrega"
+        aria-label="Mapa para elegir punto de entrega"
         {...map.viewportHandlers}
       >
-        <span className="wl-map-picker__bounds-badge" aria-hidden="true">
-          Solo territorio de Ecuador
-        </span>
         <button
           type="button"
           className="wl-map-picker__kbd"
@@ -381,13 +377,17 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         <div ref={map.panStageRef} className="wl-map-picker__stage">
           <MapTileLayer
             tiles={tiles}
-            activeLayer={map.activeLayer}
             containerClass="wl-map-picker__tiles"
             uberClass="wl-map-picker__tiles--uber"
             tileClass="wl-map-picker__tile"
             loadedTileClass="wl-map-picker__tile--loaded"
             positioning="transform"
-            onSatelliteError={() => map.setFailedSatellite(true)}
+          />
+
+          <EcuadorTerritoryMask
+            centerWorld={map.centerWorld}
+            zoom={map.zoom}
+            className="wl-map-picker__territory-mask"
           />
 
           {overlays?.map((zone) => {
@@ -486,9 +486,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
           </button>
         </div>
 
-        <span className="wl-map-picker__attribution">
-          {map.activeLayer === 'satellite' ? '© Esri World Imagery' : '© OpenStreetMap'}
-        </span>
+        <span className="wl-map-picker__attribution">© OpenStreetMap</span>
       </div>
 
       <div className="wl-map-picker__footer">

@@ -7,7 +7,7 @@ export const ECUADOR_BOUNDS = {
 } as const;
 
 /** Polígono simplificado de Ecuador continental (lat, lng) siguiendo fronteras reales con Colombia, Perú y costa del Pacífico. */
-const CONTINENTAL_ECUADOR_POLYGON: readonly (readonly [number, number])[] = [
+export const CONTINENTAL_ECUADOR_POLYGON: readonly (readonly [number, number])[] = [
   [1.45, -78.88],
   [1.44, -78.55],
   [1.12, -78.18],
@@ -50,6 +50,14 @@ const GALAPAGOS_BOUNDS = {
   minLng: -91.75,
   maxLng: -89.2,
 } as const;
+
+/** Polígono del Archipiélago de Galápagos (lat, lng) para sombreado territorial en el mapa. */
+export const GALAPAGOS_POLYGON: readonly (readonly [number, number])[] = [
+  [GALAPAGOS_BOUNDS.maxLat, GALAPAGOS_BOUNDS.minLng],
+  [GALAPAGOS_BOUNDS.maxLat, GALAPAGOS_BOUNDS.maxLng],
+  [GALAPAGOS_BOUNDS.minLat, GALAPAGOS_BOUNDS.maxLng],
+  [GALAPAGOS_BOUNDS.minLat, GALAPAGOS_BOUNDS.minLng],
+];
 
 function pointInPolygon(lat: number, lng: number, polygon: readonly (readonly [number, number])[]): boolean {
   let inside = false;

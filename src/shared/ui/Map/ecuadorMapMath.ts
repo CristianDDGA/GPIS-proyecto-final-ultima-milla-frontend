@@ -288,6 +288,86 @@ export async function fetchDrivingRouteGeometry(
   }
 }
 
+export interface ScreenPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface ClipRect {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+}
+
+function clipEdge(
+  points: readonly ScreenPoint[],
+  isInside: (p: ScreenPoint) => boolean,
+  intersect: (a: ScreenPoint, b: ScreenPoint) => ScreenPoint,
+): ScreenPoint[] {
+  if (points.length === 0) return [];
+  const out: ScreenPoint[] = [];
+  let prev = points[points.length - 1]!;
+  let prevIn = isInside(prev);
+
+  for (const curr of points) {
+    const currIn = isInside(curr);
+    if (currIn) {
+      if (!prevIn) out.push(intersect(prev, curr));
+      out.push(curr);
+    } else if (prevIn) {
+      out.push(intersect(prev, curr));
+    }
+    prev = curr;
+    prevIn = currIn;
+  }
+  return out;
+}
+
+/**
+ * Recorta un polígono 2D al rectángulo indicado (Sutherland-Hodgman) para evitar
+ * desbordes de coordenadas SVG y mantener renderizado GPU instantáneo a cualquier zoom.
+ */
+export function clipPolygonToRect(
+  polygon: readonly ScreenPoint[],
+  rect: ClipRect,
+): readonly ScreenPoint[] {
+  let pts: ScreenPoint[] = [...polygon];
+  pts = clipEdge(
+    pts,
+    (p) => p.x >= rect.minX,
+    (a, b) => ({
+      x: rect.minX,
+      y: a.y + ((b.y - a.y) * (rect.minX - a.x)) / (b.x - a.x || 1e-9),
+    }),
+  );
+  pts = clipEdge(
+    pts,
+    (p) => p.x <= rect.maxX,
+    (a, b) => ({
+      x: rect.maxX,
+      y: a.y + ((b.y - a.y) * (rect.maxX - a.x)) / (b.x - a.x || 1e-9),
+    }),
+  );
+  pts = clipEdge(
+    pts,
+    (p) => p.y >= rect.minY,
+    (a, b) => ({
+      x: a.x + ((b.x - a.x) * (rect.minY - a.y)) / (b.y - a.y || 1e-9),
+      y: rect.minY,
+    }),
+  );
+  pts = clipEdge(
+    pts,
+    (p) => p.y <= rect.maxY,
+    (a, b) => ({
+      x: a.x + ((b.x - a.x) * (rect.maxY - a.y)) / (b.y - a.y || 1e-9),
+      y: rect.maxY,
+    }),
+  );
+  return pts;
+}
+
 export function formatDistanceKm(meters: number | null): string | null {
   if (meters === null || !Number.isFinite(meters)) return null;
   if (meters < 1000) return `${Math.round(meters)} m`;

@@ -28,7 +28,7 @@ import {
   type EcuadorCityPreset,
   type LatLng,
 } from './ecuadorMapMath.js';
-import { MapTileLayer, MapToolbar } from './MapToolbar.js';
+import { EcuadorTerritoryMask, MapTileLayer, MapToolbar } from './MapToolbar.js';
 import {
   buildMapTiles,
   requestEcuadorGpsLocation,
@@ -240,18 +240,17 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   }, [selectedOrderId, geoStops, setCenter, setZoom]);
 
   const tiles = useMemo(() => {
-    const spanX = Math.ceil(viewportSize.w / (2 * MAP_TILE_SIZE)) + 1;
-    const spanY = Math.ceil(viewportSize.h / (2 * MAP_TILE_SIZE)) + 1;
+    const spanX = Math.max(3, Math.ceil(viewportSize.w / (2 * MAP_TILE_SIZE)) + 2);
+    const spanY = Math.max(3, Math.ceil(viewportSize.h / (2 * MAP_TILE_SIZE)) + 2);
     return buildMapTiles(
       map.centerWorld,
       map.zoom,
-      map.activeLayer,
       spanX,
       spanY,
       viewportSize.w / 2,
       viewportSize.h / 2,
     );
-  }, [map.activeLayer, map.centerWorld, map.zoom, viewportSize.h, viewportSize.w]);
+  }, [map.centerWorld, map.zoom, viewportSize.h, viewportSize.w]);
 
   const toViewportXY = useCallback(
     (lat: number, lng: number) => {
@@ -342,7 +341,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         (compact ? ' route-map-shell--compact' : '') +
         (isExpanded ? ' route-map-shell--expanded' : '')
       }
-      data-map-layer={map.activeLayer}
+      data-map-layer="uber"
     >
       <div className="route-map-head">
         <div className="route-map-head__info">
@@ -375,8 +374,6 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
       </div>
 
       <MapToolbar
-        activeLayer={map.activeLayer}
-        onSelectLayer={map.selectLayer}
         onSelectCity={selectCity}
         activeCityId={geoStops.length === 0 ? activeCityId : null}
         leadingRightAction={
@@ -404,17 +401,23 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
           aria-label="Mover el mapa con el teclado: flechas para desplazar, más y menos para acercar o alejar"
         />
 
-        {/* Escenario GPU: tiles + ruta + marcadores se mueven juntos en 1 solo translate3d */}
+        {/* Escenario GPU: tiles + máscara territorial + ruta + marcadores en 1 solo translate3d */}
         <div ref={map.panStageRef} className="route-map-stage">
           <MapTileLayer
             tiles={tiles}
-            activeLayer={map.activeLayer}
             containerClass="route-map-tiles"
             uberClass="route-map-tiles--uber"
             tileClass="route-map-tile"
             loadedTileClass="route-map-tile--loaded"
             positioning="offset"
-            onSatelliteError={() => map.setFailedSatellite(true)}
+          />
+
+          <EcuadorTerritoryMask
+            centerWorld={map.centerWorld}
+            zoom={map.zoom}
+            offsetX={viewportSize.w / 2}
+            offsetY={viewportSize.h / 2}
+            className="route-map-territory-mask"
           />
 
           {polylineSvgPath.length > 0 && (
@@ -488,7 +491,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
           <div className="route-map-markers">
             {geoStops.map((stop) => {
               const { x, y } = toViewportXY(stop.latitude, stop.longitude);
-              if (x < -48 || x > viewportSize.w + 48 || y < -48 || y > viewportSize.h + 48) {
+              if (x < 12 || x > viewportSize.w - 12 || y < 20 || y > viewportSize.h + 12) {
                 return null;
               }
               const isSelected = stop.orderId === effectiveSelectedId;
@@ -759,9 +762,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
           </div>
         )}
 
-        <span className="route-map-attribution">
-          {map.activeLayer === 'satellite' ? '© Esri World Imagery' : '© OpenStreetMap'}
-        </span>
+        <span className="route-map-attribution">© OpenStreetMap</span>
       </div>
 
       <div className="route-map-legend">

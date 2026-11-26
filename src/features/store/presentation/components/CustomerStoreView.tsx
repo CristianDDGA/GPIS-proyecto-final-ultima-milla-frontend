@@ -1117,7 +1117,7 @@ export const CustomerStoreView: FC<CustomerStoreViewProps> = ({ storeGateway, zo
         <div className="client-hero__content">
           <p className="client-hero__eyebrow">{zoneName ? `Entregas en ${zoneName}` : 'Entregas en tu ciudad'}</p>
           <h2 id="client-store-title" className="client-hero__title">
-            Lo pides para mañana amigo.
+            Lo pides mañana, te llega hoy.
           </h2>
           <p className="client-hero__text">Elige tu horario de entrega y pagas en efectivo cuando lo recibes.</p>
         </div>

@@ -64,9 +64,9 @@ test.describe('02 · Admin Full End-to-End Operations Flow', () => {
     await expect(page.getByText('Pedidos de tienda (despacho y detalle)')).toBeVisible();
     const mapRegion = page.getByRole('region', { name: /Mapa de /i });
     await expect(mapRegion).toBeVisible();
-    // Toggle Satélite / Calles layer on the map
-    await page.getByRole('button', { name: 'Satélite' }).click();
-    await page.getByRole('button', { name: 'Calles' }).click();
+    await expect(page.locator('.route-map-territory-mask').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Satélite' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Calles' })).toHaveCount(0);
 
     // 6d. Caja (daily courier cash + settlement)
     await storeTabs.getByRole('tab', { name: 'Caja' }).click();

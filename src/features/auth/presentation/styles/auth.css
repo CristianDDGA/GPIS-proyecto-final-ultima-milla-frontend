@@ -1,7 +1,7 @@
 /* ============================================================================
-   Millast Login · Sistema Canónico Waterline Porcelain (High-Speed 0fps Idle)
-   Unificado al 100% con los dashboards autenticados: atmósfera #e8f0f9,
-   emblema circular #1668f3, tarjetas 26px, inputs 15px y píldoras 999px.
+   Millast Login · Sistema Canónico Waterline Porcelain
+   Tarjeta compacta con emblema Millast en bucle WebGL2 dentro de la card,
+   sin filtros pesados ni inclinación 3D que generen tirones.
    ========================================================================== */
 
 .mlg-page {
@@ -27,26 +27,26 @@
 
 .mlg-shell {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1080px;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 18px 24px 36px;
+  padding: 20px 24px 32px;
   display: flex;
   flex-direction: column;
 }
 
-/* --- Grid principal de 2 columnas equilibradas --------------------------- */
+/* --- Grid principal equilibrado ------------------------------------------ */
 
 .mlg-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 36px;
+  gap: 28px;
   align-items: center;
   margin: auto 0;
-  padding: 24px 0;
+  padding: 16px 0;
 }
 
-/* --- Columna izquierda: Titular + WebGL2 One-Shot ------------------------ */
+/* --- Columna izquierda editorial ----------------------------------------- */
 
 .mlg-showcase {
   display: flex;
@@ -55,20 +55,11 @@
   min-width: 0;
 }
 
-.mlg-eyebrow {
-  margin: 0 0 10px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #1668f3;
-}
-
 .mlg-hero-title {
   margin: 0;
   color: #0b132b;
   font-weight: 800;
-  font-size: 40px;
+  font-size: 38px;
   line-height: 1.08;
   letter-spacing: -0.035em;
 }
@@ -79,54 +70,60 @@
 
 .mlg-hero-desc {
   margin: 12px 0 0;
-  max-width: 44ch;
+  max-width: 42ch;
   font-size: 14.5px;
   line-height: 1.55;
   color: #334155;
 }
 
-.mlg-showcase-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+/* --- Tarjeta compacta de acceso con emblema integrado -------------------- */
+
+.mlg-card-stage {
+  width: 100%;
+  max-width: 388px;
+  margin: 0 auto;
 }
 
-.mlg-showcase-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.96);
-  color: #0b132b;
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.16);
-}
-
-.mlg-reveal-stage {
-  margin-top: 18px;
-  width: 260px;
-  height: 260px;
-  max-width: 100%;
-  margin-left: -12px;
-  padding: 0;
-  border: 0;
-  background: transparent;
+.mlg-card {
+  position: relative;
+  width: 100%;
   border-radius: 24px;
+  background-color: #ffffff;
+  border: 1px solid rgba(11, 19, 43, 0.08);
+  overflow: hidden;
+  box-shadow:
+    0 20px 44px -24px rgba(15, 23, 42, 0.22),
+    0 4px 14px -8px rgba(22, 104, 243, 0.12),
+    inset 0 1px 0 #ffffff;
+}
+
+.mlg-card__content {
+  position: relative;
+  z-index: 2;
+  padding: 20px 24px 22px;
+}
+
+/* Emblema Millast en loop continuo completamente dentro de la card */
+.mlg-card-brand {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  margin: 0 0 12px;
 }
 
-.mlg-reveal-stage:focus-visible {
-  outline: 2px solid #1668f3;
-  outline-offset: 4px;
+.mlg-card-brand__stage {
+  width: 84px;
+  height: 84px;
+  border-radius: 20px;
+  overflow: hidden;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
 }
 
-.mlg-reveal-stage__canvas {
+.mlg-card-brand__canvas {
   width: 100%;
   height: 100%;
 }
@@ -145,164 +142,14 @@
   inset: 0;
   margin: auto;
   display: block;
-  max-width: 46%;
-  max-height: 46%;
+  max-width: 58%;
+  max-height: 58%;
   mask-size: contain;
   -webkit-mask-size: contain;
   mask-repeat: no-repeat;
   -webkit-mask-repeat: no-repeat;
   mask-position: center;
   -webkit-mask-position: center;
-}
-
-/* --- Columna derecha: Tarjeta Liquid Glass animada ----------------------- */
-
-.mlg-card-stage {
-  width: 100%;
-  max-width: 436px;
-  margin: 0 auto;
-  perspective: 1100px;
-}
-
-.mlg-card-float {
-  /* Mantiene los controles del formulario estables (WCAG / precisión de puntero); la vida óptica vive en los orbes, rim y resorte 3D */
-  transform: none;
-}
-
-.mlg-card {
-  position: relative;
-  width: 100%;
-  border-radius: 26px;
-  background-color: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.98);
-  overflow: hidden;
-  box-shadow:
-    0 24px 52px -26px rgba(15, 23, 42, 0.22),
-    0 6px 18px -8px rgba(22, 104, 243, 0.10),
-    0 0 0 1px rgba(11, 19, 43, 0.05),
-    inset 0 1.5px 0 #ffffff;
-}
-
-.mlg-card__content {
-  position: relative;
-  z-index: 10;
-  padding: 28px;
-}
-
-/* --- Capa óptica interna de la tarjeta Liquid Glass ---------------------- */
-
-.mlg-svg-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.mlg-chrome {
-  pointer-events: none;
-  user-select: none;
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  overflow: hidden;
-  z-index: 0;
-}
-
-.mlg-orb {
-  position: absolute;
-  border-radius: 9999px;
-}
-
-.mlg-orb--1 {
-  top: -48px;
-  right: -40px;
-  width: 176px;
-  height: 176px;
-  background-color: rgba(22, 104, 243, 0.085);
-  filter: blur(46px);
-  animation: mlg-orb-drift-1 11s ease-in-out infinite alternate;
-}
-
-.mlg-orb--2 {
-  bottom: -56px;
-  left: -40px;
-  width: 192px;
-  height: 192px;
-  background-color: rgba(56, 189, 248, 0.095);
-  filter: blur(50px);
-  animation: mlg-orb-drift-2 13.5s ease-in-out infinite alternate;
-}
-
-.mlg-orb--3 {
-  top: 50%;
-  left: 50%;
-  width: 144px;
-  height: 144px;
-  background-color: rgba(203, 213, 225, 0.18);
-  filter: blur(42px);
-  animation: mlg-orb-drift-3 9.5s ease-in-out infinite alternate;
-}
-
-.mlg-frosted-veil {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(28px) saturate(185%);
-  -webkit-backdrop-filter: blur(28px) saturate(185%);
-}
-
-.mlg-glass-sheen {
-  position: absolute;
-  top: -96px;
-  bottom: -96px;
-  width: 96px;
-  left: -45%;
-  background-color: rgba(255, 255, 255, 0.7);
-  filter: blur(18px);
-  transform: skewX(-22deg) translate3d(0, 0, 0);
-  animation: mlg-sheen-sweep 7.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-.mlg-pointer-glint {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 176px;
-  height: 176px;
-  border-radius: 9999px;
-  background-color: rgba(22, 104, 243, 0.07);
-  filter: blur(36px);
-  opacity: 0;
-  transition: opacity 300ms ease;
-}
-
-.mlg-card:hover .mlg-pointer-glint {
-  opacity: 1;
-}
-
-.mlg-liquid-rim {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  border: 3px solid rgba(255, 255, 255, 0.75);
-  opacity: 0.8;
-  filter: url(#millast-liquid-rim);
-}
-
-.mlg-rim-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.mlg-rim-orbit-a {
-  animation: mlg-orbit-cw 11s linear infinite;
-}
-
-.mlg-rim-orbit-b {
-  animation: mlg-orbit-ccw 14s linear infinite;
 }
 
 /* --- Barra de pestañas segmentada ---------------------------------------- */
@@ -312,45 +159,40 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   background-color: rgba(241, 246, 252, 0.95);
-  padding: 4px;
+  padding: 3px;
   border-radius: 999px;
   border: 1px solid rgba(11, 19, 43, 0.08);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .mlg-segmented__pill {
   pointer-events: none;
   position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  width: calc(50% - 4px);
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
   border-radius: 999px;
   background-color: #ffffff;
   box-shadow:
-    0 6px 14px -6px rgba(22, 104, 243, 0.24),
-    0 1px 4px rgba(15, 23, 42, 0.08);
-  transition: transform 220ms var(--ease-in-out, cubic-bezier(0.77, 0, 0.175, 1));
-  overflow: hidden;
-  transform: translateX(0);
+    0 4px 12px -6px rgba(22, 104, 243, 0.24),
+    0 1px 3px rgba(15, 23, 42, 0.08);
+  transition: transform 200ms var(--ease-in-out, cubic-bezier(0.77, 0, 0.175, 1));
+  transform: translate3d(0, 0, 0);
 }
 
 .mlg-segmented__pill--right {
-  transform: translateX(100%);
-}
-
-.mlg-segmented__pill-bar {
-  display: none;
+  transform: translate3d(100%, 0, 0);
 }
 
 .mlg-tab {
   position: relative;
   z-index: 1;
-  height: 36px;
+  height: 34px;
   border: 0;
   border-radius: 999px;
   background: transparent;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: #475569;
   cursor: pointer;
@@ -372,7 +214,7 @@
   box-shadow: 0 0 0 2px rgba(22, 104, 243, 0.4);
 }
 
-/* --- Navegación secundaria y cabecera del formulario --------------------- */
+/* --- Navegación secundaria y cabecera ------------------------------------ */
 
 .mlg-back-link {
   display: inline-flex;
@@ -381,7 +223,7 @@
   border: 0;
   background: transparent;
   padding: 2px 0;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -407,12 +249,12 @@
 }
 
 .mlg-card__head {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .mlg-card__title {
   margin: 0;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #0f172a;
@@ -426,8 +268,8 @@
 
 .mlg-card__subtitle {
   margin: 4px 0 0;
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.45;
   color: #64748b;
   word-break: break-word;
 }
@@ -435,13 +277,13 @@
 /* --- Banners accesibles integrados --------------------------------------- */
 
 .mlg-banner {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.4;
   border: 1px solid transparent;
 }
@@ -509,18 +351,18 @@
   outline-offset: 1px;
 }
 
-/* --- Formularios y campos Liquid Glass ----------------------------------- */
+/* --- Formularios y campos compactos -------------------------------------- */
 
 .mlg-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .mlg-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .mlg-label-row {
@@ -531,10 +373,10 @@
 }
 
 .mlg-label {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: #0f172a;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .mlg-required {
@@ -560,12 +402,12 @@
 
 .mlg-input {
   width: 100%;
-  height: 44px;
-  padding: 0 14px;
-  border-radius: 15px;
-  font-size: 14px;
+  height: 40px;
+  padding: 0 13px;
+  border-radius: 13px;
+  font-size: 13.5px;
   color: #0b132b;
-  background-color: rgba(255, 255, 255, 0.92);
+  background-color: #ffffff;
   border: 1px solid rgba(11, 19, 43, 0.14);
   outline: none;
   transition: border-color 160ms ease, background-color 160ms ease, box-shadow 180ms ease;
@@ -582,7 +424,7 @@
 .mlg-input:focus {
   background-color: #ffffff;
   border-color: #1668f3;
-  box-shadow: 0 0 0 4px rgba(22, 104, 243, 0.15);
+  box-shadow: 0 0 0 3px rgba(22, 104, 243, 0.15);
 }
 
 .mlg-input:disabled {
@@ -591,11 +433,11 @@
 }
 
 .mlg-input--password {
-  padding-right: 86px;
+  padding-right: 84px;
 }
 
 .mlg-input--otp {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.35em;
   text-align: center;
@@ -609,18 +451,18 @@
 
 .mlg-input--error:focus {
   border-color: #e11d48;
-  box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.12);
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.12);
 }
 
 .mlg-password-toggle {
   position: absolute;
-  right: 8px;
-  background-color: rgba(255, 255, 255, 0.92);
+  right: 7px;
+  background-color: #ffffff;
   border: 1px solid rgba(11, 19, 43, 0.14);
   color: #0b132b;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 4px 11px;
+  padding: 3px 10px;
   border-radius: 999px;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
@@ -660,7 +502,7 @@
 .mlg-forgot-row {
   display: flex;
   justify-content: flex-end;
-  margin-top: -6px;
+  margin-top: -4px;
 }
 
 .mlg-forgot-link {
@@ -669,7 +511,7 @@
   padding: 2px 0;
   border-radius: 4px;
   color: #1668f3;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
   transition: color 150ms ease;
@@ -697,7 +539,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: -4px;
+  margin-top: -2px;
 }
 
 .mlg-strength__bars {
@@ -730,7 +572,7 @@
 }
 
 .mlg-strength__label {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   color: #64748b;
 }
@@ -740,18 +582,18 @@
 .mlg-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mlg-submit-btn {
-  margin-top: 4px;
+  margin-top: 2px;
   width: 100%;
-  height: 44px;
+  height: 40px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
   background-color: #1668f3;
   color: #ffffff;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -759,7 +601,7 @@
   gap: 8px;
   cursor: pointer;
   box-shadow:
-    0 10px 22px -8px rgba(22, 104, 243, 0.56),
+    0 8px 18px -8px rgba(22, 104, 243, 0.56),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
   transition:
     background-color 160ms ease,
@@ -793,12 +635,12 @@
 
 .mlg-secondary-btn {
   width: 100%;
-  height: 42px;
+  height: 38px;
   border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.92);
+  background-color: #ffffff;
   border: 1px solid rgba(11, 19, 43, 0.14);
   color: #0b132b;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease, transform 140ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
@@ -824,20 +666,20 @@
 }
 
 .mlg-spinner {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 9999px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: #ffffff;
   animation: mlg-spin 0.75s linear infinite;
 }
 
-/* --- Acceso con Google (Google Identity Services + fallback Liquid Glass) - */
+/* --- Acceso con Google --------------------------------------------------- */
 
 .mlg-google-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin-top: 2px;
 }
 
@@ -849,8 +691,8 @@
 .mlg-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: 11.5px;
   font-weight: 500;
   color: #64748b;
   user-select: none;
@@ -864,7 +706,7 @@
 
 .mlg-google-host {
   width: 100%;
-  min-height: 44px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -876,23 +718,21 @@
 
 .mlg-google-btn {
   width: 100%;
-  height: 44px;
-  padding: 0 16px;
+  height: 40px;
+  padding: 0 14px;
   border-radius: 999px;
   border: 1px solid rgba(11, 19, 43, 0.14);
-  background-color: rgba(255, 255, 255, 0.96);
+  background-color: #ffffff;
   color: #0b132b;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   cursor: pointer;
-  box-shadow:
-    0 2px 6px -2px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 #ffffff;
+  box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.08);
   transition:
     background-color 160ms ease,
     border-color 160ms ease,
@@ -936,18 +776,15 @@
 
 .mlg-footer {
   border-top: 1px solid rgba(226, 232, 240, 0.8);
-  margin-top: 24px;
-  padding-top: 16px;
+  margin-top: 16px;
+  padding-top: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.mlg-footer {
   flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #64748b;
 }
 
 .mlg-footer a {
@@ -961,43 +798,39 @@
 }
 
 .mlg-footer__icon {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   color: #64748b;
   flex: none;
 }
 
-/* --- Animaciones --------------------------------------------------------- */
+/* --- Animaciones ligeras ------------------------------------------------- */
 
 .mlg-enter {
   opacity: 0;
-  animation: mlg-reveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: mlg-reveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .mlg-delay-1 {
-  animation-delay: 0.04s;
+  animation-delay: 0.03s;
 }
 
 .mlg-delay-2 {
-  animation-delay: 0.11s;
-}
-
-.mlg-delay-3 {
-  animation-delay: 0.18s;
+  animation-delay: 0.08s;
 }
 
 .mlg-panel-switch {
-  animation: mlg-fade-slide 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mlg-fade-slide 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .mlg-shake {
-  animation: mlg-shake-x 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: mlg-shake-x 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes mlg-reveal {
   from {
     opacity: 0;
-    transform: translate3d(0, 14px, 0);
+    transform: translate3d(0, 10px, 0);
   }
   to {
     opacity: 1;
@@ -1005,87 +838,10 @@
   }
 }
 
-@keyframes mlg-float-breathe {
-  0%,
-  100% {
-    transform: translate3d(0, 0px, 0);
-  }
-  50% {
-    transform: translate3d(0, -5px, 0);
-  }
-}
-
-@keyframes mlg-orb-drift-1 {
-  0% {
-    transform: translate3d(0px, 0px, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-55px, 42px, 0) scale(1.16);
-  }
-  100% {
-    transform: translate3d(-24px, 110px, 0) scale(0.95);
-  }
-}
-
-@keyframes mlg-orb-drift-2 {
-  0% {
-    transform: translate3d(0px, 0px, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(68px, -48px, 0) scale(1.14);
-  }
-  100% {
-    transform: translate3d(28px, -112px, 0) scale(0.96);
-  }
-}
-
-@keyframes mlg-orb-drift-3 {
-  0% {
-    transform: translate3d(-50%, -50%, 0) scale(0.92);
-  }
-  100% {
-    transform: translate3d(-32%, -64%, 0) scale(1.22);
-  }
-}
-
-@keyframes mlg-sheen-sweep {
-  0%,
-  58% {
-    transform: skewX(-22deg) translate3d(0, 0, 0);
-    opacity: 0;
-  }
-  66% {
-    opacity: 0.9;
-  }
-  86%,
-  100% {
-    transform: skewX(-22deg) translate3d(680px, 0, 0);
-    opacity: 0;
-  }
-}
-
-@keyframes mlg-orbit-cw {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: calc(var(--m-perim, 1900px) * -1);
-  }
-}
-
-@keyframes mlg-orbit-ccw {
-  from {
-    stroke-dashoffset: calc(var(--m-perim, 1900px) * 0.5);
-  }
-  to {
-    stroke-dashoffset: calc(var(--m-perim, 1900px) * 1.5);
-  }
-}
-
 @keyframes mlg-fade-slide {
   from {
     opacity: 0;
-    transform: translate3d(0, 6px, 0);
+    transform: translate3d(0, 5px, 0);
   }
   to {
     opacity: 1;
@@ -1118,34 +874,27 @@
   }
 }
 
-/* --- Responsivo (640px, 1024px, pantallas compactas) --------------------- */
+/* --- Responsivo ---------------------------------------------------------- */
 
 @media (min-width: 640px) {
   .mlg-shell {
-    padding: 32px 40px;
+    padding: 28px 36px;
   }
 
   .mlg-hero-title {
-    font-size: 48px;
-  }
-
-  .mlg-reveal-stage {
-    margin-top: 32px;
-    width: 320px;
-    height: 320px;
-    margin-left: -24px;
+    font-size: 46px;
   }
 
   .mlg-card__content {
-    padding: 32px;
+    padding: 22px 26px 24px;
   }
 }
 
 @media (min-width: 1024px) {
   .mlg-grid {
-    grid-template-columns: minmax(0, 1.05fr) 436px;
-    gap: 64px;
-    padding: 24px 0;
+    grid-template-columns: minmax(0, 1fr) 388px;
+    gap: 56px;
+    padding: 20px 0;
   }
 
   .mlg-card-stage {
@@ -1156,56 +905,29 @@
 @media (max-width: 1023px) {
   .mlg-showcase {
     width: 100%;
-    max-width: 436px;
+    max-width: 388px;
     margin: 0 auto;
-  }
-
-  .mlg-reveal-stage {
-    display: none;
+    align-items: center;
+    text-align: center;
   }
 }
 
 @media (max-width: 480px) {
   .mlg-shell {
-    padding: 22px 20px;
+    padding: 18px 16px;
   }
 
   .mlg-grid {
-    gap: 28px;
-    padding: 18px 0;
-  }
-
-  .mlg-hero-title {
-    font-size: 32px;
-  }
-
-  .mlg-card__content {
-    padding: 24px 22px;
-  }
-}
-
-@media (max-height: 700px) and (min-width: 1024px) {
-  .mlg-shell {
-    padding-top: 20px;
-    padding-bottom: 20px;
-  }
-
-  .mlg-grid {
+    gap: 20px;
     padding: 12px 0;
   }
 
   .mlg-hero-title {
-    font-size: 44px;
-  }
-
-  .mlg-reveal-stage {
-    margin-top: 20px;
-    width: 268px;
-    height: 268px;
+    font-size: 30px;
   }
 
   .mlg-card__content {
-    padding: 24px 28px;
+    padding: 18px 18px 20px;
   }
 }
 

@@ -82,6 +82,7 @@
   height: 360px;
   border-radius: 16px;
   overflow: hidden;
+  overflow: clip;
   background-color: #dce4ee;
   border: 1px solid rgba(11, 19, 43, 0.14);
   cursor: crosshair;
@@ -140,29 +141,22 @@
   max-width: none;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 150ms ease-out;
+  transition: opacity 90ms ease-out;
 }
 
 .wl-map-picker__tile--loaded {
   opacity: 1;
 }
 
-.wl-map-picker__bounds-badge {
+.wl-map-picker__territory-mask {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background-color: rgba(11, 19, 43, 0.86);
-  color: #f8fafc;
-  font-size: 11px;
-  font-weight: 700;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  overflow: visible;
   pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  z-index: 1;
 }
 
 .wl-map-picker__pin {

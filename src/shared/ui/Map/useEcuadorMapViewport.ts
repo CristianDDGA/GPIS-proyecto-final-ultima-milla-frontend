@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -17,15 +18,13 @@ import {
   tileUrlFor,
   worldToLatLng,
   type LatLng,
-  type MapLayerStyle,
 } from './ecuadorMapMath.js';
 
-const DRAG_COMMIT_THRESHOLD_PX = 128;
+const WHEEL_ZOOM_THROTTLE_MS = 110;
 
 export interface MapTileItem {
   readonly key: string;
   readonly url: string;
-  readonly fallbackUrl: string;
   readonly left: number;
   readonly top: number;
 }
@@ -42,7 +41,6 @@ export interface UseEcuadorMapViewportOptions {
 export function buildMapTiles(
   centerWorld: { readonly x: number; readonly y: number },
   zoom: number,
-  activeLayer: MapLayerStyle,
   spanX: number,
   spanY: number,
   offsetX = 0,
@@ -51,7 +49,6 @@ export function buildMapTiles(
   const maxIndex = Math.pow(2, zoom);
   const centerTileX = Math.floor(centerWorld.x / MAP_TILE_SIZE);
   const centerTileY = Math.floor(centerWorld.y / MAP_TILE_SIZE);
-  const cacheLayer = activeLayer === 'satellite' ? 'sat' : 'osm';
   const result: MapTileItem[] = [];
 
   for (let dx = -spanX; dx <= spanX; dx += 1) {
@@ -61,9 +58,8 @@ export function buildMapTiles(
       if (ty < 0 || ty >= maxIndex) continue;
       const wrappedX = ((tx % maxIndex) + maxIndex) % maxIndex;
       result.push({
-        key: `${cacheLayer}-${zoom}-${wrappedX}-${ty}`,
-        url: tileUrlFor(activeLayer, zoom, wrappedX, ty),
-        fallbackUrl: tileUrlFor('osm', zoom, wrappedX, ty),
+        key: `osm-${zoom}-${wrappedX}-${ty}`,
+        url: tileUrlFor('uber', zoom, wrappedX, ty),
         left: offsetX + (tx * MAP_TILE_SIZE - centerWorld.x),
         top: offsetY + (ty * MAP_TILE_SIZE - centerWorld.y),
       });
@@ -98,7 +94,7 @@ export function requestEcuadorGpsLocation(callbacks: {
 
 /**
  * Motor compartido de viewport para mapas interactivos en Ecuador:
- * arrastre GPU 60-120fps con translate3d, zoom por rueda no pasivo, teclado y capas.
+ * arrastre 100% GPU con translate3d sin re-renders intermedios y confirmación atómica al soltar.
  */
 export function useEcuadorMapViewport({
   initialCenter,
@@ -110,12 +106,11 @@ export function useEcuadorMapViewport({
 }: UseEcuadorMapViewportOptions) {
   const [center, setCenter] = useState<LatLng>(initialCenter);
   const [zoom, setZoom] = useState<number>(initialZoom);
-  const [layer, setLayer] = useState<MapLayerStyle>('uber');
-  const [failedSatellite, setFailedSatellite] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const panStageRef = useRef<HTMLDivElement | null>(null);
+  const lastWheelRef = useRef(0);
   const dragRef = useRef({
     active: false,
     moved: false,
@@ -133,13 +128,16 @@ export function useEcuadorMapViewport({
     [center.lat, center.lng, zoom],
   );
 
-  const activeLayer: MapLayerStyle = failedSatellite && layer === 'satellite' ? 'uber' : layer;
-
   const resetStageTransform = useCallback(() => {
     if (panStageRef.current) {
       panStageRef.current.style.transform = 'translate3d(0px, 0px, 0px)';
     }
   }, []);
+
+  // Restablece la traslación GPU en el mismo paint en que React actualiza las coordenadas de las teselas.
+  useLayoutEffect(() => {
+    resetStageTransform();
+  }, [centerWorld.x, centerWorld.y, zoom, resetStageTransform]);
 
   useEffect(() => {
     const drag = dragRef.current;
@@ -148,13 +146,16 @@ export function useEcuadorMapViewport({
     };
   }, []);
 
-  // La rueda hace zoom sin mover la página: listener nativo no pasivo.
+  // La rueda hace zoom sin mover la página y con throttle suave para evitar saltos en trackpad.
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return undefined;
     const onWheel = (event: globalThis.WheelEvent) => {
       if (disabled || Math.abs(event.deltaY) < 4) return;
       event.preventDefault();
+      const now = performance.now();
+      if (now - lastWheelRef.current < WHEEL_ZOOM_THROTTLE_MS) return;
+      lastWheelRef.current = now;
       setZoom((prev) =>
         event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
       );
@@ -165,11 +166,6 @@ export function useEcuadorMapViewport({
 
   const zoomIn = useCallback(() => setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1)), []);
   const zoomOut = useCallback(() => setZoom((z) => Math.max(MAP_MIN_ZOOM, z - 1)), []);
-
-  const selectLayer = useCallback((nextLayer: MapLayerStyle) => {
-    if (nextLayer === 'satellite') setFailedSatellite(false);
-    setLayer(nextLayer);
-  }, []);
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (disabled) return;
@@ -199,21 +195,6 @@ export function useEcuadorMapViewport({
     d.dx = dx;
     d.dy = dy;
 
-    if (Math.hypot(dx, dy) >= DRAG_COMMIT_THRESHOLD_PX) {
-      const next = worldToLatLng(d.startWorldX - dx, d.startWorldY - dy, zoom);
-      const clamped = clampEcuadorLatLng(next.lat, next.lng);
-      const nextWorld = latLngToWorld(clamped.lat, clamped.lng, zoom);
-      d.startX = event.clientX;
-      d.startY = event.clientY;
-      d.startWorldX = nextWorld.x;
-      d.startWorldY = nextWorld.y;
-      d.dx = 0;
-      d.dy = 0;
-      resetStageTransform();
-      setCenter(clamped);
-      return;
-    }
-
     if (!d.rafId) {
       d.rafId = requestAnimationFrame(() => {
         d.rafId = 0;
@@ -238,16 +219,23 @@ export function useEcuadorMapViewport({
       cancelAnimationFrame(d.rafId);
       d.rafId = 0;
     }
-    resetStageTransform();
 
     if (wasDrag || !onTap) {
       if (Math.abs(finalDx) > 1 || Math.abs(finalDy) > 1) {
         const next = worldToLatLng(d.startWorldX - finalDx, d.startWorldY - finalDy, zoom);
-        setCenter(clampEcuadorLatLng(next.lat, next.lng));
+        const clamped = clampEcuadorLatLng(next.lat, next.lng);
+        if (clamped.lat === center.lat && clamped.lng === center.lng) {
+          resetStageTransform();
+        } else {
+          setCenter(clamped);
+        }
+      } else {
+        resetStageTransform();
       }
       return;
     }
 
+    resetStageTransform();
     onTap(event.clientX, event.clientY);
   };
 
@@ -283,9 +271,6 @@ export function useEcuadorMapViewport({
     setCenter,
     zoom,
     setZoom,
-    activeLayer,
-    setFailedSatellite,
-    selectLayer,
     isDragging,
     centerWorld,
     viewportRef,

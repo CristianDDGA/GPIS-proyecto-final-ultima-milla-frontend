@@ -146,7 +146,7 @@ export const PATH_MARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0
   <circle cx="256" cy="78" r="26" fill="#ffffff" />
 </svg>`;
 
-const TEX = 1024;
+const TEX = 512;
 export const LOGO_BOX_FRACTION = 0.75;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -579,8 +579,8 @@ void main() {
     float streak = 0.35 * uStreak * bw * mix(0.15, 1.0, cornerW) * pow(1.0 - xf, 1.5) * uOptics;
     vec2 tangent = vec2(-nOut.y, nOut.x);
     vec3 acc = vec3(0.0), wsum = vec3(0.0);
-    for (int i = 0; i < 20; i++) {
-      float lam = (float(i) + 0.5) / 20.0;
+    for (int i = 0; i < 10; i++) {
+      float lam = (float(i) + 0.5) / 10.0;
       float c = uDisp * (1.0 - 2.0 * lam);
       vec2 along = tangent * (streak * 2.0 * (fract(float(i) * 0.618034 + 0.31) - 0.5));
       float cf = uDisp * (1.0 - 2.0 * lam) * (lam > 0.5 ? 1.0 : 0.5);
@@ -935,7 +935,7 @@ export function startGlassRevealEngine(
 
   function tick(now: number): void {
     raf = 0;
-    const dt = Math.min(0.1, (now - last) / 1000);
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
     const { settings: P, loop, speed, time: fixed } = live.current;
     const end = endOf(P);
@@ -967,7 +967,7 @@ export function startGlassRevealEngine(
     }
 
     if (dirty && logo && renderer && !lost) {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       const cw = canvas.clientWidth;
       const ch = canvas.clientHeight;
       const w = Math.max(1, Math.round(cw * dpr));

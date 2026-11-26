@@ -22,10 +22,14 @@ test.describe('06 · Unified Design, 0fps Idle Perf, Skeletons & Uber-Style Maps
 
     await page.goto('/');
 
-    // El login ya no muestra barra superior ni estado del sistema: solo el showcase y la tarjeta de acceso
+    // El login compacto lleva el logo animado dentro de la card y sin textos/chips superfluos
     await expect(page.locator('#auth-login-email')).toBeVisible();
+    await expect(page.locator('.mlg-card .mlg-card-brand__stage')).toBeVisible();
     await expect(page.locator('.mlg-header-pill')).toHaveCount(0);
     await expect(page.getByText(/Sistema operativo|Verificando API|Sin conexión API/i)).toHaveCount(0);
+    await expect(page.getByText(/Plataforma de logística y tienda COD/i)).toHaveCount(0);
+    await expect(page.getByText(/Rutas viales Ecuador|Cobro contra entrega|3 roles integrados/i)).toHaveCount(0);
+    await expect(page.getByText(/Accede a tu consola/i)).toHaveCount(0);
 
     // Sign in as Admin and verify normalized PageHeader + KpiStrip
     await loginAs(page, 'admin@millast.ec');
@@ -88,13 +92,11 @@ test.describe('06 · Unified Design, 0fps Idle Perf, Skeletons & Uber-Style Maps
     await expect(mapShell.getByRole('link', { name: /Waze/i })).toBeVisible();
     await expect(mapShell.getByRole('link', { name: /Google Maps/i }).first()).toBeVisible();
 
-    // Switch layers Uber -> Satélite -> Calles -> Uber
-    await mapShell.getByRole('button', { name: 'Satélite' }).click();
-    await expect(mapShell).toHaveAttribute('data-map-layer', 'satellite');
-    await mapShell.getByRole('button', { name: 'Calles' }).click();
-    await expect(mapShell).toHaveAttribute('data-map-layer', 'osm');
-    await mapShell.getByRole('button', { name: 'Uber' }).click();
-    await expect(mapShell).toHaveAttribute('data-map-layer', 'uber');
+    // Single unified map style with visual non-Ecuador shading and no layer switcher buttons
+    await expect(mapShell.locator('.route-map-territory-mask')).toBeVisible();
+    await expect(mapShell.getByRole('button', { name: 'Satélite' })).toHaveCount(0);
+    await expect(mapShell.getByRole('button', { name: 'Calles' })).toHaveCount(0);
+    await expect(mapShell.getByRole('button', { name: 'Uber' })).toHaveCount(0);
 
     // Expand & collapse viewport height
     const expandBtn = mapShell.getByRole('button', { name: 'Expandir mapa' });

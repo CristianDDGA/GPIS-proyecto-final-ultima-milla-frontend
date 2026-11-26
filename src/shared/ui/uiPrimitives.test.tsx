@@ -132,17 +132,16 @@ describe('RouteStopsMap estilo Uber', () => {
     expect(screen.getByRole('status')).toHaveTextContent('1/2 entregadas');
   });
 
-  it('cambia de capa entre Uber, Calles y Satélite', () => {
+  it('mantiene un único diseño de mapa con máscara territorial sin botones de cambio de capa', () => {
     stubOsrm();
     const { container } = render(<RouteStopsMap stops={STOPS} />);
     const shell = container.querySelector('.route-map-shell');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Satélite' }));
-    expect(shell).toHaveAttribute('data-map-layer', 'satellite');
-    fireEvent.click(screen.getByRole('button', { name: 'Calles' }));
-    expect(shell).toHaveAttribute('data-map-layer', 'osm');
-    fireEvent.click(screen.getByRole('button', { name: 'Uber' }));
     expect(shell).toHaveAttribute('data-map-layer', 'uber');
+    expect(container.querySelector('.route-map-territory-mask')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Satélite' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Calles' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Uber' })).toBeNull();
   });
 
   it('recorre las paradas con el dock, avisa a quien lo escucha y permite cerrarlo', () => {
