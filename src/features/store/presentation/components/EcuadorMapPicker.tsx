@@ -5,23 +5,20 @@ import {
   useRef,
   useState,
   type FC,
-  type KeyboardEvent,
   type MouseEvent,
-  type PointerEvent,
 } from 'react';
 import {
   Button,
   DEFAULT_ECUADOR_CENTER,
-  ECUADOR_CITIES,
-  MAP_MAX_ZOOM,
-  MAP_MIN_ZOOM,
-  MAP_TILE_SIZE,
+  MapTileLayer,
+  MapToolbar,
   TextInput,
+  buildMapTiles,
   clampEcuadorLatLng,
   latLngToWorld,
-  tileUrlFor,
+  requestEcuadorGpsLocation,
+  useEcuadorMapViewport,
   worldToLatLng,
-  type MapLayerStyle,
 } from '../../../../shared/ui/index.js';
 import {
   isWithinEcuador,
@@ -63,8 +60,6 @@ interface NominatimHit {
   readonly lon: string;
 }
 
-const DRAG_COMMIT_THRESHOLD_PX = 128;
-
 /**
  * Selector interactivo de coordenadas estilo Uber Pickup en Ecuador (cero dependencias).
  * - Capas [Uber | Calles | Satélite] con grading Uber Minimal sin API key
@@ -83,65 +78,23 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
   overlays,
   height,
 }) => {
-  const [center, setCenter] = useState<{ lat: number; lng: number }>(() =>
-    latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)
-      ? { lat: latitude, lng: longitude }
-      : DEFAULT_ECUADOR_CENTER,
-  );
-  const [zoom, setZoom] = useState(14);
-  const [layer, setLayer] = useState<MapLayerStyle>('uber');
-  const [failedSatellite, setFailedSatellite] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<readonly NominatimHit[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [mapNotice, setMapNotice] = useState<string | null>(null);
 
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const panStageRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<{
-    active: boolean;
-    moved: boolean;
-    startX: number;
-    startY: number;
-    startWorldX: number;
-    startWorldY: number;
-    dx: number;
-    dy: number;
-    rafId: number;
-  }>({
-    active: false,
-    moved: false,
-    startX: 0,
-    startY: 0,
-    startWorldX: 0,
-    startWorldY: 0,
-    dx: 0,
-    dy: 0,
-    rafId: 0,
-  });
   const lastNominatimRef = useRef(0);
-
-  useEffect(() => {
-    if (latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)) {
-      setCenter({ lat: latitude, lng: longitude });
-    }
-  }, [latitude, longitude]);
-
-  // El último punto pedido gana: si el pin se mueve varias veces seguidas, solo se busca la dirección del último
-  // (respetando el límite de 1 consulta por segundo de Nominatim) y nunca se pierde la actualización.
   const pendingPointRef = useRef<{ lat: number; lng: number } | null>(null);
   const reverseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestSeqRef = useRef(0);
 
-  useEffect(() => {
-    const drag = dragRef.current;
-    return () => {
+  useEffect(
+    () => () => {
       if (reverseTimerRef.current !== null) clearTimeout(reverseTimerRef.current);
-      if (drag.rafId) cancelAnimationFrame(drag.rafId);
-    };
-  }, []);
+    },
+    [],
+  );
 
   const runReverseGeocode = useCallback(async () => {
     const point = pendingPointRef.current;
@@ -182,6 +135,62 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     },
     [onAddressSuggested, runReverseGeocode],
   );
+
+  const commitPickedPoint = useCallback(
+    (lat: number, lng: number) => {
+      const clamped = clampEcuadorLatLng(lat, lng);
+      setMapNotice(null);
+      onChange({ latitude: clamped.lat, longitude: clamped.lng });
+      reverseGeocode(clamped.lat, clamped.lng);
+    },
+    [onChange, reverseGeocode],
+  );
+
+  const {
+    setCenter,
+    zoom,
+    setZoom,
+    activeLayer,
+    setFailedSatellite,
+    selectLayer,
+    isDragging,
+    centerWorld,
+    viewportRef,
+    panStageRef,
+    zoomIn,
+    zoomOut,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handleKeyDown,
+  } = useEcuadorMapViewport({
+    initialCenter:
+      latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)
+        ? { lat: latitude, lng: longitude }
+        : DEFAULT_ECUADOR_CENTER,
+    initialZoom: 14,
+    disabled,
+    ignorePointerSelector: 'button',
+    onTap: (clientX, clientY) => {
+      if (!viewportRef.current || disabled) return;
+      const rect = viewportRef.current.getBoundingClientRect();
+      const offsetX = clientX - rect.left - rect.width / 2;
+      const offsetY = clientY - rect.top - rect.height / 2;
+      const picked = worldToLatLng(centerWorld.x + offsetX, centerWorld.y + offsetY, zoom);
+      if (!isWithinEcuador(picked.lat, picked.lng)) {
+        setMapNotice('El punto debe estar dentro de Ecuador.');
+        return;
+      }
+      commitPickedPoint(picked.lat, picked.lng);
+    },
+    onActivateKey: (clamped) => commitPickedPoint(clamped.lat, clamped.lng),
+  });
+
+  useEffect(() => {
+    if (latitude !== null && longitude !== null && isWithinEcuador(latitude, longitude)) {
+      setCenter({ lat: latitude, lng: longitude });
+    }
+  }, [latitude, longitude, setCenter]);
 
   const runSearch = useCallback(
     async (queryText: string, silentThrottle = false) => {
@@ -254,64 +263,23 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     event.stopPropagation();
     if (disabled) return;
     setMapNotice(null);
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setMapNotice('Tu navegador no soporta geolocalización.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        if (!isWithinEcuador(lat, lng)) {
-          setMapNotice('Tu ubicación GPS actual queda fuera de Ecuador.');
-          return;
-        }
-        const clamped = clampEcuadorLatLng(lat, lng);
+    requestEcuadorGpsLocation({
+      outOfBoundsMessage: 'Tu ubicación GPS actual queda fuera de Ecuador.',
+      failedMessage: 'No se pudo obtener tu ubicación GPS. Fija el pin manualmente.',
+      onError: setMapNotice,
+      onLocated: (clamped) => {
         setCenter(clamped);
         setZoom(16);
         onChange({ latitude: clamped.lat, longitude: clamped.lng });
-        void reverseGeocode(clamped.lat, clamped.lng);
+        reverseGeocode(clamped.lat, clamped.lng);
       },
-      () => {
-        setMapNotice('No se pudo obtener tu ubicación GPS. Fija el pin manualmente.');
-      },
-      { enableHighAccuracy: true, timeout: 6000 },
-    );
+    });
   };
 
-  const centerWorld = useMemo(
-    () => latLngToWorld(center.lat, center.lng, zoom),
-    [center.lat, center.lng, zoom],
+  const tiles = useMemo(
+    () => buildMapTiles(centerWorld, zoom, activeLayer, 2, 1),
+    [activeLayer, centerWorld, zoom],
   );
-
-  const activeLayer: MapLayerStyle = failedSatellite && layer === 'satellite' ? 'uber' : layer;
-
-  const tiles = useMemo(() => {
-    const maxIndex = Math.pow(2, zoom);
-    const centerTileX = Math.floor(centerWorld.x / MAP_TILE_SIZE);
-    const centerTileY = Math.floor(centerWorld.y / MAP_TILE_SIZE);
-    const result: { key: string; url: string; fallbackUrl: string; left: number; top: number }[] = [];
-
-    for (let dx = -2; dx <= 2; dx += 1) {
-      for (let dy = -1; dy <= 1; dy += 1) {
-        const tx = centerTileX + dx;
-        const ty = centerTileY + dy;
-        if (ty < 0 || ty >= maxIndex) continue;
-        const wrappedX = ((tx % maxIndex) + maxIndex) % maxIndex;
-        const pixelLeft = tx * MAP_TILE_SIZE - centerWorld.x;
-        const pixelTop = ty * MAP_TILE_SIZE - centerWorld.y;
-        const cacheLayer = activeLayer === 'satellite' ? 'sat' : 'osm';
-        result.push({
-          key: `${cacheLayer}-${zoom}-${wrappedX}-${ty}`,
-          url: tileUrlFor(activeLayer, zoom, wrappedX, ty),
-          fallbackUrl: tileUrlFor('osm', zoom, wrappedX, ty),
-          left: pixelLeft,
-          top: pixelTop,
-        });
-      }
-    }
-    return result;
-  }, [activeLayer, centerWorld.x, centerWorld.y, zoom]);
 
   const pinOffset = useMemo(() => {
     if (latitude === null || longitude === null) return null;
@@ -322,12 +290,6 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
     };
   }, [centerWorld.x, centerWorld.y, latitude, longitude, zoom]);
 
-  const resetStageTransform = () => {
-    if (panStageRef.current) {
-      panStageRef.current.style.transform = 'translate3d(0px, 0px, 0px)';
-    }
-  };
-
   const circleFor = (lat: number, lng: number, km: number) => {
     const world = latLngToWorld(lat, lng, zoom);
     const diameter = (2 * km * 1000) / metersPerPixel(lat, zoom);
@@ -336,150 +298,6 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
       dy: world.y - centerWorld.y,
       diameter: Math.max(2, diameter),
     };
-  };
-
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('button')) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setIsDragging(true);
-    dragRef.current = {
-      active: true,
-      moved: false,
-      startX: event.clientX,
-      startY: event.clientY,
-      startWorldX: centerWorld.x,
-      startWorldY: centerWorld.y,
-      dx: 0,
-      dy: 0,
-      rafId: dragRef.current.rafId,
-    };
-  };
-
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const d = dragRef.current;
-    if (!d.active || disabled) return;
-    const dx = event.clientX - d.startX;
-    const dy = event.clientY - d.startY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-      d.moved = true;
-    }
-    d.dx = dx;
-    d.dy = dy;
-
-    if (Math.hypot(dx, dy) >= DRAG_COMMIT_THRESHOLD_PX) {
-      const next = worldToLatLng(d.startWorldX - dx, d.startWorldY - dy, zoom);
-      const clamped = clampEcuadorLatLng(next.lat, next.lng);
-      const nextWorld = latLngToWorld(clamped.lat, clamped.lng, zoom);
-      d.startX = event.clientX;
-      d.startY = event.clientY;
-      d.startWorldX = nextWorld.x;
-      d.startWorldY = nextWorld.y;
-      d.dx = 0;
-      d.dy = 0;
-      resetStageTransform();
-      setCenter(clamped);
-      return;
-    }
-
-    if (!d.rafId) {
-      d.rafId = requestAnimationFrame(() => {
-        d.rafId = 0;
-        if (panStageRef.current && d.active) {
-          panStageRef.current.style.transform = `translate3d(${d.dx}px, ${d.dy}px, 0px)`;
-        }
-      });
-    }
-  };
-
-  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    const d = dragRef.current;
-    if (!d.active) return;
-    const wasDrag = d.moved;
-    const finalDx = d.dx;
-    const finalDy = d.dy;
-    d.active = false;
-    d.dx = 0;
-    d.dy = 0;
-    setIsDragging(false);
-    if (d.rafId) {
-      cancelAnimationFrame(d.rafId);
-      d.rafId = 0;
-    }
-    resetStageTransform();
-
-    if (wasDrag) {
-      if (Math.abs(finalDx) > 1 || Math.abs(finalDy) > 1) {
-        const next = worldToLatLng(d.startWorldX - finalDx, d.startWorldY - finalDy, zoom);
-        setCenter(clampEcuadorLatLng(next.lat, next.lng));
-      }
-      return;
-    }
-
-    if (viewportRef.current && !disabled) {
-      const rect = viewportRef.current.getBoundingClientRect();
-      const offsetX = event.clientX - rect.left - rect.width / 2;
-      const offsetY = event.clientY - rect.top - rect.height / 2;
-      const picked = worldToLatLng(centerWorld.x + offsetX, centerWorld.y + offsetY, zoom);
-      if (!isWithinEcuador(picked.lat, picked.lng)) {
-        setMapNotice('El punto debe estar dentro de Ecuador.');
-        return;
-      }
-      const clamped = clampEcuadorLatLng(picked.lat, picked.lng);
-      setMapNotice(null);
-      onChange({ latitude: clamped.lat, longitude: clamped.lng });
-      reverseGeocode(clamped.lat, clamped.lng);
-    }
-  };
-
-  // La rueda hace zoom sin mover la página: el listener nativo no es pasivo (en React onWheel sí lo es).
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return undefined;
-    const onWheel = (event: globalThis.WheelEvent) => {
-      if (disabled || Math.abs(event.deltaY) < 4) return;
-      event.preventDefault();
-      setZoom((prev) =>
-        event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
-      );
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, [disabled]);
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    const stepPx = 64;
-    if (event.key === '+' || event.key === '=') {
-      event.preventDefault();
-      setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1));
-    } else if (event.key === '-' || event.key === '_') {
-      event.preventDefault();
-      setZoom((z) => Math.max(MAP_MIN_ZOOM, z - 1));
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      const next = worldToLatLng(centerWorld.x, centerWorld.y - stepPx, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      const next = worldToLatLng(centerWorld.x, centerWorld.y + stepPx, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    } else if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      const next = worldToLatLng(centerWorld.x - stepPx, centerWorld.y, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      const next = worldToLatLng(centerWorld.x + stepPx, centerWorld.y, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    } else if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      const clamped = clampEcuadorLatLng(center.lat, center.lng);
-      setMapNotice(null);
-      onChange({ latitude: clamped.lat, longitude: clamped.lng });
-      void reverseGeocode(clamped.lat, clamped.lng);
-    }
   };
 
   const stopBtn = (e: MouseEvent<HTMLButtonElement>) => e.stopPropagation();
@@ -507,50 +325,16 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
         </Button>
       </div>
 
-      <div className="route-map-toolbar">
-        <div className="route-map-cities" role="group" aria-label="Ir a ciudad de Ecuador">
-          {ECUADOR_CITIES.map((city) => (
-            <button
-              key={city.id}
-              type="button"
-              className="route-map-chip"
-              disabled={disabled}
-              onClick={() => {
-                setCenter({ lat: city.lat, lng: city.lng });
-                setZoom(city.zoom);
-              }}
-            >
-              {city.name}
-            </button>
-          ))}
-        </div>
-        <div className="route-map-tools-right">
-          <button
-            type="button"
-            className={'route-map-chip' + (activeLayer === 'uber' ? ' route-map-chip--active' : '')}
-            onClick={() => setLayer('uber')}
-          >
-            Uber
-          </button>
-          <button
-            type="button"
-            className={'route-map-chip' + (activeLayer === 'osm' ? ' route-map-chip--active' : '')}
-            onClick={() => setLayer('osm')}
-          >
-            Calles
-          </button>
-          <button
-            type="button"
-            className={'route-map-chip' + (activeLayer === 'satellite' ? ' route-map-chip--active' : '')}
-            onClick={() => {
-              setFailedSatellite(false);
-              setLayer('satellite');
-            }}
-          >
-            Satélite
-          </button>
-        </div>
-      </div>
+      <MapToolbar
+        activeLayer={activeLayer}
+        onSelectLayer={selectLayer}
+        disabled={disabled}
+        citiesAriaLabel="Ir a ciudad de Ecuador"
+        onSelectCity={(city) => {
+          setCenter({ lat: city.lat, lng: city.lng });
+          setZoom(city.zoom);
+        }}
+      />
 
       {searchResults.length > 0 && (
         <ul className="wl-map-picker__results" aria-label="Resultados de mapa">
@@ -587,36 +371,16 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
           aria-label="Mover el mapa o fijar pin con el teclado: flechas para desplazar, Enter para fijar el pin, más y menos para acercar o alejar"
         />
         <div ref={panStageRef} className="wl-map-picker__stage">
-          <div
-            className={
-              'wl-map-picker__tiles' + (activeLayer === 'uber' ? ' wl-map-picker__tiles--uber' : '')
-            }
-            aria-hidden="true"
-          >
-            {tiles.map((tile) => (
-              <img
-                key={tile.key}
-                src={tile.url}
-                alt=""
-                draggable={false}
-                className="wl-map-picker__tile"
-                style={{
-                  transform: `translate3d(${Math.round(tile.left)}px, ${Math.round(tile.top)}px, 0)`,
-                }}
-                onLoad={(event) => {
-                  event.currentTarget.classList.add('wl-map-picker__tile--loaded');
-                }}
-                onError={(event) => {
-                  if (activeLayer === 'satellite') {
-                    setFailedSatellite(true);
-                    event.currentTarget.src = tile.fallbackUrl;
-                  } else {
-                    event.currentTarget.classList.add('wl-map-picker__tile--loaded');
-                  }
-                }}
-              />
-            ))}
-          </div>
+          <MapTileLayer
+            tiles={tiles}
+            activeLayer={activeLayer}
+            containerClass="wl-map-picker__tiles"
+            uberClass="wl-map-picker__tiles--uber"
+            tileClass="wl-map-picker__tile"
+            loadedTileClass="wl-map-picker__tile--loaded"
+            positioning="transform"
+            onSatelliteError={() => setFailedSatellite(true)}
+          />
 
           {overlays?.map((zone) => {
             const circle = circleFor(zone.latitude, zone.longitude, zone.radiusKm);
@@ -679,7 +443,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
             aria-label="Acercar mapa"
             onClick={(e) => {
               stopBtn(e);
-              setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1));
+              zoomIn();
             }}
           >
             +
@@ -690,7 +454,7 @@ export const EcuadorMapPicker: FC<EcuadorMapPickerProps> = ({
             aria-label="Alejar mapa"
             onClick={(e) => {
               stopBtn(e);
-              setZoom((z) => Math.max(MAP_MIN_ZOOM, z - 1));
+              zoomOut();
             }}
           >
             −

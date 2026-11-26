@@ -22,6 +22,7 @@ export default defineConfig({
         'src/features/*/application/**/*.ts',
         'src/features/*/infrastructure/**/*.ts',
         'src/shared/infrastructure/**/*.ts',
+        'src/shared/hooks/**/*.ts',
         'src/shared/ui/Map/ecuadorMapMath.ts',
       ],
       exclude: ['**/index.ts', '**/*.test.*', 'src/test/**'],

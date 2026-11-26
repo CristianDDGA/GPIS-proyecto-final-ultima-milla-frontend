@@ -9,6 +9,7 @@ import {
   type ApplicationStatus,
   type FileKind,
 } from '../../domain/index.js';
+import { toErrorMessage, usePaginatedList } from '../../../../shared/hooks/usePaginatedList.js';
 import {
   Alert,
   Button,
@@ -33,21 +34,12 @@ const STATUS_OPTIONS = [
   })),
 ];
 
-function toErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;
-}
-
 export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUseCases }> = ({
   useCases,
 }) => {
   const [statusFilter, setStatusFilter] = useState('pendiente');
   const [query, setQuery] = useState('');
   const [appliedFilters, setAppliedFilters] = useState<ApplicationFilters>({ status: 'pendiente' });
-  const [offset, setOffset] = useState(0);
-  const [items, setItems] = useState<readonly ApplicationDetail[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -62,8 +54,21 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
   const [isRejecting, setIsRejecting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const mountedRef = useRef(true);
   const urlsRef = useRef<string[]>([]);
+
+  const fetchApplications = useCallback(
+    (params: ApplicationFilters & { readonly limit: number; readonly offset: number }) =>
+      useCases.list.execute(params),
+    [useCases],
+  );
+
+  const { items, total, offset, isLoading, requestError, setRequestError, loadPage, mountedRef } =
+    usePaginatedList<ApplicationDetail, ApplicationFilters>({
+      appliedFilters,
+      pageSize: PAGE_SIZE,
+      errorFallback: 'No se pudieron cargar las solicitudes.',
+      fetchPage: fetchApplications,
+    });
 
   const resetFileUrls = useCallback((): void => {
     for (const url of urlsRef.current) {
@@ -73,46 +78,7 @@ export const AdminCourierApplicationsPanel: FC<{ useCases: CourierApplicationUse
     setFileUrls({});
   }, []);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      resetFileUrls();
-    };
-  }, [resetFileUrls]);
-
-  const loadPage = useCallback(
-    async (filters: ApplicationFilters) => {
-      setIsLoading(true);
-      setRequestError(null);
-      try {
-        const page = await useCases.list.execute({
-          ...filters,
-          limit: PAGE_SIZE,
-          offset: filters.offset ?? 0,
-        });
-        if (!mountedRef.current) {
-          return;
-        }
-        setItems(page.items);
-        setTotal(page.total);
-        setOffset(page.offset);
-      } catch (error_) {
-        if (mountedRef.current) {
-          setRequestError(toErrorMessage(error_, 'No se pudieron cargar las solicitudes.'));
-        }
-      } finally {
-        if (mountedRef.current) {
-          setIsLoading(false);
-        }
-      }
-    },
-    [useCases],
-  );
-
-  useEffect(() => {
-    void loadPage({ ...appliedFilters, offset: 0 });
-  }, [appliedFilters, loadPage]);
+  useEffect(() => () => resetFileUrls(), [resetFileUrls]);
 
   const openDetail = async (application: ApplicationDetail): Promise<void> => {
     setSelectedId(application.id);

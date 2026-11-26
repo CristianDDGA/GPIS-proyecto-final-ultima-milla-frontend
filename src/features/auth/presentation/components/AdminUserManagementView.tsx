@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FC, type FormEvent } from 'react';
+import { useCallback, useState, type FC, type FormEvent } from 'react';
 import type { AuthUseCases } from '../../application/authUseCases.js';
 import {
   validateResetManagedUserPasswordInput,
@@ -6,6 +6,7 @@ import {
   type ManagedUserFilters,
   type PublicRole,
 } from '../../domain/index.js';
+import { toErrorMessage, usePaginatedList } from '../../../../shared/hooks/usePaginatedList.js';
 import { Alert, Button, Select, TextInput } from '../../../../shared/ui/index.js';
 import { UserDirectoryTable } from './admin/UserDirectoryTable.js';
 import {
@@ -29,20 +30,11 @@ const STATUS_OPTIONS = [
   { value: 'false', label: 'Inactivos' },
 ];
 
-function toErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;
-}
-
 export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCases }) => {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [appliedFilters, setAppliedFilters] = useState<ManagedUserFilters>({});
-  const [offset, setOffset] = useState(0);
-  const [items, setItems] = useState<readonly ManagedUser[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const [detailUser, setDetailUser] = useState<ManagedUser | null>(null);
@@ -59,47 +51,19 @@ export const AdminUserManagementView: FC<{ useCases: AuthUseCases }> = ({ useCas
   const [isResetting, setIsResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const loadPage = useCallback(
-    async (filters: ManagedUserFilters) => {
-      setIsLoading(true);
-      setRequestError(null);
-      try {
-        const page = await useCases.listManagedUsers.execute({
-          ...filters,
-          limit: PAGE_SIZE,
-          offset: filters.offset ?? 0,
-        });
-        if (!mountedRef.current) {
-          return;
-        }
-        setItems(page.items);
-        setTotal(page.total);
-        setOffset(page.offset);
-      } catch (error_) {
-        if (mountedRef.current) {
-          setRequestError(toErrorMessage(error_, 'No se pudo cargar el directorio de usuarios.'));
-        }
-      } finally {
-        if (mountedRef.current) {
-          setIsLoading(false);
-        }
-      }
-    },
+  const fetchUsers = useCallback(
+    (params: ManagedUserFilters & { readonly limit: number; readonly offset: number }) =>
+      useCases.listManagedUsers.execute(params),
     [useCases],
   );
 
-  useEffect(() => {
-    void loadPage({ ...appliedFilters, offset: 0 });
-  }, [appliedFilters, loadPage]);
+  const { items, total, offset, isLoading, requestError, setRequestError, loadPage, mountedRef } =
+    usePaginatedList<ManagedUser, ManagedUserFilters>({
+      appliedFilters,
+      pageSize: PAGE_SIZE,
+      errorFallback: 'No se pudo cargar el directorio de usuarios.',
+      fetchPage: fetchUsers,
+    });
 
   const applyFilters = (): void => {
     setAppliedFilters({

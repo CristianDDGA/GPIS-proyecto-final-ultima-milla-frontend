@@ -2,11 +2,8 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type FC,
-  type KeyboardEvent,
-  type PointerEvent,
 } from 'react';
 import { ShortIdBadge } from '../ShortIdBadge/ShortIdBadge.js';
 import {
@@ -18,11 +15,7 @@ import {
 } from '../../../features/store/domain/storeTypes.js';
 import {
   DEFAULT_ECUADOR_CENTER,
-  ECUADOR_CITIES,
-  MAP_MAX_ZOOM,
-  MAP_MIN_ZOOM,
   MAP_TILE_SIZE,
-  clampEcuadorLatLng,
   computeFitView,
   fetchDrivingRouteGeometry,
   formatDistanceKm,
@@ -30,13 +23,17 @@ import {
   googleMapsMultiStopUrl,
   latLngToWorld,
   sampleRouteChevrons,
-  tileUrlFor,
   wazeDirectionsUrl,
-  worldToLatLng,
   type DrivingRouteGeometry,
+  type EcuadorCityPreset,
   type LatLng,
-  type MapLayerStyle,
 } from './ecuadorMapMath.js';
+import { MapTileLayer, MapToolbar } from './MapToolbar.js';
+import {
+  buildMapTiles,
+  requestEcuadorGpsLocation,
+  useEcuadorMapViewport,
+} from './useEcuadorMapViewport.js';
 import './route-map.css';
 
 export interface RouteMapStop {
@@ -76,8 +73,6 @@ const STATUS_CLASS: Record<string, string> = {
   cancelado: 'route-map-marker--cancelado',
 };
 
-const DRAG_COMMIT_THRESHOLD_PX = 128;
-
 /**
  * Mapa interactivo estilo Uber / Uber Eats (OpenStreetMap + grading Uber Minimal / Esri Satélite + OSRM).
  * Arrastre GPU 60-120fps con translate3d, HUD flotante ETA/km, dock inferior navegable,
@@ -94,45 +89,40 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   height,
   emptyMessage = 'Estas paradas se registraron en modo dirección manual (sin pin en mapa). Los pedidos de tienda con pin se trazan aquí automáticamente.',
 }) => {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const panStageRef = useRef<HTMLDivElement | null>(null);
+  const {
+    setCenter,
+    zoom,
+    setZoom,
+    activeLayer,
+    setFailedSatellite,
+    selectLayer,
+    isDragging,
+    centerWorld,
+    viewportRef,
+    panStageRef,
+    zoomIn,
+    zoomOut,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handleKeyDown,
+  } = useEcuadorMapViewport({
+    initialCenter: DEFAULT_ECUADOR_CENTER,
+    initialZoom: 13,
+  });
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>({
     w: 720,
     h: height ?? (compact ? 260 : 380),
   });
-  const [layer, setLayer] = useState<MapLayerStyle>('uber');
   const [activeCityId, setActiveCityId] = useState<string>('quito');
-  const [center, setCenter] = useState<LatLng>(DEFAULT_ECUADOR_CENTER);
-  const [zoom, setZoom] = useState<number>(13);
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null);
   const [dockVisible, setDockVisible] = useState<boolean>(!compact);
   const [geometry, setGeometry] = useState<DrivingRouteGeometry | null>(null);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
-  const [failedSatellite, setFailedSatellite] = useState(false);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [geoNotice, setGeoNotice] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const dragRef = useRef<{
-    active: boolean;
-    startX: number;
-    startY: number;
-    startWorldX: number;
-    startWorldY: number;
-    dx: number;
-    dy: number;
-    rafId: number;
-  }>({
-    active: false,
-    startX: 0,
-    startY: 0,
-    startWorldX: 0,
-    startWorldY: 0,
-    dx: 0,
-    dy: 0,
-    rafId: 0,
-  });
 
   const geoStops = useMemo(
     () =>
@@ -173,13 +163,13 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
     const ro = new ResizeObserver(sync);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [isExpanded]);
+  }, [isExpanded, viewportRef]);
 
   const fitRoute = useCallback(() => {
     const fitted = computeFitView(geoPoints, viewportSize.w, viewportSize.h, DEFAULT_ECUADOR_CENTER);
     setCenter(fitted.center);
     setZoom(fitted.zoom);
-  }, [geoPoints, viewportSize.h, viewportSize.w]);
+  }, [geoPoints, setCenter, setZoom, viewportSize.h, viewportSize.w]);
 
   // Encuadre automático cuando cambian las paradas geocodificadas
   useEffect(() => {
@@ -245,41 +235,13 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
       setZoom((z) => Math.max(z, 15));
       setDockVisible(true);
     }
-  }, [selectedOrderId, geoStops]);
-
-  const centerWorld = useMemo(
-    () => latLngToWorld(center.lat, center.lng, zoom),
-    [center.lat, center.lng, zoom],
-  );
-
-  const activeLayer: MapLayerStyle = failedSatellite && layer === 'satellite' ? 'uber' : layer;
+  }, [selectedOrderId, geoStops, setCenter, setZoom]);
 
   const tiles = useMemo(() => {
-    const maxIndex = Math.pow(2, zoom);
-    const centerTileX = Math.floor(centerWorld.x / MAP_TILE_SIZE);
-    const centerTileY = Math.floor(centerWorld.y / MAP_TILE_SIZE);
     const spanX = Math.ceil(viewportSize.w / (2 * MAP_TILE_SIZE)) + 1;
     const spanY = Math.ceil(viewportSize.h / (2 * MAP_TILE_SIZE)) + 1;
-    const result: { key: string; url: string; fallbackUrl: string; left: number; top: number }[] = [];
-
-    for (let dx = -spanX; dx <= spanX; dx += 1) {
-      for (let dy = -spanY; dy <= spanY; dy += 1) {
-        const tx = centerTileX + dx;
-        const ty = centerTileY + dy;
-        if (ty < 0 || ty >= maxIndex) continue;
-        const wrappedX = ((tx % maxIndex) + maxIndex) % maxIndex;
-        const cacheLayer = activeLayer === 'satellite' ? 'sat' : 'osm';
-        result.push({
-          key: `${cacheLayer}-${zoom}-${wrappedX}-${ty}`,
-          url: tileUrlFor(activeLayer, zoom, wrappedX, ty),
-          fallbackUrl: tileUrlFor('osm', zoom, wrappedX, ty),
-          left: viewportSize.w / 2 + (tx * MAP_TILE_SIZE - centerWorld.x),
-          top: viewportSize.h / 2 + (ty * MAP_TILE_SIZE - centerWorld.y),
-        });
-      }
-    }
-    return result;
-  }, [activeLayer, centerWorld.x, centerWorld.y, viewportSize.h, viewportSize.w, zoom]);
+    return buildMapTiles(centerWorld, zoom, activeLayer, spanX, spanY, viewportSize.w / 2, viewportSize.h / 2);
+  }, [activeLayer, centerWorld, viewportSize.h, viewportSize.w, zoom]);
 
   const toViewportXY = useCallback(
     (lat: number, lng: number) => {
@@ -310,139 +272,10 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
     [compact, routeScreenPoints, showRoutePolyline],
   );
 
-  const resetStageTransform = () => {
-    if (panStageRef.current) {
-      panStageRef.current.style.transform = 'translate3d(0px, 0px, 0px)';
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (dragRef.current.rafId) {
-        cancelAnimationFrame(dragRef.current.rafId);
-      }
-    };
-  }, []);
-
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('button, a')) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setIsDragging(true);
-    dragRef.current = {
-      active: true,
-      startX: event.clientX,
-      startY: event.clientY,
-      startWorldX: centerWorld.x,
-      startWorldY: centerWorld.y,
-      dx: 0,
-      dy: 0,
-      rafId: dragRef.current.rafId,
-    };
-  };
-
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const d = dragRef.current;
-    if (!d.active) return;
-    const dx = event.clientX - d.startX;
-    const dy = event.clientY - d.startY;
-    d.dx = dx;
-    d.dy = dy;
-
-    if (Math.hypot(dx, dy) >= DRAG_COMMIT_THRESHOLD_PX) {
-      // Recarga fluida de tiles en arrastres largos sin perder el ritmo 60fps
-      const next = worldToLatLng(d.startWorldX - dx, d.startWorldY - dy, zoom);
-      const clamped = clampEcuadorLatLng(next.lat, next.lng);
-      const nextWorld = latLngToWorld(clamped.lat, clamped.lng, zoom);
-      d.startX = event.clientX;
-      d.startY = event.clientY;
-      d.startWorldX = nextWorld.x;
-      d.startWorldY = nextWorld.y;
-      d.dx = 0;
-      d.dy = 0;
-      resetStageTransform();
-      setCenter(clamped);
-      return;
-    }
-
-    if (!d.rafId) {
-      d.rafId = requestAnimationFrame(() => {
-        d.rafId = 0;
-        if (panStageRef.current && d.active) {
-          panStageRef.current.style.transform = `translate3d(${d.dx}px, ${d.dy}px, 0px)`;
-        }
-      });
-    }
-  };
-
-  const commitDragEnd = () => {
-    const d = dragRef.current;
-    if (!d.active) return;
-    d.active = false;
-    setIsDragging(false);
-    if (d.rafId) {
-      cancelAnimationFrame(d.rafId);
-      d.rafId = 0;
-    }
-    const finalDx = d.dx;
-    const finalDy = d.dy;
-    d.dx = 0;
-    d.dy = 0;
-    resetStageTransform();
-    if (Math.abs(finalDx) > 1 || Math.abs(finalDy) > 1) {
-      const next = worldToLatLng(d.startWorldX - finalDx, d.startWorldY - finalDy, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    }
-  };
-
-  // La rueda hace zoom sin mover la página: el listener nativo no es pasivo (en React onWheel sí lo es).
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return undefined;
-    const onWheel = (event: globalThis.WheelEvent) => {
-      if (Math.abs(event.deltaY) < 4) return;
-      event.preventDefault();
-      setZoom((prev) =>
-        event.deltaY < 0 ? Math.min(MAP_MAX_ZOOM, prev + 1) : Math.max(MAP_MIN_ZOOM, prev - 1),
-      );
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const stepPx = 64;
-    if (event.key === '+' || event.key === '=') {
-      event.preventDefault();
-      setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1));
-    } else if (event.key === '-' || event.key === '_') {
-      event.preventDefault();
-      setZoom((z) => Math.max(MAP_MIN_ZOOM, z - 1));
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      const next = worldToLatLng(centerWorld.x, centerWorld.y - stepPx, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      const next = worldToLatLng(centerWorld.x, centerWorld.y + stepPx, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    } else if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      const next = worldToLatLng(centerWorld.x - stepPx, centerWorld.y, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      const next = worldToLatLng(centerWorld.x + stepPx, centerWorld.y, zoom);
-      setCenter(clampEcuadorLatLng(next.lat, next.lng));
-    }
-  };
-
-  const selectCity = (cityId: string) => {
-    const found = ECUADOR_CITIES.find((c) => c.id === cityId);
-    if (!found) return;
-    setActiveCityId(found.id);
-    setCenter({ lat: found.lat, lng: found.lng });
-    setZoom(found.zoom);
+  const selectCity = (city: EcuadorCityPreset) => {
+    setActiveCityId(city.id);
+    setCenter({ lat: city.lat, lng: city.lng });
+    setZoom(city.zoom);
   };
 
   const focusStop = useCallback(
@@ -453,7 +286,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
       setZoom((z) => Math.max(z, 15));
       onSelectStop?.(stop.orderId);
     },
-    [onSelectStop],
+    [onSelectStop, setCenter, setZoom],
   );
 
   const stepStop = (delta: -1 | 1) => {
@@ -468,28 +301,16 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
 
   const handleLocateMe = () => {
     setGeoNotice(null);
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGeoNotice('Tu navegador no soporta geolocalización.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        if (!isWithinEcuador(lat, lng)) {
-          setGeoNotice('Tu ubicación GPS actual está fuera de Ecuador.');
-          return;
-        }
-        const clamped = clampEcuadorLatLng(lat, lng);
+    requestEcuadorGpsLocation({
+      outOfBoundsMessage: 'Tu ubicación GPS actual está fuera de Ecuador.',
+      failedMessage: 'No se pudo obtener tu ubicación GPS.',
+      onError: setGeoNotice,
+      onLocated: (clamped) => {
         setUserLocation(clamped);
         setCenter(clamped);
         setZoom((z) => Math.max(z, 15));
       },
-      () => {
-        setGeoNotice('No se pudo obtener tu ubicación GPS.');
-      },
-      { enableHighAccuracy: true, timeout: 6000 },
-    );
+    });
   };
 
   const gmapsRouteUrl = useMemo(() => googleMapsMultiStopUrl(geoPoints), [geoPoints]);
@@ -497,10 +318,6 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
   const durationLabel = formatDurationMinutes(geometry?.durationSeconds ?? null);
 
   const effectiveHeight = isExpanded ? 560 : height ?? (compact ? 250 : 380);
-  const tilesLayerClass =
-    activeLayer === 'uber'
-      ? 'route-map-tiles route-map-tiles--uber'
-      : 'route-map-tiles';
 
   const vehicleXY = useMemo(() => {
     if (userLocation) return toViewportXY(userLocation.lat, userLocation.lng);
@@ -547,54 +364,19 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         </div>
       </div>
 
-      <div className="route-map-toolbar">
-        <div className="route-map-cities" role="group" aria-label="Centrar en ciudad de Ecuador">
-          {ECUADOR_CITIES.map((city) => (
-            <button
-              key={city.id}
-              type="button"
-              className={
-                'route-map-chip' + (activeCityId === city.id && geoStops.length === 0 ? ' route-map-chip--active' : '')
-              }
-              onClick={() => selectCity(city.id)}
-            >
-              {city.name}
-            </button>
-          ))}
-        </div>
-
-        <div className="route-map-tools-right" role="group" aria-label="Estilo y encuadre del mapa">
-          {geoStops.length > 0 && (
+      <MapToolbar
+        activeLayer={activeLayer}
+        onSelectLayer={selectLayer}
+        onSelectCity={selectCity}
+        activeCityId={geoStops.length === 0 ? activeCityId : null}
+        leadingRightAction={
+          geoStops.length > 0 ? (
             <button type="button" className="route-map-chip route-map-chip--dark" onClick={fitRoute}>
               Ajustar ruta
             </button>
-          )}
-          <button
-            type="button"
-            className={'route-map-chip' + (activeLayer === 'uber' ? ' route-map-chip--active' : '')}
-            onClick={() => setLayer('uber')}
-          >
-            Uber
-          </button>
-          <button
-            type="button"
-            className={'route-map-chip' + (activeLayer === 'osm' ? ' route-map-chip--active' : '')}
-            onClick={() => setLayer('osm')}
-          >
-            Calles
-          </button>
-          <button
-            type="button"
-            className={'route-map-chip' + (activeLayer === 'satellite' ? ' route-map-chip--active' : '')}
-            onClick={() => {
-              setFailedSatellite(false);
-              setLayer('satellite');
-            }}
-          >
-            Satélite
-          </button>
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       <div
         ref={viewportRef}
@@ -604,10 +386,10 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
         aria-label={title}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerUp={commitDragEnd}
-        onPointerCancel={commitDragEnd}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onKeyDown={handleKeyDown}
-        onDoubleClick={() => setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1))}
+        onDoubleClick={zoomIn}
       >
         {/* Ancla de teclado interactiva real: las teclas del botón suben hasta el visor (flechas, +, −) */}
         <button
@@ -618,29 +400,16 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
 
         {/* Escenario GPU: tiles + ruta + marcadores se mueven juntos en 1 solo translate3d */}
         <div ref={panStageRef} className="route-map-stage">
-          <div className={tilesLayerClass} aria-hidden="true">
-            {tiles.map((tile) => (
-              <img
-                key={tile.key}
-                src={tile.url}
-                alt=""
-                draggable={false}
-                className="route-map-tile"
-                style={{ left: `${tile.left}px`, top: `${tile.top}px` }}
-                onLoad={(event) => {
-                  event.currentTarget.classList.add('route-map-tile--loaded');
-                }}
-                onError={(event) => {
-                  if (activeLayer === 'satellite') {
-                    setFailedSatellite(true);
-                    event.currentTarget.src = tile.fallbackUrl;
-                  } else {
-                    event.currentTarget.classList.add('route-map-tile--loaded');
-                  }
-                }}
-              />
-            ))}
-          </div>
+          <MapTileLayer
+            tiles={tiles}
+            activeLayer={activeLayer}
+            containerClass="route-map-tiles"
+            uberClass="route-map-tiles--uber"
+            tileClass="route-map-tile"
+            loadedTileClass="route-map-tile--loaded"
+            positioning="offset"
+            onSatelliteError={() => setFailedSatellite(true)}
+          />
 
           {polylineSvgPath.length > 0 && (
             <svg className="route-map-svg" aria-hidden="true">
@@ -805,7 +574,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
             className="route-map-ctrl-btn"
             aria-label="Acercar mapa"
             title="Acercar (+)"
-            onClick={() => setZoom((z) => Math.min(MAP_MAX_ZOOM, z + 1))}
+            onClick={zoomIn}
           >
             +
           </button>
@@ -814,7 +583,7 @@ export const RouteStopsMap: FC<RouteStopsMapProps> = ({
             className="route-map-ctrl-btn"
             aria-label="Alejar mapa"
             title="Alejar (−)"
-            onClick={() => setZoom((z) => Math.max(MAP_MIN_ZOOM, z - 1))}
+            onClick={zoomOut}
           >
             −
           </button>
